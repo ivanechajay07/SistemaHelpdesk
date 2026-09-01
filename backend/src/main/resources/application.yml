@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: helpdesk
+
+  # Carga el archivo .env de la raiz del proyecto (o de backend/) si existe
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:helpdesk_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: always
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:super_secret_key_for_jwt_token_generation_change_me_in_production}
+    expiration: ${JWT_EXPIRATION:86400000}
+  file:
+    upload-dir: ${UPLOAD_DIR:./uploads}
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:5173}
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.empresa.helpdesk: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

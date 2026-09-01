@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-primary: #0f172a;
+  --color-secondary: #3b82f6;
+  --color-accent: #f59e0b;
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #e2e8f0;
+    background-color: #0f172a;
+  }
+}
+
+/* Custom Scrollbar Global */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #334155;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark * {
+  scrollbar-color: #334155 transparent;
+}
+
+/* ===== Animaciones globales (GPU-friendly, no bloqueantes) ===== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(120%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shrinkBar {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* fill-mode: backwards — al terminar la animación el elemento vuelve a su estilo
+   natural (sin transform persistente), evitando que los modales position:fixed
+   queden atrapados en un contenedor transformado y su fondo no cubra la pantalla */
+.anim-fade-in-up    { animation: fadeInUp .38s cubic-bezier(.21, 1.02, .73, 1) backwards; }
+.anim-fade-in       { animation: fadeIn .22s ease-out backwards; }
+.anim-scale-in      { animation: scaleIn .30s cubic-bezier(.21, 1.02, .73, 1) backwards; }
+.anim-slide-in-right{ animation: slideInRight .45s cubic-bezier(.21, 1.02, .73, 1) backwards; }
+
+/* ===== Animaciones de alto impacto (Login / marketing) ===== */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
+}
+@keyframes blobDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(50px, -35px) scale(1.15); }
+  66%      { transform: translate(-35px, 25px) scale(0.92); }
+}
+@keyframes shineSweep {
+  0%   { transform: translateX(-160%) skewX(-15deg); }
+  100% { transform: translateX(320%) skewX(-15deg); }
+}
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+@keyframes ringPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  70%  { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.anim-float-slow    { animation: floatY 7s ease-in-out infinite; }
+.anim-float-slower  { animation: floatY 10s ease-in-out infinite; }
+.anim-blob          { animation: blobDrift 20s ease-in-out infinite; }
+.anim-shake         { animation: shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+.anim-ring-pulse    { animation: ringPulse 1.6s ease-out 2; }
+.anim-gradient-text {
+  background-size: 220% 220%;
+  animation: gradientShift 5s ease infinite;
+}
+.btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 45%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent);
+  transform: translateX(-160%) skewX(-15deg);
+  pointer-events: none;
+}
+.btn-shine:hover::after { animation: shineSweep .9s ease forwards; }
+
+/* ===== Barra de progreso superior (cambio de página) ===== */
+@keyframes topProgress {
+  0%   { transform: scaleX(0); opacity: 1; }
+  55%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+.anim-top-progress {
+  transform-origin: left center;
+  animation: topProgress .75s cubic-bezier(.21, 1.02, .73, 1) forwards;
+}
+
+/* ===== Overlay de bienvenida (login exitoso) ===== */
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.anim-overlay-in { animation: overlayIn .35s ease-out backwards; }
+
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+.anim-spin-ring { animation: spinRing 1.4s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-in-up,
+  .anim-fade-in,
+  .anim-scale-in,
+  .anim-slide-in-right,
+  .anim-float-slow,
+  .anim-float-slower,
+  .anim-blob,
+  .anim-shake,
+  .anim-ring-pulse,
+  .anim-gradient-text,
+  .anim-top-progress,
+  .anim-overlay-in,
+  .anim-spin-ring {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
