@@ -2,6 +2,7 @@ package com.empresa.helpdesk.modules.user.service;
 
 import com.empresa.helpdesk.modules.user.dto.UserRequest;
 import com.empresa.helpdesk.modules.user.dto.UserResponse;
+import com.empresa.helpdesk.modules.user.dto.UserSummaryResponse;
 import com.empresa.helpdesk.modules.user.entity.Role;
 import com.empresa.helpdesk.modules.user.entity.User;
 import com.empresa.helpdesk.modules.user.repository.RoleRepository;
@@ -38,9 +39,9 @@ public class UserService {
     }
     
     @Transactional(readOnly = true)
-    public List<UserResponse> getUsersByRole(String roleName) {
+    public List<UserSummaryResponse> getUsersByRole(String roleName) {
         return userRepository.findByRoles_Name(roleName).stream()
-                .map(this::mapToResponse)
+                .map(this::mapToSummary)
                 .collect(Collectors.toList());
     }
     
@@ -190,6 +191,20 @@ public class UserService {
                 .roles(roleNames)
                 .ultimaConexion(user.getLastActivity() != null ? user.getLastActivity() : user.getLastLogin())
                 .estadoConexion(computeEstadoConexion(user))
+                .dispositivoTipo(user.getDispositivoTipo())
+                .dispositivoModelo(user.getDispositivoModelo())
+                .dispositivoSo(user.getDispositivoSo())
+                .navegador(user.getNavegador())
+                .ipUltima(user.getIpUltima())
+                .build();
+    }
+
+    private UserSummaryResponse mapToSummary(User user) {
+        return UserSummaryResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .nombre(user.getNombre())
+                .apellidos(user.getApellidos())
                 .build();
     }
 

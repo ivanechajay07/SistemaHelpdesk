@@ -8,12 +8,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -35,8 +37,12 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
 
     /** Orígenes permitidos para CORS. En producción definir APP_CORS_ORIGINS (ej: https://midominio.com). */
-    @Value("${app.cors.allowed-origins:*}")
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String corsAllowedOrigins;
+
+    /** Permite restringir Swagger/OpenAPI en producción (SWAGGER_ENABLED=false). */
+    @Value("${app.security.swagger-enabled:true}")
+    private boolean swaggerEnabled;
 
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
@@ -51,6 +57,18 @@ public class SecurityConfig {
         };
     }
 
+    /** Sin autenticación (token ausente/inválido/expirado) responde 401, no 403. */
+    @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            Map<String, String> body = new HashMap<>();
+            body.put("message", "No autenticado. Inicia sesión nuevamente.");
+            new ObjectMapper().writeValue(response.getOutputStream(), body);
+        };
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -60,6 +78,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/inventario/activos/qr/**",
+                                "/ws/**",
+                                "/uploads/**",
+                                "/error"
+                        ).permitAll()
+                        .requestMatchers(
                                 "/v2/api-docs",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
@@ -69,16 +92,16 @@ public class SecurityConfig {
                                 "/configuration/security",
                                 "/swagger-ui/**",
                                 "/webjars/**",
-                                "/swagger-ui.html",
-                                "/ws/**",
-                                "/uploads/**",
-                                "/error"
-                        ).permitAll()
+                                "/swagger-ui.html"
+                        ).access(swaggerEnabled ? (req, ctx) -> new AuthorizationDecision(true)
+                                : (req, ctx) -> new AuthorizationDecision(false))
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
-                .exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler()))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler()))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -87,11 +110,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of(corsAllowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        String[] origins = corsAllowedOrigins.split(",");
+        boolean hasWildcard = Arrays.stream(origins).map(String::trim).anyMatch("*"::equals);
+        configuration.setAllowedOriginPatterns(List.of(origins));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(List.of("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
-        configuration.setAllowCredentials(true);
+        // Nunca combinar credenciales con origen comodín: si hay "*" se deshabilita
+        // el envío de credenciales para evitar que cualquier sitio consuma la API.
+        configuration.setAllowCredentials(!hasWildcard);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

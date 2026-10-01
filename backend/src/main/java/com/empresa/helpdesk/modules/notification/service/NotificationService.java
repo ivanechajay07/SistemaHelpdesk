@@ -46,7 +46,8 @@ public class NotificationService {
      *    que ellos mismos hayan reactivado.
      *  - CLIENTE: sus tickets recientes generados por él mismo y los que haya
      *    reactivado.
-     *  - Los tickets CERRADOS desaparecen de las notificaciones para todos los roles.
+     *  - Los tickets RESUELTOS y CERRADOS desaparecen de las notificaciones
+     *    para todos los roles, evitando que se acumulen.
      */
     @Transactional(readOnly = true)
     public List<NotificationDto> getNotifications() {
@@ -67,8 +68,8 @@ public class NotificationService {
                     return auth != null && auth.replace("ROLE_", "").equals("ADMIN");
                 });
 
-        // Los tickets cerrados desaparecen de las notificaciones
-        List<TicketStatus> estadosOcultos = List.of(TicketStatus.CERRADO);
+        // Los tickets resueltos y cerrados desaparecen de las notificaciones
+        List<TicketStatus> estadosOcultos = List.of(TicketStatus.RESUELTO, TicketStatus.CERRADO);
 
         Map<Long, Ticket> visibles = new LinkedHashMap<>();
         Set<Long> reactivadosPorMi = new java.util.HashSet<>();

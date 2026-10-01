@@ -19,12 +19,17 @@ import com.empresa.helpdesk.modules.user.entity.User;
 import com.empresa.helpdesk.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -56,22 +61,58 @@ public class TargetCheckService {
     private final UserRepository userRepository;
     private final EmailService emailService;
 
-    @Transactional
-    public void checkTarget(Long targetId, boolean force) {
-        MonitoredTarget target = monitoredTargetRepository.findByIdForUpdate(targetId)
-                .orElse(null);
-        if (target == null) return;
-        if (!Boolean.TRUE.equals(target.getActivo()) && !force) return;
+    /** Auto-referencia (proxy) para que las llamadas internas respeten las transacciones. */
+    private TargetCheckService self;
 
-        // Si otra instancia ya lo verificó hace poco, no repetir
-        if (!force && target.getUltimoChequeo() != null
-                && target.getUltimoChequeo().isAfter(LocalDateTime.now().minusSeconds(target.getIntervaloSegundos()))) {
+    @Autowired
+    public void setSelf(@Lazy TargetCheckService self) {
+        this.self = self;
+    }
+
+    /**
+     * Punto de entrada NO transaccional: la verificación de red (I/O con timeouts)
+     * se ejecuta FUERA de cualquier transacción, para no retener el bloqueo
+     * pesimista ni una conexión del pool durante el probe.
+     */
+    public void checkTarget(Long targetId, boolean force) {
+        MonitoredTarget target = self.beginCheck(targetId, force);
+        if (target == null) {
             return;
         }
 
         long inicio = System.currentTimeMillis();
         boolean ok = probe(target);
         long latencia = System.currentTimeMillis() - inicio;
+
+        self.applyResult(targetId, ok, latencia);
+    }
+
+    /** Fase 1 (transacción corta): bloquea el objetivo y decide si toca verificar. */
+    @Transactional
+    public MonitoredTarget beginCheck(Long targetId, boolean force) {
+        MonitoredTarget target = monitoredTargetRepository.findByIdForUpdate(targetId).orElse(null);
+        if (target == null) {
+            return null;
+        }
+        if (!Boolean.TRUE.equals(target.getActivo()) && !force) {
+            return null;
+        }
+        // Si otra instancia ya lo verificó hace poco, no repetir
+        if (!force && target.getUltimoChequeo() != null
+                && target.getUltimoChequeo().isAfter(LocalDateTime.now().minusSeconds(
+                        target.getIntervaloSegundos() != null ? target.getIntervaloSegundos() : 60))) {
+            return null;
+        }
+        return target;
+    }
+
+    /** Fase 2 (transacción corta): persiste el resultado del probe. */
+    @Transactional
+    public void applyResult(Long targetId, boolean ok, long latencia) {
+        MonitoredTarget target = monitoredTargetRepository.findByIdForUpdate(targetId).orElse(null);
+        if (target == null) {
+            return;
+        }
 
         target.setUltimoChequeo(LocalDateTime.now());
         target.setUltimaLatenciaMs(ok ? latencia : null);
@@ -89,7 +130,9 @@ public class TargetCheckService {
             if (target.getTicketAbiertoId() == null
                     && target.getFallosConsecutivos() >= (target.getUmbralFallos() != null ? target.getUmbralFallos() : 3)) {
                 try {
-                    target.setTicketAbiertoId(crearTicketAutomatico(target));
+                    // Transacción independiente: un fallo al crear el ticket no
+                    // marca rollback-only la transacción del resultado.
+                    target.setTicketAbiertoId(self.crearTicketAutomatico(target));
                 } catch (Exception ex) {
                     log.error("No se pudo generar el ticket automático para el objetivo {}: {}",
                             target.getNombre(), ex.getMessage());
@@ -117,17 +160,57 @@ public class TargetCheckService {
 
     private boolean probeHttp(String url) throws Exception {
         String finalUrl = url.startsWith("http://") || url.startsWith("https://") ? url : "http://" + url;
+        URI uri = URI.create(finalUrl);
+
+        // Protección SSRF: solo http/https y hosts públicos (sin loopback,
+        // link-local como 169.254.169.254, rangos privados ni multicast).
+        if (!urlSegura(uri)) {
+            log.warn("Verificación HTTP bloqueada por protección SSRF hacia: {}", safeLogValue(finalUrl));
+            return false;
+        }
+
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(TIMEOUT_MS))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                // Sin redirecciones: evita saltar a destinos internos tras una redirección
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(finalUrl))
+                .uri(uri)
                 .timeout(Duration.ofMillis(TIMEOUT_MS))
                 .GET()
                 .build();
         HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
         return response.statusCode() < 400;
+    }
+
+    /** Valida que el URI use http/https y que el host resuelva a direcciones públicas. */
+    private boolean urlSegura(URI uri) {
+        String scheme = uri.getScheme();
+        if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
+            return false;
+        }
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+        try {
+            for (InetAddress addr : InetAddress.getAllByName(host)) {
+                if (addr.isAnyLocalAddress()
+                        || addr.isLoopbackAddress()
+                        || addr.isLinkLocalAddress()
+                        || addr.isSiteLocalAddress()
+                        || addr.isMulticastAddress()) {
+                    return false;
+                }
+            }
+        } catch (UnknownHostException ex) {
+            return false;
+        }
+        return true;
+    }
+
+    private String safeLogValue(String value) {
+        return value.replaceAll("[\\r\\n]", " ");
     }
 
     private boolean probeTcp(String host, int puerto) throws Exception {
@@ -160,7 +243,8 @@ public class TargetCheckService {
         }
     }
 
-    private Long crearTicketAutomatico(MonitoredTarget target) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Long crearTicketAutomatico(MonitoredTarget target) {
         User solicitante = primerAdmin();
         Subcategory subcategoria = asegurarSubcategoriaMonitoreo();
 

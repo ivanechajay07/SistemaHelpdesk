@@ -1,5 +1,8 @@
 package com.empresa.helpdesk.modules.catalog.service;
 
+import com.empresa.helpdesk.modules.catalog.dto.EntidadRequest;
+import com.empresa.helpdesk.modules.catalog.dto.EntidadResponse;
+import com.empresa.helpdesk.modules.catalog.dto.SedeItemRequest;
 import com.empresa.helpdesk.modules.catalog.dto.SedeRequest;
 import com.empresa.helpdesk.modules.catalog.dto.SedeResponse;
 import com.empresa.helpdesk.modules.catalog.entity.Entidad;
@@ -7,6 +10,7 @@ import com.empresa.helpdesk.modules.catalog.entity.Sede;
 import com.empresa.helpdesk.modules.catalog.repository.EntidadRepository;
 import com.empresa.helpdesk.modules.catalog.repository.SedeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,11 +32,79 @@ public class CatalogService {
     }
 
     @Transactional(readOnly = true)
-    public List<String> getEntidades() {
+    public List<EntidadResponse> getEntidades() {
         return entidadRepository.findAll().stream()
-                .map(Entidad::getNombre)
-                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .sorted((a, b) -> a.getNombre().compareToIgnoreCase(b.getNombre()))
+                .map(this::mapToEntidadResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public EntidadResponse createEntidad(EntidadRequest request) {
+        String nombre = request.getNombre().trim();
+        if (entidadRepository.findByNombreIgnoreCase(nombre).isPresent()) {
+            throw new RuntimeException("Ya existe una entidad con el nombre \"" + nombre + "\"");
+        }
+        Entidad entidad = entidadRepository.save(Entidad.builder().nombre(nombre).build());
+        saveSedes(entidad, request.getSedes());
+        return mapToEntidadResponse(entidad);
+    }
+
+    @Transactional
+    public EntidadResponse updateEntidad(Long id, EntidadRequest request) {
+        Entidad entidad = entidadRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Entidad no encontrada"));
+        String nombre = request.getNombre().trim();
+        entidadRepository.findByNombreIgnoreCase(nombre)
+                .filter(e -> !e.getId().equals(id))
+                .ifPresent(e -> {
+                    throw new RuntimeException("Ya existe una entidad con el nombre \"" + nombre + "\"");
+                });
+        entidad.setNombre(nombre);
+        try {
+            sedeRepository.deleteByEntidad_Id(id);
+            saveSedes(entidad, request.getSedes());
+        } catch (DataIntegrityViolationException e) {
+            throw new RuntimeException(
+                    "No se pueden eliminar las sedes que están asociadas a activos o movimientos del inventario.");
+        }
+        return mapToEntidadResponse(entidad);
+    }
+
+    @Transactional
+    public void deleteEntidad(Long id) {
+        if (!entidadRepository.existsById(id)) {
+            throw new RuntimeException("Entidad no encontrada");
+        }
+        try {
+            sedeRepository.deleteByEntidad_Id(id);
+            entidadRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            throw new RuntimeException(
+                    "No se puede eliminar la entidad porque tiene activos o movimientos asociados en el inventario.");
+        }
+    }
+
+    private void saveSedes(Entidad entidad, List<SedeItemRequest> items) {
+        for (SedeItemRequest item : items) {
+            Sede sede = Sede.builder()
+                    .nombre(item.getNombre().trim())
+                    .descripcion(trimOrNull(item.getDescripcion()))
+                    .entidad(entidad)
+                    .build();
+            sedeRepository.save(sede);
+        }
+    }
+
+    private EntidadResponse mapToEntidadResponse(Entidad entidad) {
+        List<SedeResponse> sedes = sedeRepository.findByEntidad_Id(entidad.getId()).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        return EntidadResponse.builder()
+                .id(entidad.getId())
+                .nombre(entidad.getNombre())
+                .sedes(sedes)
+                .build();
     }
 
     @Transactional

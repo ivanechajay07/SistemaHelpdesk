@@ -29,7 +29,7 @@ export default function QrPublic() {
   const { token } = useParams<{ token: string }>();
   const [activo, setActivo] = useState<PublicActivo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -41,9 +41,17 @@ export default function QrPublic() {
         setActivo(res.data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!active) return;
-        setNotFound(true);
+        const status = err?.response?.status;
+        const serverMsg = err?.response?.data?.message;
+        if (status === 400 || status === 404) {
+          setError(serverMsg || 'El código QR no corresponde a ningún activo registrado en el sistema.');
+        } else if (!err?.response) {
+          setError('No se pudo conectar con el servidor. Verifica tu conexión e inténtalo nuevamente.');
+        } else {
+          setError(serverMsg || 'No se pudo consultar el activo. Inténtalo nuevamente.');
+        }
         setLoading(false);
       });
     return () => { active = false; };
@@ -68,14 +76,14 @@ export default function QrPublic() {
             <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
             <p className="text-sm font-semibold">Consultando activo...</p>
           </div>
-        ) : notFound || !activo ? (
+        ) : error || !activo ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl p-10 flex flex-col items-center gap-3 text-center">
             <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
               <X className="w-7 h-7 text-red-600 dark:text-red-400" />
             </div>
             <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Activo no encontrado</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              El código QR no corresponde a ningún activo registrado en el sistema.
+              {error || 'El código QR no corresponde a ningún activo registrado en el sistema.'}
             </p>
           </div>
         ) : (

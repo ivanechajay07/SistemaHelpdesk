@@ -15,6 +15,7 @@ import com.empresa.helpdesk.modules.ticket.repository.TicketTemplateRepository;
 import com.empresa.helpdesk.modules.inventario.entity.CategoriaActivo;
 import com.empresa.helpdesk.modules.inventario.repository.CategoriaActivoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,14 @@ import java.util.HashSet;
 @Component
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
+
+    /** Correo del administrador (configurable por entorno con ADMIN_EMAIL). */
+    @Value("${app.admin.email:${ADMIN_EMAIL:ivanechajay07@gmail.com}}")
+    private String adminEmailConfig;
+
+    /** Contraseña inicial del administrador. En producción DEBE definirse vía ADMIN_PASSWORD. */
+    @Value("${app.admin.password:${ADMIN_PASSWORD:admin123}}")
+    private String adminPasswordConfig;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -118,7 +127,7 @@ public class DataSeeder implements CommandLineRunner {
         
         System.out.println("Roles y permisos aplicados.");
 
-        String adminEmail = "ivanechajay07@gmail.com";
+        String adminEmail = adminEmailConfig;
 
         User admin = userRepository.findByUsernameOrEmail("admin", "admin").orElse(null);
         if (admin == null) {
@@ -127,7 +136,7 @@ public class DataSeeder implements CommandLineRunner {
             admin = User.builder()
                     .username("admin")
                     .email(adminEmail)
-                    .password(passwordEncoder.encode("admin123"))
+                    .password(passwordEncoder.encode(adminPasswordConfig))
                     .nombre("Super")
                     .apellidos("Administrador")
                     .activo(true)
@@ -147,7 +156,11 @@ public class DataSeeder implements CommandLineRunner {
         // Asegurar SIEMPRE que el usuario admin tenga el rol de administrador
         admin.setRoles(Set.of(adminRole));
         userRepository.save(admin);
-        System.out.println("Usuario administrador verificado y actualizado: admin / admin123");
+        System.out.println("Usuario administrador verificado y actualizado: admin");
+        if ("admin123".equals(adminPasswordConfig)) {
+            System.out.println("ADVERTENCIA: el administrador usa la contraseña por defecto. "
+                    + "Define la variable de entorno ADMIN_PASSWORD antes de usar el sistema en producción.");
+        }
 
         if (categoryRepository.count() == 0) {
             Category hw = categoryRepository.save(Category.builder().name("Hardware").description("Equipos físicos").build());

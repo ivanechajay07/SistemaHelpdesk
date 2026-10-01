@@ -18,12 +18,14 @@ import {
   UserCheck
 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useUserStore } from '../store/userStore';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
+import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards } from '../lib/reportPdf';
+import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt, exSection } from '../lib/reportExcel';
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#6366f1', '#94a3b8', '#ec4899'];
 
@@ -240,78 +242,90 @@ export default function Reports() {
       const { dateStr, filterLabel } = getReportMeta();
       const wb = XLSX.utils.book_new();
 
-      // --- Sheet 1: Resumen Ejecutivo ---
-      const summaryRows = [
-        ['REPORTE DE HELPDESK - RESUMEN EJECUTIVO'],
-        [],
-        ['Fecha del Reporte:', dateStr],
-        ['Periodo:', filterLabel],
-        ['Total de Tickets:', filteredTickets.length],
-        [],
+      const buildSheet = (title: string, headers: string[], rows: (string | number)[][], widths: number[]): XLSX.WorkSheet => {
+        const aoa: (string | number)[][] = [[title], [`Generado: ${dateStr} · Periodo: ${filterLabel}`], [''], headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        mergeRow(ws, 0, 0, headers.length - 1, title, exTitle);
+        mergeRow(ws, 1, 0, headers.length - 1, `Generado: ${dateStr} · Periodo: ${filterLabel}`, exSubtitle);
+        styleRow(ws, 3, headers.length, exHeader);
+        rows.forEach((_, i) => styleRow(ws, 4 + i, headers.length, i % 2 === 0 ? exData : exDataAlt));
+        setCols(ws, widths);
+        return ws;
+      };
+
+      // ===== Hoja 1: Resumen Ejecutivo =====
+      const wsSummary = XLSX.utils.aoa_to_sheet([
+        ['REPORTE DE HELPDESK — RESUMEN EJECUTIVO'],
+        [`Generado: ${dateStr} · Periodo: ${filterLabel}`],
+        [''],
+        ['Métrica', 'Valor'],
+        ['Total de Tickets', filteredTickets.length],
+        ['En Proceso / Asignados', getStatusCount('EN_PROCESO') + getStatusCount('ASIGNADO')],
+        ['Resueltos', getStatusCount('RESUELTO')],
+        ['Cerrados', getStatusCount('CERRADO')],
+        ['Tasa de Resolución', filteredTickets.length > 0 ? `${(((getStatusCount('RESUELTO') + getStatusCount('CERRADO')) / filteredTickets.length) * 100).toFixed(1)}%` : '0%'],
+        [''],
         ['DISTRIBUCIÓN POR ESTADO'],
         ['Estado', 'Cantidad', 'Porcentaje'],
         ...statusData.map(d => [
           d.name,
           d.value,
-          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%'
+          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%',
         ]),
-        [],
+        [''],
         ['DISTRIBUCIÓN POR PRIORIDAD'],
         ['Prioridad', 'Cantidad', 'Porcentaje'],
         ...priorityData.map(d => [
           d.name,
           d.value,
-          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%'
+          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%',
         ]),
-      ];
-      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-      wsSummary['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }];
-      // Merge title
-      wsSummary['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-      ];
+      ]);
+      mergeRow(wsSummary, 0, 0, 2, 'REPORTE DE HELPDESK — RESUMEN EJECUTIVO', exTitle);
+      mergeRow(wsSummary, 1, 0, 2, `Generado: ${dateStr} · Periodo: ${filterLabel}`, exSubtitle);
+      styleRow(wsSummary, 3, 2, exHeader);
+      for (let i = 4; i <= 8; i++) styleRow(wsSummary, i, 2, i % 2 === 0 ? exData : exDataAlt);
+      // Sección ESTADO
+      mergeRow(wsSummary, 10, 0, 2, 'DISTRIBUCIÓN POR ESTADO', exSection);
+      styleRow(wsSummary, 11, 3, exHeader);
+      for (let i = 12; i < 12 + statusData.length; i++) styleRow(wsSummary, i, 3, i % 2 === 0 ? exData : exDataAlt);
+      // Sección PRIORIDAD (offset después de la tabla de estado)
+      const priorityStart = 13 + statusData.length;
+      mergeRow(wsSummary, priorityStart, 0, 2, 'DISTRIBUCIÓN POR PRIORIDAD', exSection);
+      styleRow(wsSummary, priorityStart + 1, 3, exHeader);
+      for (let i = priorityStart + 2; i < priorityStart + 2 + priorityData.length; i++) styleRow(wsSummary, i, 3, i % 2 === 0 ? exData : exDataAlt);
+      setCols(wsSummary, [28, 16, 16]);
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen');
 
-      // --- Sheet 2: Detalle de Tickets ---
-      const detailHeaders = ['Código', 'Título', 'Descripción', 'Estado', 'Prioridad', 'Categoría', 'Técnico Asignado', 'Solicitante', 'Fecha Creación'];
-      const detailRows = filteredTickets.map(t => [
-        t.codigo,
-        t.titulo,
-        t.descripcion || '',
-        STATUS_LABELS[t.estado] || t.estado,
-        PRIORITY_LABELS[t.prioridad] || t.prioridad,
-        t.subcategoriaNombre || 'Sin categoría',
-        t.tecnicoNombre || 'Sin asignar',
-        t.solicitanteNombre || 'N/A',
-        new Date(t.fechaCreacion).toLocaleDateString('es-ES'),
-      ]);
-      const wsDetail = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows]);
-      wsDetail['!cols'] = [
-        { wch: 12 }, { wch: 35 }, { wch: 40 }, { wch: 14 },
-        { wch: 12 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 16 }
-      ];
-      XLSX.utils.book_append_sheet(wb, wsDetail, 'Detalle de Tickets');
+      // ===== Hoja 2: Detalle de Tickets =====
+      XLSX.utils.book_append_sheet(wb, buildSheet(
+        'DETALLE DE TICKETS',
+        ['Código', 'Título', 'Descripción', 'Estado', 'Prioridad', 'Categoría', 'Técnico Asignado', 'Solicitante', 'Fecha Creación'],
+        filteredTickets.map(t => [
+          t.codigo,
+          t.titulo,
+          t.descripcion || '',
+          STATUS_LABELS[t.estado] || t.estado,
+          PRIORITY_LABELS[t.prioridad] || t.prioridad,
+          t.subcategoriaNombre || 'Sin categoría',
+          t.tecnicoNombre || 'Sin asignar',
+          t.solicitanteNombre || 'N/A',
+          new Date(t.fechaCreacion).toLocaleDateString('es-ES'),
+        ]),
+        [12, 32, 42, 15, 12, 22, 22, 22, 16],
+      ), 'Detalle de Tickets');
 
-      // --- Sheet 3: Top Categorías ---
+      // ===== Hoja 3: Top Categorías =====
       if (categoryData.length > 0) {
-        const catHeaders = ['Subcategoría', 'Cantidad de Tickets'];
-        const catRows = categoryData.map(d => [d.name, d.value]);
-        const wsCat = XLSX.utils.aoa_to_sheet([catHeaders, ...catRows]);
-        wsCat['!cols'] = [{ wch: 30 }, { wch: 20 }];
-        XLSX.utils.book_append_sheet(wb, wsCat, 'Por Categoría');
+        XLSX.utils.book_append_sheet(wb, buildSheet(
+          'TOP CATEGORÍAS',
+          ['Subcategoría', 'Cantidad de Tickets'],
+          categoryData.map(d => [d.name, d.value]),
+          [32, 22],
+        ), 'Por Categoría');
       }
 
-      const filename = `Reporte_HelpDesk_${now.toISOString().slice(0, 10)}.xlsx`;
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadWorkbook(wb, `Reporte_HelpDesk_${now.toISOString().slice(0, 10)}.xlsx`);
     } catch (err) {
       console.error('Error exportando Excel:', err);
     } finally {
@@ -324,158 +338,126 @@ export default function Reports() {
     try {
       const { dateStr, filterLabel } = getReportMeta();
       const doc = new jsPDF('p', 'mm', 'letter');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 15;
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const M = 15;
 
-      // --- Header ---
-      doc.setFillColor(37, 99, 235); // blue-600
-      doc.rect(0, 0, pageWidth, 32, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('REPORTE HELPDESK', 15, 16);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Generado: ${dateStr}  |  Periodo: ${filterLabel}`, 15, 24);
+      let y = drawCorporateHeader(doc, {
+        title: 'REPORTE DE HELPDESK',
+        subtitle: 'Soporte técnico · Gestión de tickets',
+        meta: `Generado: ${dateStr} · Periodo: ${filterLabel}`,
+      });
+      y += 2;
 
-      y = 40;
+      y = drawKpiCards(doc, [
+        { label: 'Total tickets', value: String(filteredTickets.length) },
+        { label: 'En proceso', value: String(getStatusCount('EN_PROCESO') + getStatusCount('ASIGNADO')) },
+        { label: 'Resueltos', value: String(getStatusCount('RESUELTO')) },
+        { label: 'Cerrados', value: String(getStatusCount('CERRADO')) },
+        { label: 'Tasa resolución', value: `${filteredTickets.length > 0 ? (((getStatusCount('RESUELTO') + getStatusCount('CERRADO')) / filteredTickets.length) * 100).toFixed(1) : '0'}%` },
+      ], y);
+      y += 6;
 
-      // --- Executive Summary ---
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Resumen Ejecutivo', 15, y);
-      y += 3;
-      doc.setDrawColor(37, 99, 235);
-      doc.setLineWidth(0.5);
-      doc.line(15, y, pageWidth - 15, y);
-      y += 8;
+      const ensureSpace = (h: number) => {
+        if (y + h > pageHeight - 22) {
+          doc.addPage();
+          y = M;
+        }
+      };
 
-      const summaryData = [
-        ['Total de Tickets', String(filteredTickets.length)],
-        ['En Proceso / Asignados', String(getStatusCount('EN_PROCESO') + getStatusCount('ASIGNADO'))],
-        ['Resueltos', String(getStatusCount('RESUELTO'))],
-        ['Cerrados', String(getStatusCount('CERRADO'))],
-        ['Tasa de Resolución', filteredTickets.length > 0
-          ? `${(((getStatusCount('RESUELTO') + getStatusCount('CERRADO')) / filteredTickets.length) * 100).toFixed(1)}%`
-          : '0%'],
-      ];
+      const tableStyles = {
+        theme: 'grid' as const,
+        headStyles: { fillColor: [30, 64, 175] as [number, number, number], fontSize: 9, fontStyle: 'bold' as const, halign: 'center' as const },
+        bodyStyles: { fontSize: 9 },
+        alternateRowStyles: { fillColor: [241, 245, 249] as [number, number, number] },
+        margin: { left: M, right: M },
+      };
 
+      // ===== Resumen Ejecutivo =====
+      ensureSpace(60);
+      y = drawSectionTitle(doc, 'Resumen Ejecutivo', y);
       autoTable(doc, {
+        ...tableStyles,
         startY: y,
         head: [['Métrica', 'Valor']],
-        body: summaryData,
-        theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235], fontSize: 9, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 9 },
+        body: [
+          ['Total de Tickets', String(filteredTickets.length)],
+          ['En Proceso / Asignados', String(getStatusCount('EN_PROCESO') + getStatusCount('ASIGNADO'))],
+          ['Resueltos', String(getStatusCount('RESUELTO'))],
+          ['Cerrados', String(getStatusCount('CERRADO'))],
+          ['Tasa de Resolución', filteredTickets.length > 0
+            ? `${(((getStatusCount('RESUELTO') + getStatusCount('CERRADO')) / filteredTickets.length) * 100).toFixed(1)}%`
+            : '0%'],
+        ],
         columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' } },
-        margin: { left: 15, right: 15 },
       });
+      y = (doc as any).lastAutoTable.finalY + 10;
 
-      y = (doc as any).lastAutoTable.finalY + 12;
-
-      // --- Status Distribution ---
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Distribución por Estado', 15, y);
-      y += 3;
-      doc.line(15, y, pageWidth - 15, y);
-      y += 4;
-
+      // ===== Distribución por Estado =====
+      ensureSpace(40);
+      y = drawSectionTitle(doc, 'Distribución por Estado', y);
       autoTable(doc, {
+        ...tableStyles,
         startY: y,
         head: [['Estado', 'Cantidad', 'Porcentaje']],
         body: statusData.map(d => [
           d.name,
           String(d.value),
-          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%'
+          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%',
         ]),
-        theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235], fontSize: 9, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 9 },
-        margin: { left: 15, right: 15 },
       });
+      y = (doc as any).lastAutoTable.finalY + 10;
 
-      y = (doc as any).lastAutoTable.finalY + 12;
-
-      // --- Priority Distribution ---
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Distribución por Prioridad', 15, y);
-      y += 3;
-      doc.line(15, y, pageWidth - 15, y);
-      y += 4;
-
+      // ===== Distribución por Prioridad =====
+      ensureSpace(40);
+      y = drawSectionTitle(doc, 'Distribución por Prioridad', y);
       autoTable(doc, {
+        ...tableStyles,
         startY: y,
         head: [['Prioridad', 'Cantidad', 'Porcentaje']],
         body: priorityData.map(d => [
           d.name,
           String(d.value),
-          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%'
+          filteredTickets.length > 0 ? `${((d.value / filteredTickets.length) * 100).toFixed(1)}%` : '0%',
         ]),
-        theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235], fontSize: 9, fontStyle: 'bold' },
-        bodyStyles: { fontSize: 9 },
-        margin: { left: 15, right: 15 },
       });
+      y = (doc as any).lastAutoTable.finalY + 10;
 
-      // --- Page 2: Detail Table ---
+      // ===== Página 2: Detalle de Tickets =====
       doc.addPage();
-      y = 15;
-
-      doc.setFillColor(37, 99, 235);
-      doc.rect(0, 0, pageWidth, 20, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Detalle de Tickets', 15, 13);
-
-      y = 28;
-      doc.setTextColor(30, 41, 59);
-
-      const tableBody = filteredTickets.map(t => [
-        t.codigo,
-        t.titulo?.substring(0, 40) || '',
-        STATUS_LABELS[t.estado] || t.estado,
-        PRIORITY_LABELS[t.prioridad] || t.prioridad,
-        t.tecnicoNombre?.substring(0, 20) || 'Sin asignar',
-        new Date(t.fechaCreacion).toLocaleDateString('es-ES'),
-      ]);
+      y = drawCorporateHeader(doc, {
+        title: 'DETALLE DE TICKETS',
+        subtitle: 'Relación completa de tickets del periodo',
+        meta: `Generado: ${dateStr} · Periodo: ${filterLabel}`,
+      });
+      y += 2;
 
       autoTable(doc, {
         startY: y,
         head: [['Código', 'Título', 'Estado', 'Prioridad', 'Técnico', 'Fecha']],
-        body: tableBody,
+        body: filteredTickets.map(t => [
+          t.codigo,
+          t.titulo?.substring(0, 40) || '',
+          STATUS_LABELS[t.estado] || t.estado,
+          PRIORITY_LABELS[t.prioridad] || t.prioridad,
+          t.tecnicoNombre?.substring(0, 20) || 'Sin asignar',
+          new Date(t.fechaCreacion).toLocaleDateString('es-ES'),
+        ]),
         theme: 'striped',
-        headStyles: { fillColor: [37, 99, 235], fontSize: 8, fontStyle: 'bold' },
+        headStyles: { fillColor: [30, 64, 175], fontSize: 8, fontStyle: 'bold' },
         bodyStyles: { fontSize: 7.5 },
+        alternateRowStyles: { fillColor: [241, 245, 249] },
         columnStyles: {
-          0: { cellWidth: 20 },
+          0: { cellWidth: 20, fontStyle: 'bold' },
           1: { cellWidth: 55 },
           2: { cellWidth: 25 },
           3: { cellWidth: 22 },
           4: { cellWidth: 35 },
           5: { cellWidth: 25 },
         },
-        margin: { left: 15, right: 15 },
-        didDrawPage: () => {
-          // Footer on each page
-          doc.setFontSize(7);
-          doc.setTextColor(148, 163, 184);
-          doc.text(
-            `HelpDesk PRO - Reporte generado el ${dateStr}`,
-            15,
-            doc.internal.pageSize.getHeight() - 10
-          );
-          doc.text(
-            `Página ${doc.getCurrentPageInfo().pageNumber}`,
-            pageWidth - 30,
-            doc.internal.pageSize.getHeight() - 10
-          );
-        },
+        margin: { left: M, right: M },
       });
 
+      drawFooter(doc, `Reporte HelpDesk · ${dateStr}`);
       doc.save(`Reporte_HelpDesk_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error('Error exportando PDF:', err);
@@ -493,63 +475,25 @@ export default function Reports() {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
-      // ===== Encabezado de alto impacto =====
-      doc.setFillColor(30, 27, 75); // indigo-950 base
-      doc.rect(0, 0, pageWidth, 52, 'F');
-      doc.setFillColor(79, 70, 229); // indigo-600
-      doc.rect(0, 0, pageWidth, 44, 'F');
-      doc.setFillColor(99, 102, 241); // indigo-500
-      doc.rect(0, 0, pageWidth * 0.55, 44, 'F');
-      // Acento dorado
-      doc.setFillColor(251, 191, 36);
-      doc.rect(0, 44, pageWidth, 2.5, 'F');
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('HELPDESK PRO  ·  INFORME DE DESEMPEÑO', 15, 13);
-      doc.setFontSize(21);
-      doc.text(`${selectedTecnico.nombre} ${selectedTecnico.apellidos}`.substring(0, 42), 15, 26);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Tickets completados e informes de resolución  |  Periodo: ${filterLabel}`, 15, 35);
-      doc.setFontSize(8);
-      doc.setTextColor(199, 210, 254);
-      doc.text(`Generado: ${dateStr}`, 15, 41);
+      // ===== Encabezado corporativo =====
+      const headerY = drawCorporateHeader(doc, {
+        title: `${selectedTecnico.nombre} ${selectedTecnico.apellidos}`.substring(0, 42),
+        subtitle: 'Informe de desempeño · Tickets completados',
+        meta: `Generado: ${dateStr} · Periodo: ${filterLabel}`,
+      });
 
       // ===== Tarjetas KPI =====
       const resueltos = userCompletedTickets.filter(t => t.estado === 'RESUELTO').length;
       const cerrados = userCompletedTickets.filter(t => t.estado === 'CERRADO').length;
-      const kpisUser = [
-        { label: 'COMPLETADOS', value: String(userCompletedTickets.length), color: [79, 70, 229] },
-        { label: 'RESUELTOS', value: String(resueltos), color: [16, 185, 129] },
-        { label: 'CERRADOS', value: String(cerrados), color: [100, 116, 139] },
-      ];
-      let kx = 15;
-      const kw = (pageWidth - 30 - 12) / 3;
-      kpisUser.forEach((k) => {
-        doc.setFillColor(k.color[0], k.color[1], k.color[2]);
-        doc.roundedRect(kx, 60, kw, 20, 2.5, 2.5, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'bold');
-        doc.text(k.label, kx + 5, 68);
-        doc.setFontSize(15);
-        doc.text(k.value, kx + 5, 76);
-        kx += kw + 6;
-      });
+      const kpiY = drawKpiCards(doc, [
+        { label: 'Completados', value: String(userCompletedTickets.length) },
+        { label: 'Resueltos', value: String(resueltos) },
+        { label: 'Cerrados', value: String(cerrados) },
+      ], headerY + 2);
 
       // ===== Tabla de tickets =====
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(13);
-      doc.setFont('helvetica', 'bold');
-      let y = 92;
-      doc.text('Detalle de Tickets Completados', 15, y);
-      y += 3;
-      doc.setDrawColor(79, 70, 229);
-      doc.setLineWidth(0.6);
-      doc.line(15, y, pageWidth - 15, y);
-      y += 5;
+      let y = kpiY + 8;
+      y = drawSectionTitle(doc, 'Detalle de Tickets Completados', y);
 
       if (userCompletedTickets.length === 0) {
         doc.setFont('helvetica', 'normal');
@@ -583,26 +527,18 @@ export default function Reports() {
             5: { cellWidth: 24 },
           },
           margin: { left: 15, right: 15 },
-          didDrawPage: () => {
-            doc.setFontSize(7);
-            doc.setTextColor(148, 163, 184);
-            doc.text(`HelpDesk PRO · Informe por usuario · ${dateStr}`, 15, pageHeight - 10);
-            doc.text(`Página ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 32, pageHeight - 10);
-          },
         });
 
         // ===== Informes de resolución =====
         doc.addPage();
-        doc.setFillColor(30, 27, 75);
-        doc.rect(0, 0, pageWidth, 18, 'F');
-        doc.setFillColor(251, 191, 36);
-        doc.rect(0, 18, pageWidth, 1.5, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Informes de Resolución', 15, 12);
+        drawCorporateHeader(doc, {
+          title: 'INFORMES DE RESOLUCIÓN',
+          subtitle: `${selectedTecnico.nombre} ${selectedTecnico.apellidos}`,
+          meta: `Generado: ${dateStr} · Periodo: ${filterLabel}`,
+          bandHeight: 24,
+        });
 
-        let ry = 28;
+        let ry = 34;
         userCompletedTickets.forEach((t) => {
           const informe = t.informeResolucion
             ? t.informeResolucion.replace(/^Ticket resuelto por el técnico, pendiente de confirmación del cliente:\s*/i, '')
@@ -611,13 +547,13 @@ export default function Reports() {
 
           if (ry + blockHeight > pageHeight - 20) {
             doc.addPage();
-            doc.setFillColor(30, 27, 75);
-            doc.rect(0, 0, pageWidth, 14, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Informes de Resolución (continuación)', 15, 9.5);
-            ry = 22;
+            drawCorporateHeader(doc, {
+              title: 'INFORMES DE RESOLUCIÓN',
+              subtitle: 'Continuación',
+              meta: `Generado: ${dateStr} · Periodo: ${filterLabel}`,
+              bandHeight: 20,
+            });
+            ry = 30;
           }
 
           // Barra lateral de acento
@@ -636,6 +572,7 @@ export default function Reports() {
         });
       }
 
+      drawFooter(doc, `Informe por usuario · ${dateStr}`);
       doc.save(`Informe_Usuario_${selectedTecnico.nombre}_${selectedTecnico.apellidos}_${new Date().toISOString().slice(0, 10)}.pdf`.replace(/\s+/g, '_'));
     } catch (err) {
       console.error('Error exportando PDF por usuario:', err);

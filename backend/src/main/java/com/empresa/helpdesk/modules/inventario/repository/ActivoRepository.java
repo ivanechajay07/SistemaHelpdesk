@@ -2,9 +2,11 @@ package com.empresa.helpdesk.modules.inventario.repository;
 
 import com.empresa.helpdesk.modules.inventario.entity.Activo;
 import com.empresa.helpdesk.modules.inventario.enums.ActivoEstado;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,8 +18,15 @@ import java.util.Optional;
 @Repository
 public interface ActivoRepository extends JpaRepository<Activo, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Activo a WHERE a.id = :id")
+    Optional<Activo> findByIdForUpdate(@Param("id") Long id);
+
     Optional<Activo> findByCodigo(String codigo);
+    Optional<Activo> findByCodigoIgnoreCase(String codigo);
     Optional<Activo> findByQrToken(String qrToken);
+    Optional<Activo> findByQrTokenIgnoreCase(String qrToken);
+    List<Activo> findByQrTokenIsNull();
     boolean existsByCodigo(String codigo);
     List<Activo> findByEstado(ActivoEstado estado);
 

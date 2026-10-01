@@ -37,6 +37,19 @@ public class AuditLog {
     @Column(length = 400)
     private String detalle;
 
+    // ===== Dispositivo y red desde donde se realizó la acción =====
+    @Column(name = "dispositivo_tipo", length = 20)
+    private String dispositivoTipo; // PC | MOVIL | TABLET
+
+    @Column(name = "dispositivo_modelo", length = 120)
+    private String dispositivoModelo;
+
+    @Column(length = 60)
+    private String navegador;
+
+    @Column(length = 60)
+    private String ip;
+
     @CreationTimestamp
     @Column(name = "fecha", updatable = false)
     private LocalDateTime fecha;

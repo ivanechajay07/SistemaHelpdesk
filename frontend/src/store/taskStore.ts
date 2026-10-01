@@ -32,6 +32,25 @@ export interface TaskPayload {
   tecnicoId: number;
 }
 
+export type TaskEvidenceTipo = 'PROCESO' | 'COMPLETADA';
+
+export interface TaskEvidence {
+  id: number;
+  taskId: number;
+  tipo: TaskEvidenceTipo;
+  imagenData: string;
+  comentario: string | null;
+  subidoPorId: number | null;
+  subidoPorNombre: string | null;
+  fechaCreacion: string;
+}
+
+export interface TaskEvidencePayload {
+  tipo: TaskEvidenceTipo;
+  imagenData: string;
+  comentario?: string;
+}
+
 interface TaskState {
   tasks: Task[];
   loading: boolean;
@@ -41,6 +60,9 @@ interface TaskState {
   updateTask: (id: number, data: TaskPayload) => Promise<void>;
   updateTaskStatus: (id: number, estado: TaskStatus) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
+  fetchTaskEvidence: (taskId: number) => Promise<TaskEvidence[]>;
+  addTaskEvidence: (taskId: number, data: TaskEvidencePayload) => Promise<TaskEvidence>;
+  deleteTaskEvidence: (taskId: number, evidenceId: number) => Promise<void>;
 }
 
 export const useTaskStore = create<TaskState>((set) => ({
@@ -108,5 +130,19 @@ export const useTaskStore = create<TaskState>((set) => ({
       set({ error: 'Error al eliminar la tarea', loading: false });
       throw err;
     }
+  },
+
+  fetchTaskEvidence: async (taskId) => {
+    const { data } = await api.get<TaskEvidence[]>(`/tasks/${taskId}/evidence`);
+    return data;
+  },
+
+  addTaskEvidence: async (taskId, payload) => {
+    const { data } = await api.post<TaskEvidence>(`/tasks/${taskId}/evidence`, payload);
+    return data;
+  },
+
+  deleteTaskEvidence: async (taskId, evidenceId) => {
+    await api.delete(`/tasks/${taskId}/evidence/${evidenceId}`);
   },
 }));

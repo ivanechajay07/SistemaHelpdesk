@@ -2,12 +2,22 @@ spring:
   application:
     name: helpdesk
 
+  jackson:
+    time-zone: ${APP_TZ:America/Lima}
+
+  # Límite global de paginación: evita que el cliente pida páginas gigantes (DoS)
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 100
+
   # Carga el archivo .env de la raiz del proyecto (o de backend/) si existe
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:helpdesk_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:helpdesk_db}?useSSL=false&connectionTimeZone=LOCAL&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -15,10 +25,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${JPA_FORMAT_SQL:false}
         dialect: org.hibernate.dialect.MySQLDialect
 
   mail:
@@ -37,7 +47,7 @@ spring:
 server:
   port: ${SERVER_PORT:8081}
   error:
-    include-message: always
+    include-message: on_param
   servlet:
     encoding:
       charset: UTF-8
@@ -45,18 +55,33 @@ server:
       force: true
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  security:
+    swagger-enabled: ${SWAGGER_ENABLED:true}
   jwt:
-    secret: ${JWT_SECRET:super_secret_key_for_jwt_token_generation_change_me_in_production}
+    secret: ${JWT_SECRET}
     expiration: ${JWT_EXPIRATION:86400000}
+  crypto:
+    secret: ${CRYPTO_SECRET:${JWT_SECRET}}
   file:
     upload-dir: ${UPLOAD_DIR:./uploads}
   frontend:
     url: ${FRONTEND_URL:http://localhost:5173}
 
+# Swagger/OpenAPI: deshabilitable en producción con SWAGGER_ENABLED=false
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
 # Logging configuration
+# show-sql y el bind de parámetros (que incluye datos sensibles) quedan
+# desactivados por defecto; actívalos solo en desarrollo con JPA_SHOW_SQL=true.
 logging:
   level:
     root: INFO
-    com.empresa.helpdesk: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.empresa.helpdesk: ${APP_LOG_LEVEL:INFO}
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${SQL_BINDER_LOG_LEVEL:WARN}

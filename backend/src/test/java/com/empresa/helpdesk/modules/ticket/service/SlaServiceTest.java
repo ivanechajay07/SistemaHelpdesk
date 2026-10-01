@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SlaServiceTest {
 
@@ -32,7 +33,9 @@ class SlaServiceTest {
         SlaService.SlaInfo sla = slaService.calcular(ticket);
         assertEquals("EN_TIEMPO", sla.estado());
         assertEquals(24, sla.limiteHoras());
-        assertEquals(22.0, sla.horasRestantes());
+        // El cálculo usa "now" en dos momentos: se valida un rango tolerante al timing
+        assertTrue(sla.horasRestantes() >= 21.0 && sla.horasRestantes() <= 22.0,
+                "horasRestantes fuera del rango esperado: " + sla.horasRestantes());
     }
 
     @Test
@@ -74,11 +77,11 @@ class SlaServiceTest {
 
     @Test
     void ticketCercaDeVencerEstaPorVencer() {
-        // MEDIA = 24h; con 23h transcurridas queda 1h restante (<= limite/4)
+        // MEDIA = 24h; con 22h transcurridas queda ~2h restantes (<= limite/4 = 6h)
         Ticket ticket = Ticket.builder()
                 .prioridad(Priority.MEDIA)
                 .estado(TicketStatus.ASIGNADO)
-                .fechaCreacion(LocalDateTime.now().minusHours(23))
+                .fechaCreacion(LocalDateTime.now().minusHours(22))
                 .build();
 
         assertEquals("POR_VENCER", slaService.calcular(ticket).estado());

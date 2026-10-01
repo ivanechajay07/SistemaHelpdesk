@@ -66,6 +66,10 @@ public class TicketService {
                 .solicitante(currentUser)
                 .build();
 
+        // El plazo SLA se fija desde la creación, de modo que los tickets aún
+        // sin asignar también puedan contabilizarse como vencidos.
+        ticket.setFechaEstimadaResolucion(LocalDateTime.now().plusHours(slaService.limiteHoras(request.getPrioridad())));
+
         ticket = ticketRepository.save(ticket);
 
         // Registro en el historial
@@ -101,6 +105,7 @@ public class TicketService {
         return mapToResponse(ticket);
     }
 
+    @Transactional(readOnly = true)
     public Page<TicketResponse> getAllTickets(Pageable pageable) {
         User currentUser = getCurrentUser();
         if (isAdmin(currentUser) || hasAuthority(currentUser, "TICKET_VIEW_ALL")) {
@@ -110,18 +115,21 @@ public class TicketService {
                 .map(this::mapToResponse);
     }
     
+    @Transactional(readOnly = true)
     public Page<TicketResponse> getMyTickets(Pageable pageable) {
         User currentUser = getCurrentUser();
         return ticketRepository.findBySolicitanteId(currentUser.getId(), pageable)
                 .map(this::mapToResponse);
     }
 
+    @Transactional(readOnly = true)
     public Page<TicketResponse> getAssignedTickets(Pageable pageable) {
         User currentUser = getCurrentUser();
         return ticketRepository.findByTecnicoId(currentUser.getId(), pageable)
                 .map(this::mapToResponse);
     }
 
+    @Transactional(readOnly = true)
     public TicketResponse getTicketById(Long id) {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
@@ -145,6 +153,10 @@ public class TicketService {
         ticket.setSede(trimOrNull(request.getSede()));
         ticket.setSubcategoria(subcategory);
 
+        // Recalcular el vencimiento SLA si cambió la prioridad (manteniendo el inicio)
+        LocalDateTime baseSla = ticket.getFechaCreacion() != null ? ticket.getFechaCreacion() : LocalDateTime.now();
+        ticket.setFechaEstimadaResolucion(baseSla.plusHours(slaService.limiteHoras(request.getPrioridad())));
+
         ticket = ticketRepository.save(ticket);
         
         TicketHistory history = TicketHistory.builder()
@@ -164,6 +176,8 @@ public class TicketService {
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
         validateTicketAdminAccess(ticket);
         
+        // Borrar primero las referencias dependientes para no violar claves foráneas
+        ticketRatingRepository.findByTicketId(ticket.getId()).ifPresent(ticketRatingRepository::delete);
         ticketHistoryRepository.deleteAll(ticketHistoryRepository.findByTicketIdOrderByFechaRegistroDesc(ticket.getId()));
         messageRepository.deleteAll(messageRepository.findByTicketIdOrderByFechaEnvioAsc(ticket.getId()));
         ticketRepository.delete(ticket);
@@ -179,17 +193,19 @@ public class TicketService {
                 
         User currentUser = getCurrentUser();
 
+        // Solo administradores o usuarios con permiso TICKET_ASSIGN pueden asignar
+        if (!isAdmin(currentUser) && !hasAuthority(currentUser, "TICKET_ASSIGN")) {
+            throw new RuntimeException("No tienes permiso para asignar tickets");
+        }
+
         ticket.setTecnico(tecnico);
         ticket.setEstado(TicketStatus.ASIGNADO);
         ticket.setFechaAsignacion(LocalDateTime.now());
-        
-        // Simulación de SLA básico
-        switch (ticket.getPrioridad()) {
-            case CRITICA: ticket.setFechaEstimadaResolucion(LocalDateTime.now().plusHours(2)); break;
-            case ALTA: ticket.setFechaEstimadaResolucion(LocalDateTime.now().plusHours(8)); break;
-            case MEDIA: ticket.setFechaEstimadaResolucion(LocalDateTime.now().plusHours(24)); break;
-            case BAJA: ticket.setFechaEstimadaResolucion(LocalDateTime.now().plusHours(72)); break;
-        }
+
+        // SLA centralizado en SlaService y calculado desde la creación del ticket
+        // para que reasignarlo no extienda artificialmente el plazo.
+        LocalDateTime baseSla = ticket.getFechaCreacion() != null ? ticket.getFechaCreacion() : LocalDateTime.now();
+        ticket.setFechaEstimadaResolucion(baseSla.plusHours(slaService.limiteHoras(ticket.getPrioridad())));
 
         ticket = ticketRepository.save(ticket);
 
@@ -205,9 +221,13 @@ public class TicketService {
         ticket.getSolicitante().getNombre();
         ticket.getSolicitante().getApellidos();
         tecnico.getNombre();
+        tecnico.getApellidos();
 
         // Enviar notificación al técnico asignado
         emailService.sendTicketAssignmentEmail(tecnico.getEmail(), ticket, tecnico);
+
+        // Notificar al cliente qué técnico atenderá su ticket (y que ya puede abrirlo)
+        emailService.sendTicketAssignedToClientEmail(ticket.getSolicitante().getEmail(), ticket, tecnico);
 
         auditService.registrar("ASIGNAR_TICKET", "TICKET", ticket.getId(),
                 ticket.getCodigo() + " asignado a " + tecnico.getUsername());
@@ -380,6 +400,13 @@ public class TicketService {
         }
         boolean isSolicitante = ticket.getSolicitante().getId().equals(currentUser.getId());
         boolean isTecnicoAsignado = ticket.getTecnico() != null && ticket.getTecnico().getId().equals(currentUser.getId());
+
+        // El solicitante (cliente) no puede abrir el detalle hasta que un
+        // administrador asigne un técnico al ticket.
+        if (isSolicitante && ticket.getTecnico() == null) {
+            throw new RuntimeException("Tu ticket aún no tiene un técnico asignado. Podrás abrir el detalle "
+                    + "cuando el administrador lo asigne y recibirás un correo con el nombre del técnico.");
+        }
         if (!isSolicitante && !isTecnicoAsignado) {
             throw new RuntimeException("No tienes acceso a este ticket");
         }
@@ -396,6 +423,15 @@ public class TicketService {
             throw new RuntimeException("No tienes permiso para editar este ticket. "
                     + "El administrador debe otorgarte el permiso TICKET_EDIT.");
         }
+        // Defensa contra IDOR: además del permiso, solo se puede editar un ticket
+        // del que se es solicitante o técnico asignado (o admin / con visión global).
+        boolean isSolicitante = ticket.getSolicitante().getId().equals(currentUser.getId());
+        boolean isTecnicoAsignado = ticket.getTecnico() != null && ticket.getTecnico().getId().equals(currentUser.getId());
+        if (isAdmin(currentUser) || hasAuthority(currentUser, "TICKET_VIEW_ALL")
+                || isSolicitante || isTecnicoAsignado) {
+            return;
+        }
+        throw new RuntimeException("Solo puedes editar los tickets de los que eres solicitante o técnico asignado");
     }
 
     /**
@@ -412,7 +448,9 @@ public class TicketService {
 
     private void validateTicketResolveAccess(Ticket ticket) {
         User currentUser = getCurrentUser();
-        if (isAdmin(currentUser) || hasAuthority(currentUser, "TICKET_VIEW_ALL")) {
+        // Resolver es una acción de escritura: NO se autoriza con el permiso de
+        // solo lectura TICKET_VIEW_ALL. Solo el admin o el técnico asignado.
+        if (isAdmin(currentUser)) {
             return;
         }
         boolean isTecnicoAsignado = ticket.getTecnico() != null && ticket.getTecnico().getId().equals(currentUser.getId());
@@ -458,14 +496,15 @@ public class TicketService {
         // SLA según prioridad
         SlaService.SlaInfo sla = slaService.calcular(ticket);
 
-        // CSAT si existe calificación
+        // CSAT si existe calificación (una sola consulta)
         Integer calificacion = null;
         String comentarioCliente = null;
         if (ticket.getEstado() == TicketStatus.CERRADO) {
-            calificacion = ticketRatingRepository.findByTicketId(ticket.getId())
-                    .map(r -> r.getPuntaje()).orElse(null);
-            comentarioCliente = ticketRatingRepository.findByTicketId(ticket.getId())
-                    .map(r -> r.getComentario()).orElse(null);
+            var rating = ticketRatingRepository.findByTicketId(ticket.getId());
+            if (rating.isPresent()) {
+                calificacion = rating.get().getPuntaje();
+                comentarioCliente = rating.get().getComentario();
+            }
         }
 
         return TicketResponse.builder()

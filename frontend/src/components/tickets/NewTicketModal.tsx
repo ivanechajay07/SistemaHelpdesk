@@ -3,6 +3,7 @@ import { X, Loader2, AlertCircle, Building2, MapPin, FileStack } from 'lucide-re
 import { useTicketStore } from '../../store/ticketStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useCatalogStore } from '../../store/catalogStore';
+import SearchableSelect from '../ui/SearchableSelect';
 import api from '../../lib/axios';
 
 interface TicketTemplate {
@@ -233,48 +234,34 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    <select
-                      required
-                      className={`w-full pl-9 pr-3 py-2.5 border rounded-xl bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all ${
-                        fieldErrors.entidad ? 'border-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-blue-500'
-                      }`}
-                      value={formData.entidad}
-                      onChange={(e) => {
-                        setFormData((prev) => ({ ...prev, entidad: e.target.value, sede: '' }));
-                        if (fieldErrors.entidad) {
-                          const next = { ...fieldErrors };
-                          delete next.entidad;
-                          setFieldErrors(next);
-                        }
-                      }}
-                    >
-                      <option value="" disabled>Entidad...</option>
-                      {entidadesDisponibles.map((ent) => (
-                        <option key={ent} value={ent}>{ent}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <SearchableSelect
+                    options={entidadesDisponibles.map((ent) => ({ value: ent, label: ent }))}
+                    value={formData.entidad}
+                    onChange={(value) => {
+                      setFormData((prev) => ({ ...prev, entidad: value, sede: '' }));
+                      if (fieldErrors.entidad) {
+                        const next = { ...fieldErrors };
+                        delete next.entidad;
+                        setFieldErrors(next);
+                      }
+                    }}
+                    placeholder="Entidad..."
+                    searchPlaceholder="Buscar entidad..."
+                    invalid={!!fieldErrors.entidad}
+                    icon={<Building2 className="w-4 h-4" />}
+                  />
                   {fieldErrors.entidad && <p className="text-red-500 text-xs mt-1">{fieldErrors.entidad}</p>}
                 </div>
                 <div>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    <select
-                      required
-                      className={`w-full pl-9 pr-3 py-2.5 border rounded-xl bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all ${
-                        fieldErrors.sede ? 'border-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-blue-500'
-                      }`}
-                      value={formData.sede}
-                      onChange={(e) => handleFieldChange('sede', e.target.value)}
-                    >
-                      <option value="" disabled>Sede...</option>
-                      {sedesFiltradas.map((s) => (
-                        <option key={s.id} value={s.nombre}>{s.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <SearchableSelect
+                    options={sedesFiltradas.map((s) => ({ value: s.nombre, label: s.nombre }))}
+                    value={formData.sede}
+                    onChange={(value) => handleFieldChange('sede', value)}
+                    placeholder="Sede..."
+                    searchPlaceholder="Buscar sede..."
+                    invalid={!!fieldErrors.sede}
+                    icon={<MapPin className="w-4 h-4" />}
+                  />
                   {fieldErrors.sede && <p className="text-red-500 text-xs mt-1">{fieldErrors.sede}</p>}
                 </div>
               </div>

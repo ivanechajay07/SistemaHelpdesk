@@ -23,6 +23,7 @@ public class KnowledgeArticleController {
     private final KnowledgeArticleService knowledgeArticleService;
 
     @GetMapping
+    @PreAuthorize("!#all or hasAnyRole('ADMIN', 'SUPERVISOR', 'TECNICO')")
     @Operation(summary = "Listar artículos publicados (o todos para staff con ?all=true). Búsqueda opcional ?search=")
     public ResponseEntity<List<KnowledgeArticleResponse>> getArticles(
             @RequestParam(required = false) String search,

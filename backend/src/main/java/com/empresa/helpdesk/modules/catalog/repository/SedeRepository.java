@@ -10,4 +10,8 @@ public interface SedeRepository extends JpaRepository<Sede, Long> {
 
     @Query("SELECT s FROM Sede s JOIN FETCH s.entidad ORDER BY s.entidad.nombre ASC, s.nombre ASC")
     List<Sede> findAllWithEntidad();
+
+    List<Sede> findByEntidad_Id(Long entidadId);
+
+    void deleteByEntidad_Id(Long entidadId);
 }

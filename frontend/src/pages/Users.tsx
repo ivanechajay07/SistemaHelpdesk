@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, Loader2, Edit2, Trash2, Mail, Clock } from 'lucide-react';
+import { Search, Plus, MoreVertical, Loader2, Edit2, Trash2, Mail, Clock, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { useUserStore } from '../store/userStore';
 import type { User } from '../store/userStore';
 import { UserModal } from '../components/users/UserModal';
@@ -123,6 +123,22 @@ export default function Users() {
   const getConnection = (u: User) =>
     connectionConfig[u.estadoConexion || 'DESCONECTADO'] || connectionConfig.DESCONECTADO;
 
+  const deviceIcon = (tipo?: string | null) => {
+    switch ((tipo || '').toUpperCase()) {
+      case 'MOVIL': return Smartphone;
+      case 'TABLET': return Tablet;
+      default: return Monitor;
+    }
+  };
+  const deviceLabel = (tipo?: string | null) => {
+    switch ((tipo || '').toUpperCase()) {
+      case 'MOVIL': return 'Móvil';
+      case 'TABLET': return 'Tablet';
+      case 'PC': return 'PC';
+      default: return 'Sin registrar';
+    }
+  };
+
   const connectedCount = users.filter((u) => u.estadoConexion === 'CONECTADO').length;
   const absentCount = users.filter((u) => u.estadoConexion === 'AUSENTE').length;
 
@@ -195,6 +211,7 @@ export default function Users() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {pagedUsers.map((user, idx) => {
             const conn = getConnection(user);
+            const DevIcon = deviceIcon(user.dispositivoTipo);
             return (
               <div
                 key={user.id}
@@ -270,6 +287,21 @@ export default function Users() {
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3">
                   <Clock className="w-3.5 h-3.5 shrink-0" />
                   <span>Últ. conexión: <strong className="font-semibold text-slate-600 dark:text-slate-300">{timeAgo(user.ultimaConexion)}</strong></span>
+                </div>
+
+                {/* Dispositivo conectado */}
+                <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  <DevIcon className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-500 dark:text-indigo-400" />
+                  <span className="min-w-0">
+                    <strong className="font-semibold text-slate-600 dark:text-slate-300">{deviceLabel(user.dispositivoTipo)}</strong>
+                    {user.dispositivoModelo ? ` · ${user.dispositivoModelo}` : ''}
+                    {(user.dispositivoSo || user.navegador || user.ipUltima) && (
+                      <span className="block text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                        {[user.dispositivoSo, user.navegador].filter(Boolean).join(' · ')}
+                        {user.ipUltima ? `${user.dispositivoSo || user.navegador ? ' · ' : ''}${user.ipUltima}` : ''}
+                      </span>
+                    )}
+                  </span>
                 </div>
 
                 {/* Email */}

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,10 +30,12 @@ public class DashboardController {
     @Operation(summary = "Obtener volumen de tickets por mes")
     public ResponseEntity<List<TicketVolumeResponse>> getTicketVolume(
             @RequestParam(defaultValue = "6") int months) {
-        return ResponseEntity.ok(dashboardService.getTicketVolume(months));
+        int safeMonths = Math.max(1, Math.min(months, 24));
+        return ResponseEntity.ok(dashboardService.getTicketVolume(safeMonths));
     }
 
     @GetMapping("/technician-stats")
+    @PreAuthorize("hasAnyAuthority('REPORT_VIEW', 'TICKET_VIEW_ALL', 'ROLE_ADMIN')")
     @Operation(summary = "Tickets resueltos por técnico, mes a mes, para un año específico")
     public ResponseEntity<List<com.empresa.helpdesk.modules.ticket.dto.TechnicianMonthlyStatsResponse>> getTechnicianMonthlyStats(
             @RequestParam(required = false) Integer year) {

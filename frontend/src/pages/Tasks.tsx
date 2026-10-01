@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Loader2, Edit2, Trash2, ListTodo, UserCheck, CalendarDays,
-  Inbox, Play, CheckCircle2, TrendingUp, Flame,
+  Inbox, CheckCircle2, TrendingUp, Flame, FileDown, Images,
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -9,6 +9,8 @@ import {
 import { useTaskStore, type Task, type TaskStatus } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
 import { TaskModal, getPrioridadCls, getEstadoCls, getEstadoLabel } from '../components/tasks/TaskModal';
+import TaskStatusDialog from '../components/tasks/TaskStatusDialog';
+import { generarTareaPdf } from '../lib/taskPdf';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
@@ -80,7 +82,7 @@ function TaskTimeline({ task }: { task: Task }) {
 }
 
 export default function Tasks() {
-  const { tasks, loading, fetchTasks, deleteTask, updateTaskStatus } = useTaskStore();
+  const { tasks, loading, fetchTasks, deleteTask } = useTaskStore();
   const { user, isAdmin, hasRole } = useAuthStore();
   const toast = useToast();
 
@@ -89,7 +91,8 @@ export default function Tasks() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [dialog, setDialog] = useState<{ variant: DialogVariant; title: string; message: string; action?: () => Promise<void> } | null>(null);
-  const [statusUpdating, setStatusUpdating] = useState<number | null>(null);
+  const [statusTask, setStatusTask] = useState<Task | null>(null);
+  const [reportingId, setReportingId] = useState<number | null>(null);
 
   // Solo ADMIN y SUPERVISOR gestionan tareas; el técnico solo actualiza el estado de las suyas
   const canManage = isAdmin() || hasRole('SUPERVISOR');
@@ -183,19 +186,16 @@ export default function Tasks() {
     });
   };
 
-  const handleStatusChange = async (task: Task, estado: TaskStatus) => {
-    setStatusUpdating(task.id);
+  const handleDownloadReport = async (task: Task) => {
+    setReportingId(task.id);
     try {
-      await updateTaskStatus(task.id, estado);
-      toast({
-        variant: 'success',
-        title: 'Estado actualizado',
-        message: `"${task.titulo}" ahora está: ${getEstadoLabel(estado)}.`,
-      });
+      const evidencias = await useTaskStore.getState().fetchTaskEvidence(task.id);
+      const doc = await generarTareaPdf({ task, evidencias });
+      doc.save(`Informe_Tarea_${task.id}.pdf`);
     } catch {
-      toast({ variant: 'error', title: 'Error', message: 'No se pudo actualizar el estado de la tarea.' });
+      toast({ variant: 'error', title: 'Error', message: 'No se pudo generar el informe PDF.' });
     } finally {
-      setStatusUpdating(null);
+      setReportingId(null);
     }
   };
 
@@ -452,26 +452,33 @@ export default function Tasks() {
                         {/* Línea de tiempo del proceso */}
                         <TaskTimeline task={task} />
 
-                        {/* Acciones de estado: solo el técnico asignado */}
-                        {user?.id === task.tecnicoId && task.estado !== 'COMPLETADA' && (
+                        {/* Avance, evidencia e informe: técnico asignado y gestores */}
+                        {(user?.id === task.tecnicoId || canManage) && (
                           <div className="flex flex-wrap items-center gap-2 mt-3">
-                            {task.estado === 'PENDIENTE' && (
+                            {user?.id === task.tecnicoId && task.estado !== 'COMPLETADA' ? (
                               <button
-                                onClick={() => handleStatusChange(task, 'EN_PROCESO')}
-                                disabled={statusUpdating === task.id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-black uppercase tracking-wide ring-1 ring-blue-200 dark:ring-blue-500/30 hover:bg-blue-100 dark:hover:bg-blue-500/20 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                onClick={() => setStatusTask(task)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[11px] font-black uppercase tracking-wide ring-1 ring-teal-200 dark:ring-teal-500/30 hover:bg-teal-100 dark:hover:bg-teal-500/20 active:scale-95 transition-all"
                               >
-                                {statusUpdating === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                                Iniciar Proceso
+                                <Images className="w-3.5 h-3.5" />
+                                Registrar avance y evidencia
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setStatusTask(task)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-black uppercase tracking-wide ring-1 ring-slate-200 dark:ring-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition-all"
+                              >
+                                <Images className="w-3.5 h-3.5" />
+                                Ver evidencia
                               </button>
                             )}
                             <button
-                              onClick={() => handleStatusChange(task, 'COMPLETADA')}
-                              disabled={statusUpdating === task.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-black uppercase tracking-wide ring-1 ring-emerald-200 dark:ring-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                              onClick={() => handleDownloadReport(task)}
+                              disabled={reportingId === task.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[11px] font-black uppercase tracking-wide ring-1 ring-indigo-200 dark:ring-indigo-500/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 active:scale-95 transition-all disabled:opacity-60"
                             >
-                              {statusUpdating === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                              Marcar Completada
+                              {reportingId === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+                              Informe PDF
                             </button>
                           </div>
                         )}
@@ -515,6 +522,7 @@ export default function Tasks() {
       )}
 
       <TaskModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingTask(null); }} task={editingTask} />
+      <TaskStatusDialog isOpen={!!statusTask} onClose={() => setStatusTask(null)} task={statusTask} />
       <ConfirmDialog
         isOpen={!!dialog}
         variant={dialog?.variant || 'danger'}

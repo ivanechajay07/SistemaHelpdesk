@@ -1,8 +1,11 @@
 package com.empresa.helpdesk.modules.task.controller;
 
+import com.empresa.helpdesk.modules.task.dto.TaskEvidenceRequest;
+import com.empresa.helpdesk.modules.task.dto.TaskEvidenceResponse;
 import com.empresa.helpdesk.modules.task.dto.TaskRequest;
 import com.empresa.helpdesk.modules.task.dto.TaskResponse;
 import com.empresa.helpdesk.modules.task.dto.TaskStatusRequest;
+import com.empresa.helpdesk.modules.task.service.TaskEvidenceService;
 import com.empresa.helpdesk.modules.task.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +26,7 @@ import java.util.Map;
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskEvidenceService taskEvidenceService;
 
     @GetMapping
     @Operation(summary = "Listar tareas (admin/supervisor: todas; técnico: las suyas)")
@@ -56,5 +60,30 @@ public class TaskController {
     public ResponseEntity<Map<String, String>> deleteTask(@PathVariable Long id) {
         taskService.deleteTask(id);
         return ResponseEntity.ok(Map.of("message", "Tarea eliminada correctamente"));
+    }
+
+    // ===== Evidencia (imágenes) de la tarea =====
+
+    @GetMapping("/{id}/evidence")
+    @Operation(summary = "Listar imágenes de evidencia de una tarea")
+    public ResponseEntity<List<TaskEvidenceResponse>> getEvidence(@PathVariable Long id) {
+        return ResponseEntity.ok(taskEvidenceService.getEvidences(id));
+    }
+
+    @PostMapping("/{id}/evidence")
+    @Operation(summary = "Registrar una imagen de evidencia (técnico asignado)")
+    public ResponseEntity<TaskEvidenceResponse> addEvidence(
+            @PathVariable Long id,
+            @Valid @RequestBody TaskEvidenceRequest request) {
+        return ResponseEntity.ok(taskEvidenceService.addEvidence(id, request));
+    }
+
+    @DeleteMapping("/{id}/evidence/{evidenceId}")
+    @Operation(summary = "Eliminar una imagen de evidencia (técnico asignado)")
+    public ResponseEntity<Map<String, String>> deleteEvidence(
+            @PathVariable Long id,
+            @PathVariable Long evidenceId) {
+        taskEvidenceService.deleteEvidence(id, evidenceId);
+        return ResponseEntity.ok(Map.of("message", "Evidencia eliminada correctamente"));
     }
 }

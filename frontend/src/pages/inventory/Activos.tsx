@@ -16,6 +16,11 @@ import {
   User, MapPin, Building2, Tag, CircleDollarSign, CalendarDays, Cpu,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import * as XLSX from 'xlsx-js-style';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards, formatReportDate } from '../../lib/reportPdf';
+import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt } from '../../lib/reportExcel';
 
 function Badge({ estado }: { estado: string }) {
   if (!estado) return null;
@@ -69,6 +74,7 @@ export default function Activos() {
   const [qrPreview, setQrPreview] = useState<{ id: number; token: string; codigo: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [specs, setSpecs] = useState<Record<string, string>>({});
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
 
   const canCreate = isAdmin || permissions.includes('INV_CREATE');
 
@@ -144,8 +150,114 @@ export default function Activos() {
     try { const t = await generarQr(id); setQrPreview({ id, token: t || '', codigo }); } catch (e: any) { toast({ variant: 'error', title: 'Error QR', message: e.message }); }
   };
 
-  const exportPdf = () => { toast({ variant: 'info', title: 'PDF', message: 'Generando PDF de activos...' }); };
-  const exportExcel = () => { toast({ variant: 'info', title: 'Excel', message: 'Generando Excel de activos...' }); };
+  const loadAllActivos = async () => {
+    await fetchActivos({ page: 0, size: 5000, ...filters, sedeId: filters.sedeId || undefined, estado: filters.estado || undefined, q: filters.q || undefined });
+    return useInventarioStore.getState().activos;
+  };
+
+  const exportPdf = async () => {
+    setExporting('pdf');
+    try {
+      const list = await loadAllActivos();
+      const dateStr = formatReportDate();
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const M = 14;
+
+      let y = drawCorporateHeader(doc, {
+        title: 'INVENTARIO DE ACTIVOS',
+        subtitle: 'Registro y control de activos del sistema',
+        meta: `Generado: ${dateStr} · Total: ${list.length}`,
+        bandHeight: 26,
+      });
+      y += 2;
+
+      y = drawKpiCards(doc, [
+        { label: 'Total activos', value: String(list.length) },
+        { label: 'Operativos', value: String(list.filter((a) => a.estado === 'OPERATIVO').length) },
+        { label: 'En mantenimiento', value: String(list.filter((a) => a.estado === 'EN_MANTENIMIENTO' || a.estado === 'EN_REPARACION').length) },
+        { label: 'Dados de baja', value: String(list.filter((a) => a.estado === 'DADO_DE_BAJA').length) },
+      ], y);
+      y += 8;
+
+      if (y + 20 > pageHeight - 22) {
+        doc.addPage();
+        y = 14;
+      }
+      y = drawSectionTitle(doc, 'Listado de Activos', y);
+      autoTable(doc, {
+        startY: y,
+        head: [['Código', 'Nombre', 'Categoría', 'Estado', 'Sede', 'Responsable', 'Marca', 'Modelo', 'Serie']],
+        body: list.map((a) => [a.codigo, a.nombre, a.categoriaNombre || '—', ESTADO_LABELS[a.estado] || a.estado, a.sedeNombre || '—', a.responsableNombre || '—', a.marca || '—', a.modelo || '—', a.numeroSerie || '—']),
+        styles: { fontSize: 7.5, cellPadding: 1.8 },
+        headStyles: { fillColor: [30, 58, 138], fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
+        alternateRowStyles: { fillColor: [241, 245, 249] },
+        margin: { left: M, right: M },
+      });
+
+      drawFooter(doc, `Inventario de activos · ${dateStr}`);
+      doc.save(`Inventario_Activos_${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast({ variant: 'success', title: 'PDF generado', message: `Se exportaron ${list.length} activos` });
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'error', title: 'Error', message: 'No se pudo generar el PDF de activos' });
+    }
+    setExporting(null);
+  };
+
+  const exportExcel = async () => {
+    setExporting('excel');
+    try {
+      const list = await loadAllActivos();
+      const now = new Date();
+      const dateStr = now.toLocaleString('es-PE', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const wb = XLSX.utils.book_new();
+
+      // ===== Resumen =====
+      const resumenRows: (string | number)[][] = [
+        ['INVENTARIO DE ACTIVOS'],
+        [`Generado: ${dateStr}`],
+        [''],
+        ['Métrica', 'Valor'],
+        ['Total activos', list.length],
+        ['Operativos', list.filter((a) => a.estado === 'OPERATIVO').length],
+        ['En mantenimiento', list.filter((a) => a.estado === 'EN_MANTENIMIENTO' || a.estado === 'EN_REPARACION').length],
+        ['Dados de baja', list.filter((a) => a.estado === 'DADO_DE_BAJA').length],
+      ];
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows);
+      mergeRow(wsResumen, 0, 0, 1, 'INVENTARIO DE ACTIVOS', exTitle);
+      mergeRow(wsResumen, 1, 0, 1, `Generado: ${dateStr}`, exSubtitle);
+      styleRow(wsResumen, 3, 2, exHeader);
+      for (let i = 4; i <= 7; i++) styleRow(wsResumen, i, 2, i % 2 === 0 ? exData : exDataAlt);
+      setCols(wsResumen, [32, 22]);
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+      // ===== Activos =====
+      const headers = ['Código', 'Nombre', 'Categoría', 'Estado', 'Marca', 'Modelo', 'Serie', 'Sede', 'Responsable', 'Área'];
+      const aoa: (string | number)[][] = [
+        ['ACTIVOS'],
+        [`Generado: ${dateStr}`],
+        [''],
+        headers,
+        ...list.map((a) => [a.codigo, a.nombre, a.categoriaNombre || '', ESTADO_LABELS[a.estado] || a.estado, a.marca || '', a.modelo || '', a.numeroSerie || '', a.sedeNombre || '', a.responsableNombre || '', a.area || '']),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const ncols = headers.length;
+      mergeRow(ws, 0, 0, ncols - 1, 'ACTIVOS', exTitle);
+      mergeRow(ws, 1, 0, ncols - 1, `Generado: ${dateStr}`, exSubtitle);
+      styleRow(ws, 3, ncols, exHeader);
+      list.forEach((_, i) => styleRow(ws, 4 + i, ncols, i % 2 === 0 ? exData : exDataAlt));
+      setCols(ws, [12, 28, 16, 14, 14, 14, 16, 22, 20, 14]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Activos');
+
+      downloadWorkbook(wb, `Inventario_Activos_${now.toISOString().slice(0, 10)}.xlsx`);
+      toast({ variant: 'success', title: 'Excel generado', message: `Se exportaron ${list.length} activos` });
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'error', title: 'Error', message: 'No se pudo generar el Excel de activos' });
+    }
+    setExporting(null);
+  };
 
   const setF = (k: keyof typeof filters, v: string) => { setFilters((p) => ({ ...p, [k]: v })); setPage(0); };
 
@@ -168,8 +280,8 @@ export default function Activos() {
             <option value="">Todas las sedes</option>
             {sedes.map((s) => <option key={s.id} value={s.id}>{s.nombre} — {s.entidadNombre}</option>)}
           </select>
-          <button onClick={exportExcel} className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/20 text-sm font-bold transition-colors"><FileSpreadsheet className="w-4 h-4" /> Excel</button>
-          <button onClick={exportPdf} className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 text-sm font-bold transition-colors"><Download className="w-4 h-4" /> PDF</button>
+          <button onClick={exportExcel} disabled={exporting !== null} className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/20 text-sm font-bold transition-colors disabled:opacity-50">{exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />} Excel</button>
+          <button onClick={exportPdf} disabled={exporting !== null} className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 text-sm font-bold transition-colors disabled:opacity-50">{exporting === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} PDF</button>
           {canCreate && (
             <button onClick={openCreate} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-sm font-bold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30 transition-all hover:-translate-y-0.5 active:scale-95"><Plus className="w-4 h-4" /> Nuevo Activo</button>
           )}
@@ -428,8 +540,13 @@ function DetallePanel({ activo, onClose, onQr }: { activo: any; onClose: () => v
 }
 
 function QrModal({ qr, onClose }: { qr: { token: string; codigo: string }; onClose: () => void }) {
+  // URL pública configurable (VITE_PUBLIC_APP_URL) para que el QR sea escaneable
+  // desde otros dispositivos; si no se define, se usa el origen actual.
+  const publicBase =
+    (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.replace(/\/+$/, '') ||
+    window.location.origin;
   const qrValue = qr.token
-    ? `${window.location.origin}/qr/${qr.token}`
+    ? `${publicBase}/qr/${qr.token}`
     : qr.codigo;
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">

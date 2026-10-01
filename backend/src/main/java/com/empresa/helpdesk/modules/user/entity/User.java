@@ -43,11 +43,33 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean activo = true;
 
+    // Versión de token JWT: se incrementa al cambiar/restablecer la contraseña
+    // para revocar todos los tokens emitidos previamente.
+    @Builder.Default
+    @Column(name = "token_version")
+    private Integer tokenVersion = 0;
+
     @Column(name = "last_login")
     private java.time.LocalDateTime lastLogin;
 
     @Column(name = "last_activity")
     private java.time.LocalDateTime lastActivity;
+
+    // ===== Dispositivo desde el que se conecta =====
+    @Column(name = "dispositivo_tipo", length = 20)
+    private String dispositivoTipo; // PC | MOVIL | TABLET
+
+    @Column(name = "dispositivo_modelo", length = 120)
+    private String dispositivoModelo;
+
+    @Column(name = "dispositivo_so", length = 60)
+    private String dispositivoSo;
+
+    @Column(length = 60)
+    private String navegador;
+
+    @Column(name = "ip_ultima", length = 60)
+    private String ipUltima;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

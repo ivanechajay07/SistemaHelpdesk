@@ -1,6 +1,7 @@
 package com.empresa.helpdesk.modules.chat.repository;
 
 import com.empresa.helpdesk.modules.chat.entity.Message;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,9 @@ import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
+
+    // Carga remitente y adjunto en la misma consulta (evita N+1 al mapear el historial)
+    @EntityGraph(attributePaths = {"remitente", "adjunto"})
     List<Message> findByTicketIdOrderByFechaEnvioAsc(Long ticketId);
 
     // Mensajes de un ticket que el destinatario (cualquiera que no sea el remitente) aún no ha leído

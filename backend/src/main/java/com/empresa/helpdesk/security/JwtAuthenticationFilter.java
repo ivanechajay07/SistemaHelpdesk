@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -43,36 +45,56 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         jwt = authHeader.substring(7);
-        username = jwtService.extractUsername(jwt);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+        // Un token inválido o expirado no debe romper la petición: simplemente
+        // se continúa sin autenticar (los endpoints protegidos responderán 401).
+        // Esto es clave para endpoints públicos como el QR de inventario, que
+        // pueden recibir un Authorization obsoleto desde el navegador.
+        try {
+            username = jwtService.extractUsername(jwt);
 
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-                // Actualizar la última actividad del usuario (máximo una vez por minuto)
-                touchLastActivity(username);
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                    // Actualizar la última actividad y el dispositivo del usuario
+                    // (máximo una vez por minuto)
+                    touchPresence(username, request);
+                }
+            }
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
+            if (log.isDebugEnabled()) {
+                log.debug("Token JWT inválido o expirado, se continúa sin autenticar: {}", e.getMessage());
             }
         }
+
         filterChain.doFilter(request, response);
     }
 
-    private void touchLastActivity(String username) {
+    private void touchPresence(String username, HttpServletRequest request) {
         try {
             userRepository.findByUsernameOrEmail(username, username).ifPresent(user -> {
                 LocalDateTime now = LocalDateTime.now();
                 LocalDateTime last = user.getLastActivity();
                 if (last == null || last.isBefore(now.minusSeconds(60))) {
                     user.setLastActivity(now);
+                    DeviceInfoResolver.DeviceInfo di = DeviceInfoResolver.resolve(request);
+                    user.setDispositivoTipo(di.tipo());
+                    user.setDispositivoModelo(di.modelo());
+                    user.setDispositivoSo(di.so());
+                    user.setNavegador(di.navegador());
+                    user.setIpUltima(di.ip());
                     userRepository.save(user);
                 }
             });

@@ -45,7 +45,9 @@ public class PrestamoService {
 
     @Transactional
     public PrestamoResponse crear(PrestamoRequest request) {
-        Activo activo = activoRepository.findById(request.getActivoId())
+        // Bloqueo pesimista: serializa préstamos concurrentes del mismo activo
+        // para evitar el doble préstamo (read-check-write race condition).
+        Activo activo = activoRepository.findByIdForUpdate(request.getActivoId())
                 .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
         if (activo.getEstado() != ActivoEstado.OPERATIVO) {
             throw new RuntimeException("El activo no está en estado OPERATIVO para ser prestado (estado actual: " + activo.getEstado() + ")");
@@ -83,7 +85,9 @@ public class PrestamoService {
         p.setFechaDevolucionReal(LocalDate.now());
         p = prestamoRepository.save(p);
 
-        Activo activo = p.getActivo();
+        // Bloqueo pesimista al liberar el activo (evita carreras con otra devolución/préstamo)
+        Activo activo = activoRepository.findByIdForUpdate(p.getActivo().getId())
+                .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
         if (activo.getEstado() == ActivoEstado.PRESTADO) {
             activo.setEstado(ActivoEstado.OPERATIVO);
             activoRepository.save(activo);

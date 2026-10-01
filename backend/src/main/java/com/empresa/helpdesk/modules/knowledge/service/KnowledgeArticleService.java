@@ -24,7 +24,15 @@ public class KnowledgeArticleService {
     public List<KnowledgeArticleResponse> getArticles(String search, boolean includeDrafts) {
         List<KnowledgeArticle> articles;
         if (search != null && !search.isBlank()) {
-            articles = knowledgeArticleRepository.searchPublicados(search.trim());
+            // La búsqueda debe respetar includeDrafts (antes se ignoraba y
+            // siempre devolvía solo publicados).
+            String term = search.trim().toLowerCase();
+            List<KnowledgeArticle> base = includeDrafts
+                    ? knowledgeArticleRepository.findAllByOrderByFechaCreacionDesc()
+                    : knowledgeArticleRepository.findByPublicadoTrueOrderByFechaCreacionDesc();
+            articles = base.stream()
+                    .filter(a -> coincide(a, term))
+                    .toList();
         } else if (includeDrafts) {
             articles = knowledgeArticleRepository.findAllByOrderByFechaCreacionDesc();
         } else {
@@ -35,9 +43,11 @@ public class KnowledgeArticleService {
 
     @Transactional
     public KnowledgeArticleResponse getArticle(Long id) {
+        if (knowledgeArticleRepository.incrementarVistas(id) == 0) {
+            throw new RuntimeException("Artículo no encontrado");
+        }
         KnowledgeArticle article = knowledgeArticleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Artículo no encontrado"));
-        article.setVistas(article.getVistas() + 1);
         return mapToResponse(article);
     }
 
@@ -91,6 +101,16 @@ public class KnowledgeArticleService {
                 .fechaCreacion(article.getFechaCreacion())
                 .fechaActualizacion(article.getFechaActualizacion())
                 .build();
+    }
+
+    private boolean coincide(KnowledgeArticle a, String term) {
+        return contiene(a.getTitulo(), term)
+                || contiene(a.getContenido(), term)
+                || contiene(a.getCategoria(), term);
+    }
+
+    private boolean contiene(String valor, String term) {
+        return valor != null && valor.toLowerCase().contains(term);
     }
 
     private User getCurrentUser() {

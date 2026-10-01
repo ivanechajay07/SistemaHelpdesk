@@ -8,8 +8,9 @@ import { useTicketStore } from '../store/ticketStore';
 import type { Ticket } from '../store/ticketStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/Toast';
-import { Send, ArrowLeft, Loader2, Paperclip, Bold, Italic, Underline, Strikethrough, Link as LinkIcon, Image as ImageIcon, MessageSquare, Smile, Code, List, AlignLeft, X, Lock, RotateCcw, Star, Check, CheckCheck } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Paperclip, Bold, Italic, Underline, Strikethrough, Link as LinkIcon, Image as ImageIcon, MessageSquare, Smile, Code, List, AlignLeft, X, Lock, RotateCcw, Star, Check, CheckCheck, ClipboardCheck } from 'lucide-react';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
+import ActaModal from '../components/tickets/ActaModal';
 
 interface Message {
   id: number;
@@ -28,9 +29,11 @@ export default function TicketDetail() {
   const reactivateTicket = useTicketStore((state) => state.reactivateTicket);
   
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [showActa, setShowActa] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
@@ -70,6 +73,11 @@ export default function TicketDetail() {
         console.error('Error fetching ticket details', err);
         if ((err as any).response?.status === 404) {
            navigate('/tickets');
+        } else {
+           setLoadError(
+             (err as any).response?.data?.message ||
+             'No se pudo abrir el ticket. Puede que aún no tenga un técnico asignado.'
+           );
         }
       } finally {
         setLoading(false);
@@ -331,6 +339,9 @@ export default function TicketDetail() {
   const canReactivate = ticket?.estado === 'CERRADO' && !!user && (
     isAdmin() || ticket.usuarioId === user.id || ticket.tecnicoId === user.id
   );
+  const canActa = !!ticket && ['RESUELTO', 'CERRADO'].includes(ticket.estado) && !!user && (
+    isAdmin() || ticket.usuarioId === user.id || ticket.tecnicoId === user.id
+  );
 
   const [dialog, setDialog] = useState<{
     variant: DialogVariant;
@@ -371,6 +382,26 @@ export default function TicketDetail() {
     });
   };
 
+  if (loadError) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-3 max-w-md text-center px-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+            <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{loadError}</p>
+          <button
+            onClick={() => navigate('/tickets')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Volver a tickets
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
@@ -410,15 +441,26 @@ export default function TicketDetail() {
               </div>
            </div>
         </div>
-        {canReactivate && (
-          <button
-            onClick={handleReactivate}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-cyan-500/20 shrink-0 active:scale-95"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reactivar ticket
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {canActa && (
+            <button
+              onClick={() => setShowActa(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-emerald-500/20 shrink-0 active:scale-95"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              Acta de Conformidad
+            </button>
+          )}
+          {canReactivate && (
+            <button
+              onClick={handleReactivate}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-cyan-500/20 shrink-0 active:scale-95"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reactivar ticket
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Calificación del cliente (CSAT) */}
@@ -658,6 +700,8 @@ export default function TicketDetail() {
         onConfirm={dialog?.onConfirm}
         onClose={() => setDialog(null)}
       />
+
+      <ActaModal isOpen={showActa} onClose={() => setShowActa(false)} ticket={ticket} />
     </div>
   );
 }

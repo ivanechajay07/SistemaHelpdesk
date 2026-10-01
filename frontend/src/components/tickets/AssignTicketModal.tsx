@@ -81,7 +81,7 @@ export default function AssignTicketModal({ isOpen, onClose, onAssign, currentTe
               <option value="">Seleccione un técnico...</option>
               {technicians.map((tecnico) => (
                 <option key={tecnico.id} value={tecnico.id}>
-                  {tecnico.nombre} {tecnico.apellidos} ({tecnico.email})
+                  {tecnico.nombre} {tecnico.apellidos}
                 </option>
               ))}
             </select>

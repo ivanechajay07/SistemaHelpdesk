@@ -6,9 +6,11 @@ import { useToast } from '../../components/ui/Toast';
 import InventoryPageHeader from './InventoryPageHeader';
 import { BarChart3, Download, FileSpreadsheet, Loader2, PackageCheck, Wrench, PackagePlus, ArrowLeftRight, Boxes, CheckCircle2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards, formatReportDate } from '../../lib/reportPdf';
+import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt } from '../../lib/reportExcel';
 
 const COLORS = ['#10b981', '#f59e0b', '#f97316', '#8b5cf6', '#06b6d4', '#3b82f6', '#ef4444', '#6366f1', '#ec4899', '#94a3b8'];
 const tooltipStyle = { backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px', fontWeight: 600 };
@@ -54,48 +56,108 @@ export default function Reportes() {
   const exportPdf = async () => {
     setExporting('pdf');
     try {
+      const dateStr = formatReportDate();
       const doc = new jsPDF({ orientation: 'landscape' });
-      doc.setFontSize(18); doc.setTextColor(20, 184, 166);
-      doc.text('Reporte de Inventario', 14, 16);
-      doc.setFontSize(10); doc.setTextColor(100, 116, 139);
-      doc.text(`Generado: ${new Date().toLocaleString('es-PE')} · Total activos: ${activoTotal}`, 14, 24);
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const M = 14;
 
-      doc.setFontSize(13); doc.setTextColor(15, 23, 42); doc.text('Activos', 14, 36);
+      let y = drawCorporateHeader(doc, {
+        title: 'REPORTE DE INVENTARIO',
+        subtitle: 'Activos, movimientos, transferencias, mantenimientos y préstamos',
+        meta: `Generado: ${dateStr}`,
+        bandHeight: 26,
+      });
+      y += 2;
+
+      y = drawKpiCards(doc, [
+        { label: 'Activos registrados', value: String(activoTotal) },
+        { label: 'Operativos', value: String(dashboard?.operativos || 0) },
+        { label: 'En mantenimiento', value: String(dashboard?.enMantenimiento || 0) },
+        { label: 'Movimientos', value: String(movimientos.length) },
+        { label: 'Transferencias', value: String(transferencias.length) },
+        { label: 'Mantenimientos', value: String(mantenimientos.length) },
+        { label: 'Préstamos', value: String(prestamos.length) },
+      ], y);
+      y += 8;
+
+      const ensureSpace = (h: number) => {
+        if (y + h > pageHeight - 22) {
+          doc.addPage();
+          y = 14;
+        }
+      };
+
+      const tableStyles = {
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 64, 175] as [number, number, number], fontSize: 8, fontStyle: 'bold' as const, halign: 'center' as const },
+        alternateRowStyles: { fillColor: [241, 245, 249] as [number, number, number] },
+        margin: { left: M, right: M },
+      };
+
+      // ===== Activos =====
+      ensureSpace(20);
+      y = drawSectionTitle(doc, 'Activos', y);
       autoTable(doc, {
-        startY: 40,
+        ...tableStyles,
+        startY: y,
         head: [['Código', 'Nombre', 'Categoría', 'Estado', 'Sede', 'Responsable', 'Serie']],
         body: activos.map((a) => [a.codigo, a.nombre, a.categoriaNombre || '—', ESTADO_LABELS[a.estado] || a.estado, a.sedeNombre || '—', a.responsableNombre || '—', a.numeroSerie || '—']),
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [20, 184, 166] },
-        alternateRowStyles: { fillColor: [240, 253, 250] },
       });
+      y = (doc as any).lastAutoTable.finalY + 10;
 
+      // ===== Movimientos =====
       if (movimientos.length > 0) {
-        doc.addPage();
-        doc.setFontSize(13); doc.setTextColor(15, 23, 42); doc.text('Movimientos', 14, 16);
+        ensureSpace(20);
+        y = drawSectionTitle(doc, 'Movimientos', y);
         autoTable(doc, {
-          startY: 20,
+          ...tableStyles,
+          startY: y,
           head: [['Tipo', 'Activo', 'Origen', 'Destino', 'Fecha', 'Usuario']],
           body: movimientos.map((m) => [MOVIMIENTO_LABELS[m.tipo] || m.tipo, `${m.activoCodigo} ${m.activoNombre}`, m.sedeOrigenNombre || m.entidadOrigenNombre || '—', m.sedeDestinoNombre || m.entidadDestinoNombre || '—', m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE') : '—', m.usuarioOperacion || '—']),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [20, 184, 166] },
-          alternateRowStyles: { fillColor: [240, 253, 250] },
         });
+        y = (doc as any).lastAutoTable.finalY + 10;
       }
 
+      // ===== Transferencias =====
       if (transferencias.length > 0) {
-        doc.addPage();
-        doc.setFontSize(13); doc.setTextColor(15, 23, 42); doc.text('Transferencias', 14, 16);
+        ensureSpace(20);
+        y = drawSectionTitle(doc, 'Transferencias', y);
         autoTable(doc, {
-          startY: 20,
+          ...tableStyles,
+          startY: y,
           head: [['N° Documento', 'Origen', 'Destino', 'Estado', 'Fecha']],
           body: transferencias.map((t) => [t.numeroDocumento, t.sedeOrigenNombre || '—', t.sedeDestinoNombre || '—', TRANSFERENCIA_LABELS[t.estado] || t.estado, t.fecha ? new Date(t.fecha).toLocaleDateString('es-PE') : '—']),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [20, 184, 166] },
-          alternateRowStyles: { fillColor: [240, 253, 250] },
         });
+        y = (doc as any).lastAutoTable.finalY + 10;
       }
 
+      // ===== Mantenimientos =====
+      if (mantenimientos.length > 0) {
+        ensureSpace(20);
+        y = drawSectionTitle(doc, 'Mantenimientos', y);
+        autoTable(doc, {
+          ...tableStyles,
+          startY: y,
+          head: [['Activo', 'Tipo', 'Estado', 'Fecha', 'Técnico', 'Proveedor', 'Costo']],
+          body: mantenimientos.map((m) => [`${m.activoCodigo} ${m.activoNombre}`, m.tipo || '—', MANTENIMIENTO_LABELS[m.estado] || m.estado || '—', m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE') : '—', m.tecnicoNombre || '—', m.proveedor || '—', m.costo != null ? `S/ ${m.costo}` : '—']),
+        });
+        y = (doc as any).lastAutoTable.finalY + 10;
+      }
+
+      // ===== Préstamos =====
+      if (prestamos.length > 0) {
+        ensureSpace(20);
+        y = drawSectionTitle(doc, 'Préstamos', y);
+        autoTable(doc, {
+          ...tableStyles,
+          startY: y,
+          head: [['Activo', 'Solicitante', 'Estado', 'Entrega', 'Devolución prevista', 'Devolución real']],
+          body: prestamos.map((p) => [`${p.activoCodigo} ${p.activoNombre}`, p.solicitanteNombre || '—', PRESTAMO_LABELS[p.estado] || p.estado || '—', p.fechaEntrega || '—', p.fechaDevolucionPrevista || '—', p.fechaDevolucionReal || '—']),
+        });
+        y = (doc as any).lastAutoTable.finalY + 10;
+      }
+
+      drawFooter(doc, dateStr);
       doc.save(`Reporte_Inventario_${new Date().toISOString().slice(0, 10)}.pdf`);
       toast({ variant: 'success', title: 'PDF generado', message: 'Reporte de inventario exportado' });
     } catch (e) {
@@ -108,28 +170,84 @@ export default function Reportes() {
   const exportExcel = async () => {
     setExporting('excel');
     try {
+      const now = new Date();
+      const dateStr = now.toLocaleString('es-PE', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-        { Reporte: 'Inventario', Generado: new Date().toLocaleString('es-PE'), TotalActivos: activoTotal },
-      ]), 'Resumen');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(activos.map((a) => ({
-        Codigo: a.codigo, Nombre: a.nombre, Categoria: a.categoriaNombre || '', Estado: ESTADO_LABELS[a.estado] || a.estado,
-        Marca: a.marca || '', Modelo: a.modelo || '', Serie: a.numeroSerie || '', Sede: a.sedeNombre || '',
-        Responsable: a.responsableNombre || '', Area: a.area || '',
-      }))), 'Activos');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movimientos.map((m) => ({
-        Tipo: MOVIMIENTO_LABELS[m.tipo] || m.tipo, Activo: `${m.activoCodigo} ${m.activoNombre}`, Origen: m.sedeOrigenNombre || m.entidadOrigenNombre || '',
-        Destino: m.sedeDestinoNombre || m.entidadDestinoNombre || '', Fecha: m.fecha || '', Usuario: m.usuarioOperacion || '',
-      }))), 'Movimientos');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mantenimientos.map((m) => ({
-        Activo: `${m.activoCodigo} ${m.activoNombre}`, Tipo: m.tipo, Estado: MANTENIMIENTO_LABELS[m.estado] || m.estado,
-        Fecha: m.fecha || '', Tecnico: m.tecnicoNombre || '', Proveedor: m.proveedor || '', Costo: m.costo ?? '',
-      }))), 'Mantenimientos');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(prestamos.map((p) => ({
-        Activo: `${p.activoCodigo} ${p.activoNombre}`, Solicitante: p.solicitanteNombre || '', Estado: PRESTAMO_LABELS[p.estado] || p.estado,
-        Entrega: p.fechaEntrega || '', DevolucionPrevista: p.fechaDevolucionPrevista || '', DevolucionReal: p.fechaDevolucionReal || '',
-      }))), 'Prestamos');
-      XLSX.writeFile(wb, `Reporte_Inventario_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+      const buildSheet = (title: string, headers: string[], rows: (string | number)[][], widths: number[]): XLSX.WorkSheet => {
+        const aoa: (string | number)[][] = [[title], [`Generado: ${dateStr}`], [''], headers, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        mergeRow(ws, 0, 0, headers.length - 1, title, exTitle);
+        mergeRow(ws, 1, 0, headers.length - 1, `Generado: ${dateStr}`, exSubtitle);
+        styleRow(ws, 3, headers.length, exHeader);
+        rows.forEach((_, i) => styleRow(ws, 4 + i, headers.length, i % 2 === 0 ? exData : exDataAlt));
+        setCols(ws, widths);
+        return ws;
+      };
+
+      // ===== Resumen =====
+      const resumenRows: (string | number)[][] = [
+        ['REPORTE DE INVENTARIO'],
+        [`Generado: ${dateStr}`],
+        [''],
+        ['Métrica', 'Valor'],
+        ['Activos registrados', activoTotal],
+        ['Operativos', dashboard?.operativos || 0],
+        ['En mantenimiento', dashboard?.enMantenimiento || 0],
+        ['Movimientos', movimientos.length],
+        ['Transferencias', transferencias.length],
+        ['Mantenimientos', mantenimientos.length],
+        ['Préstamos', prestamos.length],
+      ];
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows);
+      mergeRow(wsResumen, 0, 0, 1, 'REPORTE DE INVENTARIO', exTitle);
+      mergeRow(wsResumen, 1, 0, 1, `Generado: ${dateStr}`, exSubtitle);
+      styleRow(wsResumen, 3, 2, exHeader);
+      for (let i = 4; i <= 10; i++) styleRow(wsResumen, i, 2, i % 2 === 0 ? exData : exDataAlt);
+      setCols(wsResumen, [32, 22]);
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+      // ===== Activos =====
+      XLSX.utils.book_append_sheet(wb, buildSheet(
+        'ACTIVOS',
+        ['Código', 'Nombre', 'Categoría', 'Estado', 'Marca', 'Modelo', 'Serie', 'Sede', 'Responsable', 'Área'],
+        activos.map((a) => [a.codigo, a.nombre, a.categoriaNombre || '', ESTADO_LABELS[a.estado] || a.estado, a.marca || '', a.modelo || '', a.numeroSerie || '', a.sedeNombre || '', a.responsableNombre || '', a.area || '']),
+        [12, 28, 16, 14, 14, 14, 16, 22, 20, 16],
+      ), 'Activos');
+
+      // ===== Movimientos =====
+      XLSX.utils.book_append_sheet(wb, buildSheet(
+        'MOVIMIENTOS',
+        ['Tipo', 'Activo', 'Origen', 'Destino', 'Fecha', 'Usuario'],
+        movimientos.map((m) => [MOVIMIENTO_LABELS[m.tipo] || m.tipo, `${m.activoCodigo} ${m.activoNombre}`, m.sedeOrigenNombre || m.entidadOrigenNombre || '', m.sedeDestinoNombre || m.entidadDestinoNombre || '', m.fecha || '', m.usuarioOperacion || '']),
+        [16, 30, 24, 24, 16, 20],
+      ), 'Movimientos');
+
+      // ===== Transferencias =====
+      XLSX.utils.book_append_sheet(wb, buildSheet(
+        'TRANSFERENCIAS',
+        ['N° Documento', 'Origen', 'Destino', 'Estado', 'Fecha'],
+        transferencias.map((t) => [t.numeroDocumento, t.sedeOrigenNombre || '', t.sedeDestinoNombre || '', TRANSFERENCIA_LABELS[t.estado] || t.estado, t.fecha || '']),
+        [20, 30, 30, 18, 16],
+      ), 'Transferencias');
+
+      // ===== Mantenimientos =====
+      XLSX.utils.book_append_sheet(wb, buildSheet(
+        'MANTENIMIENTOS',
+        ['Activo', 'Tipo', 'Estado', 'Fecha', 'Técnico', 'Proveedor', 'Costo'],
+        mantenimientos.map((m) => [`${m.activoCodigo} ${m.activoNombre}`, m.tipo || '', MANTENIMIENTO_LABELS[m.estado] || m.estado || '', m.fecha || '', m.tecnicoNombre || '', m.proveedor || '', m.costo ?? '']),
+        [30, 16, 16, 16, 20, 20, 14],
+      ), 'Mantenimientos');
+
+      // ===== Préstamos =====
+      XLSX.utils.book_append_sheet(wb, buildSheet(
+        'PRÉSTAMOS',
+        ['Activo', 'Solicitante', 'Estado', 'Entrega', 'Devolución prevista', 'Devolución real'],
+        prestamos.map((p) => [`${p.activoCodigo} ${p.activoNombre}`, p.solicitanteNombre || '', PRESTAMO_LABELS[p.estado] || p.estado || '', p.fechaEntrega || '', p.fechaDevolucionPrevista || '', p.fechaDevolucionReal || '']),
+        [30, 22, 18, 18, 20, 20],
+      ), 'Prestamos');
+
+      downloadWorkbook(wb, `Reporte_Inventario_${now.toISOString().slice(0, 10)}.xlsx`);
       toast({ variant: 'success', title: 'Excel generado', message: 'Reporte de inventario exportado' });
     } catch (e) {
       console.error(e);

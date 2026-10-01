@@ -24,4 +24,11 @@ public class UserResponse {
     private List<String> roles;
     private LocalDateTime ultimaConexion;
     private String estadoConexion;
+
+    // ===== Dispositivo y conexión =====
+    private String dispositivoTipo;   // PC | MOVIL | TABLET
+    private String dispositivoModelo;
+    private String dispositivoSo;
+    private String navegador;
+    private String ipUltima;
 }

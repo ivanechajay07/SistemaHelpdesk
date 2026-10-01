@@ -11,6 +11,11 @@ export interface User {
   roles: string[];
   ultimaConexion?: string | null;
   estadoConexion?: 'CONECTADO' | 'AUSENTE' | 'DESCONECTADO' | string;
+  dispositivoTipo?: 'PC' | 'MOVIL' | 'TABLET' | string | null;
+  dispositivoModelo?: string | null;
+  dispositivoSo?: string | null;
+  navegador?: string | null;
+  ipUltima?: string | null;
 }
 
 interface UserState {

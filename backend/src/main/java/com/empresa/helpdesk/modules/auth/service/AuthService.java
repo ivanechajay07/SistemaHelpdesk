@@ -17,7 +17,9 @@ import com.empresa.helpdesk.modules.user.repository.UserRepository;
 import com.empresa.helpdesk.modules.notification.service.EmailService;
 import com.empresa.helpdesk.security.JwtService;
 import com.empresa.helpdesk.security.RateLimiterService;
+import com.empresa.helpdesk.security.DeviceInfoResolver;
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,10 +28,15 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -63,17 +70,18 @@ public class AuthService {
         User user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        // Registrar presencia del usuario
+        // Registrar presencia del usuario y desde qué dispositivo se conecta
         LocalDateTime now = LocalDateTime.now();
         user.setLastLogin(now);
         user.setLastActivity(now);
+        aplicarDispositivoActual(user);
         user = userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(new HashMap<>(), user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
         rateLimiter.resetear("login:" + request.getUsername().toLowerCase());
-        auditService.registrar("LOGIN", "USUARIO", user.getId(), user.getUsername() + " inició sesión");
+        auditService.registrar(user.getUsername(), "LOGIN", "USUARIO", user.getId(), user.getUsername() + " inició sesión");
 
         return buildAuthResponse(user, jwtToken, refreshToken);
     }
@@ -97,8 +105,16 @@ public class AuthService {
             throw new RuntimeException("Tu cuenta está desactivada.");
         }
 
+        // Rechazar refresh tokens revocados por cambio/restablecimiento de contraseña
+        int tvUser = user.getTokenVersion() != null ? user.getTokenVersion() : 0;
+        if (jwtService.extractTokenVersion(request.getRefreshToken()) != tvUser) {
+            throw new RuntimeException("Sesión expirada. Inicia sesión nuevamente.");
+        }
+
         String newAccessToken = jwtService.generateToken(new HashMap<>(), user);
-        return buildAuthResponse(user, newAccessToken, request.getRefreshToken());
+        // Rotación de refresh token: se emite uno nuevo en cada renovación
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+        return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
 
     /** Cambio de contraseña autenticado (el propio usuario). */
@@ -117,6 +133,8 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // Revocar todas las sesiones emitidas antes del cambio de contraseña
+        user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
         userRepository.save(user);
         auditService.registrar("CAMBIO_PASSWORD", "USUARIO", user.getId(), user.getUsername() + " cambió su contraseña");
 
@@ -154,11 +172,10 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         // Rate limiting: máx. 3 registros por minuto por correo
         rateLimiter.verificar("register:" + request.getEmail().toLowerCase(), 3, 60);
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("El nombre de usuario ya está en uso");
-        }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("El correo electrónico ya está en uso");
+        // Mensaje genérico para no permitir enumerar usuarios/correos existentes
+        if (userRepository.existsByUsername(request.getUsername())
+                || userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("No se pudo completar el registro con los datos proporcionados.");
         }
 
         Role defaultRole = roleRepository.findByName("CLIENTE")
@@ -188,20 +205,29 @@ public class AuthService {
         return buildAuthResponse(user, null, null);
     }
 
+    @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("No se encontró una cuenta con ese correo electrónico."));
+        // No revelar si el correo está registrado (evita enumeración de usuarios):
+        // si no existe la cuenta, se termina silenciosamente con la misma respuesta genérica.
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            return;
+        }
 
-        boolean alreadyPending = passwordResetRequestRepository
-                .existsByUsuarioIdAndStatus(user.getId(), PasswordResetRequest.ResetStatus.PENDIENTE);
-        if (alreadyPending) {
-            throw new RuntimeException("Ya existe una solicitud de cambio de contraseña pendiente para esta cuenta.");
+        // Invalidar solicitudes pendientes anteriores para permitir reintentar
+        // (por ejemplo, si el correo nunca llegó o el enlace falló).
+        List<PasswordResetRequest> pendientes = passwordResetRequestRepository
+                .findByUsuarioIdAndStatus(user.getId(), PasswordResetRequest.ResetStatus.PENDIENTE);
+        if (!pendientes.isEmpty()) {
+            pendientes.forEach(p -> p.setStatus(PasswordResetRequest.ResetStatus.EXPIRADO));
+            passwordResetRequestRepository.saveAll(pendientes);
         }
 
         String token = UUID.randomUUID().toString();
 
         PasswordResetRequest resetRequest = PasswordResetRequest.builder()
-                .token(token)
+                // Se guarda solo el hash del token; el valor en claro viaja únicamente por correo
+                .token(hashToken(token))
                 .email(request.getEmail())
                 .usuario(user)
                 .status(PasswordResetRequest.ResetStatus.PENDIENTE)
@@ -221,11 +247,21 @@ public class AuthService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetRequest resetRequest = passwordResetRequestRepository
-                .findByTokenAndStatus(request.getToken(), PasswordResetRequest.ResetStatus.PENDIENTE)
+                .findByTokenAndStatus(hashToken(request.getToken()), PasswordResetRequest.ResetStatus.PENDIENTE)
                 .orElseThrow(() -> new RuntimeException("El enlace de restablecimiento no es válido o ya fue utilizado."));
+
+        // El enlace expira a las 24 horas (igual que indica el correo).
+        if (resetRequest.getFechaSolicitud() != null
+                && resetRequest.getFechaSolicitud().isBefore(LocalDateTime.now().minusHours(24))) {
+            resetRequest.setStatus(PasswordResetRequest.ResetStatus.EXPIRADO);
+            passwordResetRequestRepository.save(resetRequest);
+            throw new RuntimeException("El enlace de restablecimiento ha expirado. Solicita uno nuevo.");
+        }
 
         User user = resetRequest.getUsuario();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // Revocar sesiones vigentes tras el restablecimiento
+        user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
         userRepository.save(user);
 
         resetRequest.setStatus(PasswordResetRequest.ResetStatus.COMPLETADO);
@@ -253,8 +289,38 @@ public class AuthService {
         }
     }
 
-    private AuthResponse buildAuthResponse(User user, String token, String refreshToken) {
-        List<String> roleNames = user.getRoles().stream()
+    /** Hash SHA-256 (hex) del token de restablecimiento para almacenarlo de forma segura. */
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            throw new RuntimeException("Error procesando el token de restablecimiento");
+        }
+    }
+
+    /** Captura el dispositivo (tipo, modelo, SO, navegador, IP) de la petición actual. */
+    private void aplicarDispositivoActual(User user) {
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            DeviceInfoResolver.DeviceInfo di = DeviceInfoResolver.resolve(request);
+            user.setDispositivoTipo(di.tipo());
+            user.setDispositivoModelo(di.modelo());
+            user.setDispositivoSo(di.so());
+            user.setNavegador(di.navegador());
+            user.setIpUltima(di.ip());
+        } catch (Exception e) {
+            log.debug("No se pudo detectar el dispositivo del usuario: {}", e.getMessage());
+        }
+    }
+
+    private AuthResponse buildAuthResponse(User user, String token, String refreshToken) {        List<String> roleNames = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
 

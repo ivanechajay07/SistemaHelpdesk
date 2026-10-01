@@ -1,8 +1,10 @@
 package com.empresa.helpdesk.security;
 
+import com.empresa.helpdesk.modules.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,16 @@ public class JwtService {
     /** Expiración del refresh token (por defecto 7 días). */
     @Value("${app.jwt.refresh-expiration:604800000}")
     private long refreshExpiration;
+
+    /** Falla rápido si el secreto es débil o no está configurado. */
+    @PostConstruct
+    public void validateSecret() {
+        if (secretKey == null || secretKey.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "app.jwt.secret debe tener al menos 32 caracteres (256 bits) para HS256. "
+                    + "Definelo en tu archivo .env con JWT_SECRET.");
+        }
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -59,6 +71,11 @@ public class JwtService {
             UserDetails userDetails,
             long expiration
     ) {
+        // "tv" (token version): permite invalidar todos los tokens emitidos
+        // cuando cambia la contraseña (revocación de sesiones).
+        if (userDetails instanceof User user && user.getTokenVersion() != null) {
+            extraClaims.put("tv", user.getTokenVersion());
+        }
         return Jwts
                 .builder()
                 .claims(extraClaims)
@@ -71,7 +88,26 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        if (!username.equals(userDetails.getUsername()) || isTokenExpired(token)) {
+            return false;
+        }
+        // No permitir tokens de cuentas desactivadas o bloqueadas
+        if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+            return false;
+        }
+        // Verificar que el token no haya sido revocado por cambio de contraseña
+        if (userDetails instanceof User user) {
+            Integer tvToken = extractClaim(token, c -> c.get("tv", Integer.class));
+            Integer tvUser = user.getTokenVersion() != null ? user.getTokenVersion() : 0;
+            return tvToken != null && tvToken.equals(tvUser);
+        }
+        return true;
+    }
+
+    /** Devuelve la versión de token incluida en el JWT (o 0 si no existe). */
+    public int extractTokenVersion(String token) {
+        Integer tv = extractClaim(token, c -> c.get("tv", Integer.class));
+        return tv != null ? tv : 0;
     }
 
     private boolean isTokenExpired(String token) {

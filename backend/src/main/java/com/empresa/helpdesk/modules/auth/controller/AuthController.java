@@ -79,13 +79,14 @@ public class AuthController {
     ) {
         try {
             authService.forgotPassword(request);
-            return ResponseEntity.ok(Map.of("message", "Se ha enviado un correo con las instrucciones para restablecer tu contraseña."));
         } catch (RuntimeException e) {
-            if (e.getMessage().contains("No se encontró")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            // No se revela información sobre la existencia de la cuenta; si falla
+            // el envío del correo se informa un error genérico de servicio.
+            return ResponseEntity.badRequest().body(Map.of("message",
+                    "No se pudo procesar la solicitud. Intenta nuevamente más tarde."));
         }
+        return ResponseEntity.ok(Map.of("message",
+                "Si el correo está registrado, recibirás las instrucciones para restablecer tu contraseña."));
     }
 
     @PostMapping("/reset-password")

@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -59,9 +60,35 @@ public class ActivoService {
 
     @Transactional(readOnly = true)
     public ActivoResponse obtenerPorQr(String qrToken) {
-        Activo activo = activoRepository.findByQrToken(qrToken)
-                .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
+        Activo activo = resolverPorQr(qrToken);
         return mapToResponse(activo);
+    }
+
+    /**
+     * Resuelve un activo a partir del contenido del QR. Acepta tanto el token
+     * (p. ej. INV-AB12...) como el código del activo (p. ej. ACT-0001), sin
+     * distinguir mayúsculas/minúsculas y tolerando espacios alrededor.
+     */
+    private Activo resolverPorQr(String qrToken) {
+        String valor = qrToken != null ? qrToken.trim() : "";
+        if (valor.isEmpty()) {
+            throw new RuntimeException("Activo no encontrado");
+        }
+        return activoRepository.findByQrTokenIgnoreCase(valor)
+                .or(() -> activoRepository.findByCodigoIgnoreCase(valor))
+                .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
+    }
+
+    /** Asigna un token QR a los activos que aún no lo tengan (backfill al arrancar). */
+    @Transactional
+    public int asignarQrFaltantes() {
+        List<Activo> sinQr = activoRepository.findByQrTokenIsNull();
+        if (sinQr.isEmpty()) {
+            return 0;
+        }
+        sinQr.forEach(a -> a.setQrToken(generarQrToken()));
+        activoRepository.saveAll(sinQr);
+        return sinQr.size();
     }
 
     /**
@@ -71,8 +98,7 @@ public class ActivoService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> obtenerPorQrPublico(String qrToken) {
-        Activo activo = activoRepository.findByQrToken(qrToken)
-                .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
+        Activo activo = resolverPorQr(qrToken);
         Map<String, Object> m = new HashMap<>();
         m.put("codigo", activo.getCodigo());
         m.put("nombre", activo.getNombre());

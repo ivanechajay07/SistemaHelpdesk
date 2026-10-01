@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +59,8 @@ public class ChatController {
     @SendTo("/topic/ticket/{ticketId}")
     public ChatMessageResponse sendMessage(
             @DestinationVariable Long ticketId,
-            @Payload ChatMessageRequest request
+            @Payload ChatMessageRequest request,
+            Principal principal
     ) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
@@ -71,8 +73,13 @@ public class ChatController {
             throw new RuntimeException("El chat está deshabilitado porque el ticket ya no está en gestión");
         }
 
-        User remitente = userRepository.findById(request.getRemitenteId())
-                .orElseThrow(() -> new RuntimeException("Remitente no encontrado"));
+        // El remitente SIEMPRE se toma del Principal autenticado (nunca del payload del cliente)
+        if (principal == null || principal.getName() == null) {
+            throw new RuntimeException("Usuario no autenticado");
+        }
+        User remitente = userRepository.findByUsernameOrEmail(principal.getName(), principal.getName())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        validateParticipant(ticket, remitente);
 
         Message message = Message.builder()
                 .contenido(request.getContenido())
@@ -109,6 +116,9 @@ public class ChatController {
     @GetMapping("/api/v1/tickets/{ticketId}/messages")
     @Operation(summary = "Obtener el historial de chat de un ticket")
     public ResponseEntity<List<ChatMessageResponse>> getChatHistory(@PathVariable Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+        validateParticipant(ticket, getCurrentUser());
         List<Message> messages = messageRepository.findByTicketIdOrderByFechaEnvioAsc(ticketId);
         List<ChatMessageResponse> response = messages.stream()
                 .map(this::mapToResponse)
@@ -198,24 +208,69 @@ public class ChatController {
                 .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado"));
     }
 
+    /** Valida que el usuario sea participante del ticket (solicitante, técnico asignado o admin). */
+    private void validateParticipant(Ticket ticket, User user) {
+        if (isAdmin(user)) {
+            return;
+        }
+        boolean isSolicitante = ticket.getSolicitante().getId().equals(user.getId());
+        boolean isTecnico = ticket.getTecnico() != null && ticket.getTecnico().getId().equals(user.getId());
+        if (!isSolicitante && !isTecnico) {
+            throw new RuntimeException("No tienes acceso al chat de este ticket");
+        }
+    }
+
+    private boolean isAdmin(User user) {
+        return user.getRoles().stream().anyMatch(role -> "ADMIN".equals(role.getName()));
+    }
+
+    private static final long MAX_FILE_SIZE = 10L * 1024 * 1024; // 10 MB
+    private static final List<String> ALLOWED_EXTENSIONS = List.of(
+            "jpg", "jpeg", "png", "gif", "webp", "pdf", "doc", "docx", "xls", "xlsx", "txt", "csv", "zip"
+    );
+
     /**
      * REST Endpoint para subir un archivo adjunto
      */
     @PostMapping("/api/v1/chat/upload")
     @Operation(summary = "Subir archivo adjunto para el chat")
     public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body("El archivo está vacío");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return ResponseEntity.badRequest().body("El archivo excede el tamaño máximo de 10 MB");
+        }
+        String extension = StringUtils.getFilenameExtension(file.getOriginalFilename());
+        if (extension == null || !ALLOWED_EXTENSIONS.contains(extension.toLowerCase())) {
+            return ResponseEntity.badRequest().body("Tipo de archivo no permitido");
+        }
         try {
-            Path uploadDir = Paths.get("uploads");
+            Path uploadDir = Paths.get("uploads").toAbsolutePath().normalize();
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
-            
-            String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-            String savedFileName = UUID.randomUUID().toString() + "_" + fileName;
-            Path targetLocation = uploadDir.resolve(savedFileName);
-            
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            
+
+            // Se usa únicamente el nombre base (sin componentes de ruta) y se
+            // sanea el nombre para impedir path traversal ("../").
+            String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "archivo";
+            String baseName = Paths.get(StringUtils.cleanPath(originalName)).getFileName().toString();
+            baseName = baseName.replaceAll("[^A-Za-z0-9._-]", "_");
+            if (baseName.isBlank() || ".".equals(baseName) || "..".equals(baseName)) {
+                return ResponseEntity.badRequest().body("Nombre de archivo no válido");
+            }
+            String savedFileName = UUID.randomUUID().toString() + "_" + baseName;
+            Path targetLocation = uploadDir.resolve(savedFileName).normalize();
+
+            // Verificación final: el destino debe permanecer dentro de uploads/
+            if (!targetLocation.startsWith(uploadDir)) {
+                return ResponseEntity.badRequest().body("Nombre de archivo no válido");
+            }
+
+            try (java.io.InputStream in = file.getInputStream()) {
+                Files.copy(in, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            }
+
             String fileUrl = "/uploads/" + savedFileName;
             return ResponseEntity.ok(fileUrl);
         } catch (IOException ex) {

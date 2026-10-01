@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive } from 'lucide-react';
+import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive, Lock } from 'lucide-react';
 import { useTicketStore, type Ticket } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
 import NewTicketModal from '../components/tickets/NewTicketModal';
@@ -80,6 +80,20 @@ export default function Tickets() {
   } | null>(null);
   const [csatTicket, setCsatTicket] = useState<Ticket | null>(null);
   const toast = useToast();
+
+  // El cliente no puede abrir el detalle hasta que el administrador asigne un técnico
+  const isTicketLocked = (ticket: any) => !isStaff && !ticket.tecnicoId;
+  const openTicket = (ticket: any) => {
+    if (isTicketLocked(ticket)) {
+      toast({
+        variant: 'info',
+        title: 'Ticket pendiente de asignación',
+        message: 'Podrás abrir el detalle cuando el administrador asigne un técnico. Te llegará un correo con el nombre del técnico que atenderá tu ticket.',
+      });
+      return;
+    }
+    navigate(`/tickets/${ticket.id}`);
+  };
 
   const runDialogAction = async () => {
     const action = dialog?.action;
@@ -434,8 +448,10 @@ export default function Tickets() {
                   pagedTickets.map((ticket) => (
                     <tr 
                       key={ticket.id} 
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="hover:bg-blue-50/30 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                      onClick={() => openTicket(ticket)}
+                      className={`hover:bg-blue-50/30 dark:hover:bg-slate-800/40 transition-colors group ${
+                        isTicketLocked(ticket) ? 'cursor-not-allowed' : 'cursor-pointer'
+                      }`}
                     >
                       <td className="px-6 py-3">
                         <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-100/50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
@@ -446,8 +462,13 @@ export default function Tickets() {
                         <span className="font-semibold text-slate-900 dark:text-slate-100 block truncate max-w-[200px] group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" title={ticket.titulo}>
                           {ticket.titulo}
                         </span>
-                        <div className="mt-1">
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
                           <SlaBadge estado={ticket.slaEstado} horasRestantes={ticket.slaHorasRestantes} limiteHoras={ticket.slaLimiteHoras} />
+                          {isTicketLocked(ticket) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                              <Lock className="w-3 h-3" /> Pendiente de asignación
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-3 text-slate-600 dark:text-slate-400 font-medium text-sm">
@@ -582,8 +603,10 @@ export default function Tickets() {
               pagedTickets.map((ticket) => (
                 <div 
                   key={ticket.id}
-                  onClick={() => navigate(`/tickets/${ticket.id}`)}
-                  className="bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => openTicket(ticket)}
+                  className={`bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all ${
+                    isTicketLocked(ticket) ? 'cursor-not-allowed' : 'cursor-pointer'
+                  }`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-100/50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
@@ -599,6 +622,11 @@ export default function Tickets() {
                     {ticket.subcategoriaNombre || 'Sin categoría'}
                     {ticket.tecnicoNombre && ` · ${ticket.tecnicoNombre}`}
                   </p>
+                  {isTicketLocked(ticket) && (
+                    <span className="inline-flex items-center gap-1 mb-2 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      <Lock className="w-3 h-3" /> Pendiente de asignación
+                    </span>
+                  )}
                   {(ticket.entidad || ticket.sede) && (
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       {ticket.entidad && (

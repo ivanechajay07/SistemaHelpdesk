@@ -9,8 +9,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    // El QR público no requiere autenticación: no adjuntar un token obsoleto
+    const isPublicQr = config.url?.includes('/inventario/activos/qr/');
     const token = localStorage.getItem('access_token');
-    if (token && config.headers) {
+    if (token && !isPublicQr && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

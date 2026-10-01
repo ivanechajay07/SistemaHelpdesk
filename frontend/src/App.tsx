@@ -9,6 +9,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Tickets from './pages/Tickets';
 import TicketDetail from './pages/TicketDetail';
+import ActasConformidad from './pages/ActasConformidad';
 import Users from './pages/Users';
 import Roles from './pages/Roles';
 import Categories from './pages/Categories';
@@ -19,6 +20,7 @@ import TaskGantt from './pages/TaskGantt';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
 import Knowledge from './pages/Knowledge';
+import CorreoCorporativo from './pages/CorreoCorporativo';
 import Monitoring from './pages/Monitoring';
 import Templates from './pages/Templates';
 import Audit from './pages/Audit';
@@ -109,8 +111,10 @@ function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="tickets" element={<Tickets />} />
+          <Route path="tickets/actas" element={<ActasConformidad />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="knowledge" element={<Knowledge />} />
+          <Route path="knowledge/correos" element={<CorreoCorporativo />} />
           <Route path="monitoring" element={
             <ProtectedRouteWithPermission permission="MONITORING_VIEW">
               <Monitoring />

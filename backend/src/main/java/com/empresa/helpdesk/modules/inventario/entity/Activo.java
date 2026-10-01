@@ -130,4 +130,10 @@ public class Activo {
 
     @Column(name = "qr_token", unique = true, length = 80)
     private String qrToken;
+
+    // Bloqueo optimista: evita que dos operaciones concurrentes (p. ej. dos
+    // préstamos del mismo activo) sobrescriban el estado sin detectarlo.
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

@@ -10,6 +10,7 @@ import {
   LogOut,
   Bell,
   MessageCircle,
+  Mail,
   Layers,
   Shield,
   Sun,
@@ -17,8 +18,6 @@ import {
   Menu,
   X,
   FileText,
-  PanelLeftClose,
-  PanelLeftOpen,
   BookOpen,
   Activity,
   TicketPlus,
@@ -26,6 +25,8 @@ import {
   UserPlus,
   Building2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   CheckCircle2,
   RotateCcw,
@@ -35,6 +36,7 @@ import {
   CalendarRange,
   ChartGantt,
   Check,
+  ClipboardCheck,
   Loader2,
   FileStack,
   ScrollText,
@@ -59,7 +61,9 @@ import GlobalSearch from '../components/ui/GlobalSearch';
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Panel de Control',
   '/tickets': 'Gestión de Tickets',
+  '/tickets/actas': 'Actas de Conformidad',
   '/knowledge': 'Base de Conocimiento',
+  '/knowledge/correos': 'Directorio de Correo Corporativo',
   '/monitoring': 'Monitoreo de Red',
   '/users': 'Gestión de Usuarios',
   '/roles': 'Roles y Permisos',
@@ -82,6 +86,23 @@ const pageTitles: Record<string, string> = {
   '/inventario/reportes': 'Reportes de Inventario',
 };
 
+const moduleDescriptions: Record<string, string> = {
+  'Dashboard': 'Métricas y resumen general',
+  'Tickets': 'Soporte técnico e incidentes',
+  'Tareas': 'Gestor de actividades y proyectos',
+  'Conocimiento': 'Base de conocimiento y correos',
+  'Monitoreo': 'Estado de servidores y red',
+  'Usuarios': 'Administración de cuentas',
+  'Roles': 'Permisos y control de acceso',
+  'Entidad': 'Entidades, sedes y dependencias',
+  'Categorías': 'Clasificación de incidentes',
+  'Plantillas': 'Modelos rápidos de tickets',
+  'Reportes': 'Informes y estadísticas',
+  'Auditoría': 'Registro de eventos y accesos',
+  'Inventario': 'Control de activos y traslados',
+  'Configuración': 'Ajustes de la plataforma',
+};
+
 interface NavItem {
   name: string;
   icon: React.ElementType;
@@ -97,8 +118,9 @@ interface TicketSubItem {
   key: string;
   label: string;
   icon: React.ElementType;
-  query: string;
-  count: number;
+  query?: string;
+  path?: string;
+  count?: number;
 }
 
 interface TaskSubItem {
@@ -138,10 +160,100 @@ export default function DashboardLayout() {
   const [ticketsSubOpen, setTicketsSubOpen] = useState(false);
   const [tasksSubOpen, setTasksSubOpen] = useState(false);
   const [invSubOpen, setInvSubOpen] = useState(false);
+  const [knowledgeSubOpen, setKnowledgeSubOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState<'todos' | 'tickets' | 'tareas' | 'seguridad' | 'usuarios'>('todos');
   const notifRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const profileImage = useProfileImage(user?.id);
+
+  // Estado para el diseño interactivo flotante al pasar el puntero en modo colapsado
+  const [hoveredModule, setHoveredModule] = useState<{
+    item: NavItem;
+    rect: DOMRect;
+    subItems?: Array<{ key: string; label: string; icon: React.ElementType; path?: string; query?: string; count?: number }>;
+  } | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [hoveredAction, setHoveredAction] = useState<{
+    title: string;
+    subtitle?: string;
+    rect: DOMRect;
+    isDanger?: boolean;
+  } | null>(null);
+
+  // Limpiar popovers flotantes al navegar o cambiar el estado del sidebar
+  useEffect(() => {
+    setHoveredModule(null);
+    setHoveredAction(null);
+  }, [location.pathname, collapsed]);
+
+  useEffect(() => {
+    const onScrollOrResize = () => {
+      setHoveredModule(null);
+      setHoveredAction(null);
+    };
+    window.addEventListener('resize', onScrollOrResize);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    return () => {
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize, true);
+    };
+  }, []);
+
+  const getTooltipPosition = (rect: DOMRect, isMenuWithSubItems: boolean) => {
+    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
+    const estimatedHeight = isMenuWithSubItems ? 280 : 80;
+    const centerY = rect.top + rect.height / 2;
+    
+    let top = centerY - 38;
+    if (top + estimatedHeight > windowHeight - 16) {
+      top = Math.max(16, windowHeight - estimatedHeight - 16);
+    }
+    if (top < 16) {
+      top = 16;
+    }
+    
+    const arrowTop = Math.max(16, Math.min(estimatedHeight - 16, centerY - top));
+
+    return {
+      left: rect.right + 12,
+      top,
+      arrowTop,
+    };
+  };
+
+  const handleNavItemMouseEnter = (item: NavItem, e: React.MouseEvent<HTMLElement>) => {
+    if (!collapsed) return;
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    let subItems: any[] | undefined = undefined;
+    if (item.name === 'Tickets' && canSeeTicketSubmenu) {
+      subItems = ticketSubItems;
+    } else if (item.name === 'Tareas' && canSeeTasks) {
+      subItems = taskSubItems;
+    } else if (item.name === 'Inventario' && canSeeInventario) {
+      subItems = invSubItems;
+    } else if (item.name === 'Conocimiento') {
+      subItems = [
+        { key: 'knowledge', label: 'Base de Conocimiento', icon: BookOpen, path: '/knowledge' },
+        ...(canSeeCorreoDirectory ? [{ key: 'correos', label: 'Directorio de Correo', icon: Mail, path: '/knowledge/correos' }] : [])
+      ];
+    }
+
+    setHoveredAction(null);
+    setHoveredModule({ item, rect, subItems });
+  };
+
+  const handleNavItemMouseLeave = () => {
+    if (!collapsed) return;
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredModule(null);
+    }, 150);
+  };
 
   // Conexión global al WebSocket de notificaciones de chat (tiempo real)
   useEffect(() => {
@@ -179,9 +291,10 @@ export default function DashboardLayout() {
   useEffect(() => {
     setSidebarOpen(false);
     setNotifOpen(false);
-    setTicketsSubOpen(location.pathname === '/tickets');
+    setTicketsSubOpen(location.pathname.startsWith('/tickets'));
     setTasksSubOpen(location.pathname.startsWith('/tareas'));
     setInvSubOpen(location.pathname.startsWith('/inventario'));
+    setKnowledgeSubOpen(location.pathname.startsWith('/knowledge'));
   }, [location.pathname]);
 
   useEffect(() => {
@@ -321,6 +434,9 @@ export default function DashboardLayout() {
   // Submenú de Tickets (vistas recientes/resueltos/etc.): personal de soporte
   const canSeeTicketSubmenu = isAdmin() || hasPermission('TICKET_VIEW_ALL') || hasPermission('TICKET_ASSIGN');
 
+  // Directorio de Correo Corporativo: solo roles de alto nivel
+  const canSeeCorreoDirectory = isAdmin() || hasRole('SUPERVISOR');
+
   // Módulo de Inventario: quien tenga permiso de visualización
   const canSeeInventario = isAdmin() || hasPermission('INV_VIEW');
 
@@ -368,6 +484,12 @@ export default function DashboardLayout() {
       icon: Archive,
       query: '?vista=cerrados',
       count: tickets.filter((t) => t.estado === 'CERRADO').length,
+    },
+    {
+      key: 'actas',
+      label: 'Actas de Conformidad',
+      icon: ClipboardCheck,
+      path: '/tickets/actas',
     },
   ];
 
@@ -422,7 +544,7 @@ export default function DashboardLayout() {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200/50 dark:border-slate-800/50 shrink-0">
+        <div className="relative h-16 flex items-center justify-between px-4 border-b border-slate-200/50 dark:border-slate-800/50 shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
@@ -438,6 +560,26 @@ export default function DashboardLayout() {
               H
             </div>
           )}
+
+          {/* Botón toggle ubicado exactamente entre el Sidebar (Menú) y el Header */}
+          <button
+            type="button"
+            onClick={() => {
+              setCollapsed(!collapsed);
+              setHoveredModule(null);
+              setHoveredAction(null);
+            }}
+            className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-full shadow-md hover:shadow-lg items-center justify-center text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer"
+            title={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+            aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
+          >
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            )}
+          </button>
+
           <button 
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -454,8 +596,10 @@ export default function DashboardLayout() {
                 <div className="relative">
                   <NavLink
                     to={item.path}
-                    title={collapsed ? item.name : undefined}
+                    onMouseEnter={(e) => handleNavItemMouseEnter(item, e)}
+                    onMouseLeave={handleNavItemMouseLeave}
                     onClick={(e) => {
+                      setHoveredModule(null);
                       if (item.name === 'Tickets' && canSeeTicketSubmenu && !collapsed) {
                         e.preventDefault();
                         setTicketsSubOpen((o) => !o);
@@ -470,6 +614,11 @@ export default function DashboardLayout() {
                         e.preventDefault();
                         setInvSubOpen((o) => !o);
                         if (!location.pathname.startsWith('/inventario')) navigate('/inventario');
+                      }
+                      if (item.name === 'Conocimiento' && !collapsed) {
+                        e.preventDefault();
+                        setKnowledgeSubOpen((o) => !o);
+                        if (!location.pathname.startsWith('/knowledge')) navigate('/knowledge');
                       }
                     }}
                     className={({ isActive }) =>
@@ -491,11 +640,12 @@ export default function DashboardLayout() {
                             {item.badge > 99 ? '99+' : item.badge}
                           </span>
                         )}
-                        {(item.name === 'Tickets' && canSeeTicketSubmenu) || (item.name === 'Tareas' && canSeeTasks) || (item.name === 'Inventario' && canSeeInventario) ? (
+                        {(item.name === 'Tickets' && canSeeTicketSubmenu) || (item.name === 'Tareas' && canSeeTasks) || (item.name === 'Inventario' && canSeeInventario) || item.name === 'Conocimiento' ? (
                           !collapsed && <ChevronDown className={`ml-auto h-4 w-4 transition-transform duration-300 ${
                             item.name === 'Tickets' ? (ticketsSubOpen ? 'rotate-180' : '') :
                             item.name === 'Tareas' ? (tasksSubOpen ? 'rotate-180' : '') :
-                            (invSubOpen ? 'rotate-180' : '')
+                            item.name === 'Inventario' ? (invSubOpen ? 'rotate-180' : '') :
+                            (knowledgeSubOpen ? 'rotate-180' : '')
                           }`} />
                         ) : null}
                       </>
@@ -510,11 +660,13 @@ export default function DashboardLayout() {
                 {item.name === 'Tickets' && canSeeTicketSubmenu && !collapsed && ticketsSubOpen && (
                   <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-slate-200 dark:border-slate-700/60 space-y-0.5 anim-fade-in">
                     {ticketSubItems.map((sub) => {
-                      const isActive = location.pathname === '/tickets' && location.search === sub.query;
+                      const isActive = sub.path
+                        ? location.pathname === sub.path
+                        : location.pathname === '/tickets' && location.search === sub.query;
                       return (
                         <li key={sub.key}>
                           <button
-                            onClick={() => navigate(`/tickets${sub.query}`)}
+                            onClick={() => navigate(sub.path || `/tickets${sub.query}`)}
                             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
                               isActive
                                 ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
@@ -523,13 +675,15 @@ export default function DashboardLayout() {
                           >
                             <sub.icon className="h-3.5 w-3.5 shrink-0" />
                             <span className="whitespace-nowrap">{sub.label}</span>
-                            <span className={`ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center text-[10px] font-black rounded-full ${
-                              isActive
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                            }`}>
-                              {sub.count}
-                            </span>
+                            {sub.count != null && (
+                              <span className={`ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center text-[10px] font-black rounded-full ${
+                                isActive
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              }`}>
+                                {sub.count}
+                              </span>
+                            )}
                           </button>
                         </li>
                       );
@@ -588,6 +742,40 @@ export default function DashboardLayout() {
                     })}
                   </ul>
                 )}
+
+                {/* Submenú de Conocimiento: Base de conocimiento y Directorio de Correo Corporativo */}
+                {item.name === 'Conocimiento' && !collapsed && knowledgeSubOpen && (
+                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-violet-200 dark:border-violet-700/40 space-y-0.5 anim-fade-in">
+                    <li>
+                      <button
+                        onClick={() => navigate('/knowledge')}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
+                          location.pathname === '/knowledge'
+                            ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                        <span className="whitespace-nowrap">Base de Conocimiento</span>
+                      </button>
+                    </li>
+                    {canSeeCorreoDirectory && (
+                      <li>
+                        <button
+                          onClick={() => navigate('/knowledge/correos')}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
+                            location.pathname === '/knowledge/correos'
+                              ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">Directorio de Correo Corporativo</span>
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
@@ -615,7 +803,18 @@ export default function DashboardLayout() {
             </div>
           )}
           {collapsed && (
-            <div className="flex justify-center mb-2">
+            <div
+              className="flex justify-center mb-2 cursor-pointer"
+              onMouseEnter={(e) => {
+                setHoveredModule(null);
+                setHoveredAction({
+                  title: `${user?.nombre || ''} ${user?.apellidos || ''}`.trim() || 'Usuario',
+                  subtitle: user?.email || '',
+                  rect: e.currentTarget.getBoundingClientRect(),
+                });
+              }}
+              onMouseLeave={() => setHoveredAction(null)}
+            >
               {profileImage ? (
                 <img
                   src={profileImage}
@@ -631,7 +830,18 @@ export default function DashboardLayout() {
           )}
           <button 
             onClick={handleLogout}
-            title={collapsed ? 'Cerrar Sesión' : undefined}
+            onMouseEnter={(e) => {
+              if (collapsed) {
+                setHoveredModule(null);
+                setHoveredAction({
+                  title: 'Cerrar Sesión',
+                  subtitle: 'Salir del sistema',
+                  rect: e.currentTarget.getBoundingClientRect(),
+                  isDanger: true,
+                });
+              }
+            }}
+            onMouseLeave={() => setHoveredAction(null)}
             className={`w-full flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors ${
               collapsed ? 'justify-center px-2 py-2.5' : 'justify-center px-3 py-2.5'
             }`}
@@ -644,8 +854,8 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-4 lg:px-6 z-10 shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 grid grid-cols-[1fr_auto_1fr] items-center px-4 lg:px-6 z-10 shrink-0">
+          <div className="flex items-center gap-3 justify-self-start">
             {/* Mobile hamburger */}
             <button 
               onClick={() => setSidebarOpen(true)}
@@ -653,19 +863,11 @@ export default function DashboardLayout() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            {/* Desktop collapse toggle */}
-            <button 
-              onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:flex p-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
-              title={collapsed ? 'Expandir menú' : 'Contraer menú'}
-            >
-              {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-            </button>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-              {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
-            </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 text-center truncate max-w-[38vw] lg:max-w-lg justify-self-center px-2">
+            {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
+          </h2>
+          <div className="flex items-center gap-2 justify-self-end">
             <GlobalSearch />
             <div className="hidden md:block text-right mr-1">
               <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 leading-tight">{greeting},</p>
@@ -926,7 +1128,124 @@ export default function DashboardLayout() {
           </div>
         </div>
       </main>
-      
+
+      {/* Popover flotante con diseño estilizado cuando el sidebar está colapsado */}
+      {collapsed && hoveredModule && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${getTooltipPosition(hoveredModule.rect, Boolean(hoveredModule.subItems?.length)).left}px`,
+            top: `${getTooltipPosition(hoveredModule.rect, Boolean(hoveredModule.subItems?.length)).top}px`,
+          }}
+          onMouseEnter={() => {
+            if (hoverTimeoutRef.current) {
+              clearTimeout(hoverTimeoutRef.current);
+              hoverTimeoutRef.current = null;
+            }
+          }}
+          onMouseLeave={handleNavItemMouseLeave}
+          className="z-[100] min-w-[220px] max-w-[280px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-2xl shadow-slate-900/20 dark:shadow-black/70 p-3 select-none anim-fade-in pointer-events-auto"
+        >
+          {/* Flecha indicadora apuntando hacia el icono del sidebar */}
+          <div
+            style={{
+              top: `${getTooltipPosition(hoveredModule.rect, Boolean(hoveredModule.subItems?.length)).arrowTop}px`,
+            }}
+            className="absolute -left-1.5 -translate-y-1/2 w-3 h-3 bg-white dark:bg-slate-900 border-l border-b border-slate-200/90 dark:border-slate-700/80 rotate-45 rounded-bl-[2px]"
+          />
+
+          {/* Encabezado del Módulo */}
+          <div
+            onClick={() => {
+              navigate(hoveredModule.item.path);
+              setHoveredModule(null);
+            }}
+            className="flex items-center gap-3 p-1.5 -m-1 rounded-xl cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors group"
+          >
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${hoveredModule.item.gradient} flex items-center justify-center text-white shadow-md ${hoveredModule.item.shadow} shrink-0 transition-transform group-hover:scale-105`}>
+              <hoveredModule.item.icon className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1.5">
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                  {hoveredModule.item.name}
+                </h4>
+                {location.pathname.startsWith(hoveredModule.item.path) && (
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" title="Módulo activo" />
+                )}
+                {!!hoveredModule.item.badge && hoveredModule.item.badge > 0 && (
+                  <span className="min-w-[18px] h-4 px-1.5 flex items-center justify-center text-[10px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full shadow-sm shrink-0">
+                    {hoveredModule.item.badge > 99 ? '99+' : hoveredModule.item.badge}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                {moduleDescriptions[hoveredModule.item.name] || 'Módulo del sistema'}
+              </p>
+            </div>
+          </div>
+
+          {/* Si tiene submenú (Tickets, Tareas, Inventario, Conocimiento) */}
+          {hoveredModule.subItems && hoveredModule.subItems.length > 0 && (
+            <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-0.5">
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 py-0.5">
+                Accesos directos
+              </p>
+              {hoveredModule.subItems.map((sub) => {
+                const isActive = sub.path
+                  ? location.pathname === sub.path
+                  : location.pathname === '/tickets' && location.search === sub.query;
+                return (
+                  <button
+                    key={sub.key}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(sub.path || `/tickets${sub.query}`);
+                      setHoveredModule(null);
+                    }}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <sub.icon className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                    <span className="truncate flex-1 text-left">{sub.label}</span>
+                    {sub.count != null && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold">
+                        {sub.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Popover flotante para acciones del pie (Perfil / Logout) */}
+      {collapsed && hoveredAction && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${hoveredAction.rect.right + 12}px`,
+            top: `${hoveredAction.rect.top + hoveredAction.rect.height / 2}px`,
+            transform: 'translateY(-50%)',
+          }}
+          className={`z-[100] min-w-[180px] backdrop-blur-xl border rounded-xl shadow-2xl p-2.5 select-none anim-fade-in pointer-events-none ${
+            hoveredAction.isDanger
+              ? 'bg-red-950/90 text-red-100 border-red-800/60 shadow-red-950/50'
+              : 'bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border-slate-200/90 dark:border-slate-700/80 shadow-slate-900/20'
+          }`}
+        >
+          <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rotate-45 rounded-bl-[2px] bg-inherit border-l border-b border-inherit" />
+          <p className="text-xs font-bold leading-tight truncate">{hoveredAction.title}</p>
+          {hoveredAction.subtitle && (
+            <p className="text-[11px] opacity-75 leading-tight truncate mt-0.5">{hoveredAction.subtitle}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

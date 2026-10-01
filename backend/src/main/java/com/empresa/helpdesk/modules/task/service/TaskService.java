@@ -5,6 +5,7 @@ import com.empresa.helpdesk.modules.task.dto.TaskRequest;
 import com.empresa.helpdesk.modules.task.dto.TaskResponse;
 import com.empresa.helpdesk.modules.task.entity.Task;
 import com.empresa.helpdesk.modules.task.enums.TaskStatus;
+import com.empresa.helpdesk.modules.task.repository.TaskEvidenceRepository;
 import com.empresa.helpdesk.modules.task.repository.TaskRepository;
 import com.empresa.helpdesk.modules.user.entity.User;
 import com.empresa.helpdesk.modules.user.repository.UserRepository;
@@ -23,6 +24,7 @@ import java.util.List;
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final TaskEvidenceRepository taskEvidenceRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
 
@@ -63,6 +65,7 @@ public class TaskService {
                 .build();
 
         Task saved = taskRepository.save(task);
+        precargarParaCorreo(saved, tecnico);
         notifyAssignment(saved, tecnico);
         return mapToResponse(saved);
     }
@@ -98,6 +101,7 @@ public class TaskService {
 
         Task saved = taskRepository.save(task);
         if (nuevoTecnico != tecnicoAnterior) {
+            precargarParaCorreo(saved, nuevoTecnico);
             notifyAssignment(saved, nuevoTecnico);
         }
         return mapToResponse(saved);
@@ -122,6 +126,20 @@ public class TaskService {
             throw new RuntimeException("La tarea ya está completada");
         }
 
+        // El técnico asignado debe adjuntar evidencia (imágenes) al iniciar el
+        // proceso y al marcar la tarea como completada.
+        boolean isAsignado = task.getTecnico() != null && task.getTecnico().getId().equals(current.getId());
+        if (isAsignado && !canManage(current)) {
+            if (estado == TaskStatus.EN_PROCESO && taskEvidenceRepository.countByTaskIdAndTipo(id, "PROCESO") == 0) {
+                throw new RuntimeException(
+                        "Debes adjuntar al menos una imagen como evidencia para iniciar el proceso.");
+            }
+            if (estado == TaskStatus.COMPLETADA && taskEvidenceRepository.countByTaskIdAndTipo(id, "COMPLETADA") == 0) {
+                throw new RuntimeException(
+                        "Debes adjuntar al menos una imagen de evidencia del trabajo realizado para completar la tarea.");
+            }
+        }
+
         applyTransition(task, estado);
         return mapToResponse(taskRepository.save(task));
     }
@@ -132,6 +150,7 @@ public class TaskService {
                 .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
         User current = getCurrentUser();
         validateManageAccess(current);
+        taskEvidenceRepository.deleteByTaskId(id);
         taskRepository.delete(task);
     }
 
@@ -159,15 +178,34 @@ public class TaskService {
     }
 
     /**
+     * Fuerza la carga de las asociaciones lazy que usa la plantilla del correo.
+     * El correo se envía en otro hilo (@Async) sin sesión de Hibernate, por lo
+     * que si no se inicializan aquí podrían fallar de forma silenciosa.
+     */
+    private void precargarParaCorreo(Task task, User tecnico) {
+        if (task.getTecnico() != null) {
+            task.getTecnico().getNombre();
+            task.getTecnico().getApellidos();
+        }
+        if (task.getCreador() != null) {
+            task.getCreador().getNombre();
+            task.getCreador().getApellidos();
+        }
+        tecnico.getNombre();
+        tecnico.getApellidos();
+    }
+
+    /**
      * Notifica al técnico asignado: notificación en el sistema (derivada del listado)
      * y correo electrónico. El fallo del correo no interrumpe la operación.
      */
     private void notifyAssignment(Task task, User tecnico) {
         if (tecnico.getEmail() == null || tecnico.getEmail().isBlank()) {
+            log.warn("No se envió el correo de tarea asignada: el técnico {} no tiene correo configurado", tecnico.getUsername());
             return;
         }
         try {
-            emailService.sendTaskAssignedEmail(tecnico.getEmail(), task);
+            emailService.sendTaskAssignedEmail(tecnico.getEmail(), task, tecnico);
         } catch (Exception e) {
             log.warn("No se pudo enviar el correo de tarea asignada a {}: {}", tecnico.getEmail(), e.getMessage());
         }

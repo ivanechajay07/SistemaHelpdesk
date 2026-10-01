@@ -2,6 +2,7 @@ package com.empresa.helpdesk.modules.user.controller;
 
 import com.empresa.helpdesk.modules.user.dto.UserRequest;
 import com.empresa.helpdesk.modules.user.dto.UserResponse;
+import com.empresa.helpdesk.modules.user.dto.UserSummaryResponse;
 import com.empresa.helpdesk.modules.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,8 +31,8 @@ public class UserController {
     }
 
     @GetMapping("/role/{roleName}")
-    @Operation(summary = "Obtener usuarios por su rol")
-    public ResponseEntity<java.util.List<UserResponse>> getUsersByRole(@PathVariable String roleName) {
+    @Operation(summary = "Obtener usuarios por su rol (resumen sin datos sensibles)")
+    public ResponseEntity<java.util.List<UserSummaryResponse>> getUsersByRole(@PathVariable String roleName) {
         return ResponseEntity.ok(userService.getUsersByRole(roleName));
     }
 
