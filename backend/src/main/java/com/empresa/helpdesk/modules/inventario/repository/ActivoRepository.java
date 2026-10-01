@@ -5,6 +5,7 @@ import com.empresa.helpdesk.modules.inventario.enums.ActivoEstado;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,10 @@ public interface ActivoRepository extends JpaRepository<Activo, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Activo a WHERE a.id = :id")
     Optional<Activo> findByIdForUpdate(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"categoria", "entidad", "sede", "responsable"})
+    @Query("SELECT a FROM Activo a WHERE a.id = :id")
+    Optional<Activo> findConRelacionesById(@Param("id") Long id);
 
     Optional<Activo> findByCodigo(String codigo);
     Optional<Activo> findByCodigoIgnoreCase(String codigo);
@@ -57,6 +62,7 @@ public interface ActivoRepository extends JpaRepository<Activo, Long> {
           AND (:categoriaId IS NULL OR a.categoria.id = :categoriaId)
           AND (:responsableId IS NULL OR a.responsable.id = :responsableId)
     """)
+    @EntityGraph(attributePaths = {"categoria", "entidad", "sede", "responsable"})
     Page<Activo> buscar(
             @Param("q") String q,
             @Param("estado") ActivoEstado estado,

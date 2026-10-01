@@ -53,7 +53,7 @@ public class ActivoService {
 
     @Transactional(readOnly = true)
     public ActivoResponse obtener(Long id) {
-        Activo activo = activoRepository.findById(id)
+        Activo activo = activoRepository.findConRelacionesById(id)
                 .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
         return mapToResponse(activo);
     }

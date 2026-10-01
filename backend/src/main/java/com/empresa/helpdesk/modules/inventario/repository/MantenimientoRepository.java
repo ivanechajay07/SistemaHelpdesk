@@ -2,6 +2,7 @@ package com.empresa.helpdesk.modules.inventario.repository;
 
 import com.empresa.helpdesk.modules.inventario.entity.Mantenimiento;
 import com.empresa.helpdesk.modules.inventario.enums.MantenimientoEstado;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +12,10 @@ import java.util.List;
 @Repository
 public interface MantenimientoRepository extends JpaRepository<Mantenimiento, Long> {
 
+    @EntityGraph(attributePaths = {"activo", "tecnico", "ticket"})
     List<Mantenimiento> findByActivoIdOrderByFechaDesc(Long activoId);
+
+    @EntityGraph(attributePaths = {"activo", "tecnico", "ticket"})
     List<Mantenimiento> findAllByOrderByFechaDesc();
 
     long countByEstado(MantenimientoEstado estado);
