@@ -7,9 +7,9 @@ import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    List<Task> findByTecnicoIdOrderByFechaInicioAsc(Long tecnicoId);
+    List<Task> findTop500ByTecnicoIdOrderByFechaInicioAsc(Long tecnicoId);
 
-    List<Task> findAllByOrderByFechaInicioAsc();
+    List<Task> findTop500ByOrderByFechaInicioAsc();
 
     List<Task> findByTecnicoIdAndFechaInicioBetweenOrderByFechaInicioAsc(Long tecnicoId, java.time.LocalDate start, java.time.LocalDate end);
 

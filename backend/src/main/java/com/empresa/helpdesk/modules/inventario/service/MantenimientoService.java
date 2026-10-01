@@ -33,13 +33,13 @@ public class MantenimientoService {
 
     @Transactional(readOnly = true)
     public List<MantenimientoResponse> listar() {
-        return mantenimientoRepository.findAllByOrderByFechaDesc().stream()
+        return mantenimientoRepository.findTop1000ByOrderByFechaDesc().stream()
                 .map(this::mapToResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public List<MantenimientoResponse> listarPorActivo(Long activoId) {
-        return mantenimientoRepository.findByActivoIdOrderByFechaDesc(activoId).stream()
+        return mantenimientoRepository.findTop500ByActivoIdOrderByFechaDesc(activoId).stream()
                 .map(this::mapToResponse).toList();
     }
 

@@ -13,10 +13,10 @@ import java.util.List;
 public interface MantenimientoRepository extends JpaRepository<Mantenimiento, Long> {
 
     @EntityGraph(attributePaths = {"activo", "tecnico", "ticket"})
-    List<Mantenimiento> findByActivoIdOrderByFechaDesc(Long activoId);
+    List<Mantenimiento> findTop500ByActivoIdOrderByFechaDesc(Long activoId);
 
     @EntityGraph(attributePaths = {"activo", "tecnico", "ticket"})
-    List<Mantenimiento> findAllByOrderByFechaDesc();
+    List<Mantenimiento> findTop1000ByOrderByFechaDesc();
 
     long countByEstado(MantenimientoEstado estado);
 

@@ -6,6 +6,7 @@ import com.empresa.helpdesk.modules.chat.dto.UnreadCountResponse;
 import com.empresa.helpdesk.modules.chat.entity.Message;
 import com.empresa.helpdesk.modules.chat.entity.FileAttachment;
 import com.empresa.helpdesk.modules.chat.repository.MessageRepository;
+import com.empresa.helpdesk.modules.chat.service.AttachmentLinkService;
 import com.empresa.helpdesk.modules.chat.service.ChatNotificationService;
 import com.empresa.helpdesk.modules.ticket.entity.Ticket;
 import com.empresa.helpdesk.modules.ticket.enums.TicketStatus;
@@ -48,6 +49,7 @@ public class ChatController {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final ChatNotificationService chatNotificationService;
+    private final AttachmentLinkService attachmentLinkService;
 
     /**
      * WebSocket Endpoint
@@ -88,11 +90,14 @@ public class ChatController {
                 .leido(false)
                 .build();
 
-        if (request.getAdjuntoUrl() != null && !request.getAdjuntoUrl().isEmpty()) {
+        // Solo se aceptan adjuntos servidos por la propia aplicación: se extrae
+        // el nombre base y se descarta cualquier URL externa enviada por el cliente.
+        String nombreAdjunto = attachmentLinkService.extraerNombre(request.getAdjuntoUrl());
+        if (nombreAdjunto != null) {
             FileAttachment adjunto = FileAttachment.builder()
-                    .urlArchivo(request.getAdjuntoUrl())
-                    .nombreOriginal("archivo_adjunto")
-                    .nombreGuardado("archivo_adjunto")
+                    .urlArchivo("/uploads/" + nombreAdjunto)
+                    .nombreOriginal(nombreAdjunto)
+                    .nombreGuardado(nombreAdjunto)
                     .ticket(ticket)
                     .usuario(remitente)
                     .mensaje(message)
@@ -197,7 +202,9 @@ public class ChatController {
                 .remitenteNombre(message.getRemitente().getNombre() + " " + message.getRemitente().getApellidos())
                 .remitenteId(message.getRemitente().getId())
                 .fechaEnvio(message.getFechaEnvio() != null ? message.getFechaEnvio() : LocalDateTime.now())
-                .adjuntoUrl(message.getAdjunto() != null ? message.getAdjunto().getUrlArchivo() : null)
+                .adjuntoUrl(message.getAdjunto() != null
+                        ? attachmentLinkService.toPublicUrl(message.getAdjunto().getUrlArchivo())
+                        : null)
                 .leido(message.isLeido())
                 .build();
     }

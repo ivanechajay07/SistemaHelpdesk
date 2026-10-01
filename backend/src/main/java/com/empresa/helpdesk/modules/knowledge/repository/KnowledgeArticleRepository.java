@@ -15,9 +15,9 @@ public interface KnowledgeArticleRepository extends JpaRepository<KnowledgeArtic
     @Query("UPDATE KnowledgeArticle a SET a.vistas = COALESCE(a.vistas, 0) + 1 WHERE a.id = :id")
     int incrementarVistas(@Param("id") Long id);
 
-    List<KnowledgeArticle> findByPublicadoTrueOrderByFechaCreacionDesc();
+    List<KnowledgeArticle> findTop300ByPublicadoTrueOrderByFechaCreacionDesc();
 
-    List<KnowledgeArticle> findAllByOrderByFechaCreacionDesc();
+    List<KnowledgeArticle> findTop300ByOrderByFechaCreacionDesc();
 
     List<KnowledgeArticle> findByPublicadoTrueAndCategoriaIgnoreCaseOrderByFechaCreacionDesc(String categoria);
 

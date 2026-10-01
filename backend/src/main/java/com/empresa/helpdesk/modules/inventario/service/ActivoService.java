@@ -65,9 +65,9 @@ public class ActivoService {
     }
 
     /**
-     * Resuelve un activo a partir del contenido del QR. Acepta tanto el token
-     * (p. ej. INV-AB12...) como el código del activo (p. ej. ACT-0001), sin
-     * distinguir mayúsculas/minúsculas y tolerando espacios alrededor.
+     * Resuelve un activo a partir del token del QR (p. ej. INV-AB12...).
+     * Solo se acepta el token aleatorio: NO se permite resolver por el código
+     * del activo (predecible) para evitar la enumeración de activos por QR.
      */
     private Activo resolverPorQr(String qrToken) {
         String valor = qrToken != null ? qrToken.trim() : "";
@@ -75,7 +75,6 @@ public class ActivoService {
             throw new RuntimeException("Activo no encontrado");
         }
         return activoRepository.findByQrTokenIgnoreCase(valor)
-                .or(() -> activoRepository.findByCodigoIgnoreCase(valor))
                 .orElseThrow(() -> new RuntimeException("Activo no encontrado"));
     }
 

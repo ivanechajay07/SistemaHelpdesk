@@ -16,7 +16,7 @@ public interface PrestamoRepository extends JpaRepository<Prestamo, Long> {
     List<Prestamo> findByActivoIdOrderByFechaCreacionDesc(Long activoId);
 
     @EntityGraph(attributePaths = {"activo", "solicitante", "responsableEntrega"})
-    List<Prestamo> findAllByOrderByFechaCreacionDesc();
+    List<Prestamo> findTop1000ByOrderByFechaCreacionDesc();
 
     long countByEstado(PrestamoEstado estado);
 

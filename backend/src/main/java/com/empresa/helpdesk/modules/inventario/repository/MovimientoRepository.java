@@ -17,7 +17,7 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
 
     @EntityGraph(attributePaths = {"activo", "entidadOrigen", "sedeOrigen", "responsableAnterior",
             "entidadDestino", "sedeDestino", "responsableNuevo", "usuarioOperacion"})
-    List<Movimiento> findByActivoIdOrderByFechaDesc(Long activoId);
+    List<Movimiento> findTop1000ByActivoIdOrderByFechaDesc(Long activoId);
 
     @EntityGraph(attributePaths = {"activo", "entidadOrigen", "sedeOrigen", "responsableAnterior",
             "entidadDestino", "sedeDestino", "responsableNuevo", "usuarioOperacion"})

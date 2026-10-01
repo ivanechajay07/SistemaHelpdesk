@@ -28,15 +28,15 @@ public class KnowledgeArticleService {
             // siempre devolvía solo publicados).
             String term = search.trim().toLowerCase();
             List<KnowledgeArticle> base = includeDrafts
-                    ? knowledgeArticleRepository.findAllByOrderByFechaCreacionDesc()
-                    : knowledgeArticleRepository.findByPublicadoTrueOrderByFechaCreacionDesc();
+                    ? knowledgeArticleRepository.findTop300ByOrderByFechaCreacionDesc()
+                    : knowledgeArticleRepository.findTop300ByPublicadoTrueOrderByFechaCreacionDesc();
             articles = base.stream()
                     .filter(a -> coincide(a, term))
                     .toList();
         } else if (includeDrafts) {
-            articles = knowledgeArticleRepository.findAllByOrderByFechaCreacionDesc();
+            articles = knowledgeArticleRepository.findTop300ByOrderByFechaCreacionDesc();
         } else {
-            articles = knowledgeArticleRepository.findByPublicadoTrueOrderByFechaCreacionDesc();
+            articles = knowledgeArticleRepository.findTop300ByPublicadoTrueOrderByFechaCreacionDesc();
         }
         return articles.stream().map(this::mapToResponse).toList();
     }

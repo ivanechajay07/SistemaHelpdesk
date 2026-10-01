@@ -44,7 +44,7 @@ public class TransferenciaService {
 
     @Transactional(readOnly = true)
     public List<TransferenciaResponse> listar() {
-        return transferenciaRepository.findAllByOrderByFechaDesc().stream()
+        return transferenciaRepository.findTop1000ByOrderByFechaDesc().stream()
                 .map(this::mapToResponse).toList();
     }
 

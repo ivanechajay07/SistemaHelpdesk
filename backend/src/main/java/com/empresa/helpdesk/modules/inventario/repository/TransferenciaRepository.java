@@ -15,7 +15,7 @@ public interface TransferenciaRepository extends JpaRepository<Transferencia, Lo
 
     @EntityGraph(attributePaths = {"entidadOrigen", "sedeOrigen", "entidadDestino", "sedeDestino",
             "responsableEntrega", "responsableRecibe", "creadoPor"})
-    List<Transferencia> findAllByOrderByFechaDesc();
+    List<Transferencia> findTop1000ByOrderByFechaDesc();
 
     @EntityGraph(attributePaths = {"entidadOrigen", "sedeOrigen", "entidadDestino", "sedeDestino",
             "responsableEntrega", "responsableRecibe", "creadoPor"})

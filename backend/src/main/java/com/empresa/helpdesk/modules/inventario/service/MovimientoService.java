@@ -46,7 +46,7 @@ public class MovimientoService {
 
     @Transactional(readOnly = true)
     public List<MovimientoResponse> listarPorActivo(Long activoId) {
-        return movimientoRepository.findByActivoIdOrderByFechaDesc(activoId).stream()
+        return movimientoRepository.findTop1000ByActivoIdOrderByFechaDesc(activoId).stream()
                 .map(this::mapToResponse).toList();
     }
 

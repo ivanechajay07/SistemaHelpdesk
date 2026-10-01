@@ -78,8 +78,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/inventario/activos/qr/**",
+                                // Adjuntos del chat: enlaces firmados con expiración (HMAC),
+                                // no requieren cabecera Authorization en el navegador.
+                                "/api/v1/chat/attachments/**",
                                 "/ws/**",
-                                "/uploads/**",
                                 "/error"
                         ).permitAll()
                         .requestMatchers(

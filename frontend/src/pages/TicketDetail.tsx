@@ -544,11 +544,11 @@ export default function TicketDetail() {
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                               isMe ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-blue-500'
                             } transition-colors`}>
-                               {msg.adjuntoUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? <ImageIcon className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
+                               {msg.adjuntoUrl.split('?')[0].match(/\.(jpeg|jpg|gif|png|webp)$/i) ? <ImageIcon className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
                             </div>
                             <div>
                                <p className={`text-xs font-bold max-w-[160px] truncate ${isMe ? 'text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                                 {msg.adjuntoUrl.split('/').pop()?.split('_').pop() || 'Archivo adjunto'}
+                                 {msg.adjuntoUrl.split('/').pop()?.split('?')[0].split('_').pop() || 'Archivo adjunto'}
                                </p>
                                <p className={`text-[10px] font-semibold mt-0.5 ${isMe ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>Click para abrir</p>
                             </div>

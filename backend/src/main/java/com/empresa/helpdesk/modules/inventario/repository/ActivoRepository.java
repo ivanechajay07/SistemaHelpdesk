@@ -28,7 +28,6 @@ public interface ActivoRepository extends JpaRepository<Activo, Long> {
     Optional<Activo> findConRelacionesById(@Param("id") Long id);
 
     Optional<Activo> findByCodigo(String codigo);
-    Optional<Activo> findByCodigoIgnoreCase(String codigo);
     Optional<Activo> findByQrToken(String qrToken);
     Optional<Activo> findByQrTokenIgnoreCase(String qrToken);
     List<Activo> findByQrTokenIsNull();

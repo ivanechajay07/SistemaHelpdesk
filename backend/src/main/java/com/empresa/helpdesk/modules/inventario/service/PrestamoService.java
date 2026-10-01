@@ -32,7 +32,7 @@ public class PrestamoService {
     @Transactional(readOnly = true)
     public List<PrestamoResponse> listar() {
         LocalDate hoy = LocalDate.now();
-        return prestamoRepository.findAllByOrderByFechaCreacionDesc().stream()
+        return prestamoRepository.findTop1000ByOrderByFechaCreacionDesc().stream()
                 .map(p -> mapToResponse(p, hoy)).toList();
     }
 

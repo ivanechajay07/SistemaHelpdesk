@@ -33,9 +33,9 @@ public class TaskService {
         User current = getCurrentUser();
         List<Task> tasks;
         if (canManage(current)) {
-            tasks = taskRepository.findAllByOrderByFechaInicioAsc();
+            tasks = taskRepository.findTop500ByOrderByFechaInicioAsc();
         } else {
-            tasks = taskRepository.findByTecnicoIdOrderByFechaInicioAsc(current.getId());
+            tasks = taskRepository.findTop500ByTecnicoIdOrderByFechaInicioAsc(current.getId());
         }
         return tasks.stream().map(this::mapToResponse).toList();
     }
