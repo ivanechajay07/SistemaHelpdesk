@@ -69,6 +69,11 @@ app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:5173}
 
+  # Monitoreo de red: permite apuntar a equipos internos (192.168.x, 10.x, localhost).
+  # Requiere permiso MONITORING_VIEW/ADMIN. Pon false para restringir a IPs públicas.
+  monitoring:
+    allow-private-targets: ${MONITORING_ALLOW_PRIVATE:true}
+
 # Swagger/OpenAPI: deshabilitable en producción con SWAGGER_ENABLED=false
 springdoc:
   api-docs:

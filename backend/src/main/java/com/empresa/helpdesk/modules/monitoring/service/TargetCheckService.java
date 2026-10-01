@@ -20,6 +20,7 @@ import com.empresa.helpdesk.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -60,6 +61,15 @@ public class TargetCheckService {
     private final SubcategoryRepository subcategoryRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+
+    /**
+     * El monitoreo suele apuntar a equipos de la red interna (192.168.x, 10.x,
+     * localhost), por lo que por defecto se permiten destinos privados. El
+     * endpoint solo es accesible para administradores. Puede desactivarse con
+     * app.monitoring.allow-private-targets=false para entornos restringidos.
+     */
+    @Value("${app.monitoring.allow-private-targets:true}")
+    private boolean allowPrivateTargets;
 
     /** Auto-referencia (proxy) para que las llamadas internas respeten las transacciones. */
     private TargetCheckService self;
@@ -162,17 +172,17 @@ public class TargetCheckService {
         String finalUrl = url.startsWith("http://") || url.startsWith("https://") ? url : "http://" + url;
         URI uri = URI.create(finalUrl);
 
-        // Protección SSRF: solo http/https y hosts públicos (sin loopback,
-        // link-local como 169.254.169.254, rangos privados ni multicast).
+        // Validación básica: esquema http/https y host resoluble. Se permite el
+        // monitoreo de la red interna, pero se bloquea siempre el endpoint de
+        // metadatos de la nube (169.254.169.254) y direcciones multicast.
         if (!urlSegura(uri)) {
-            log.warn("Verificación HTTP bloqueada por protección SSRF hacia: {}", safeLogValue(finalUrl));
+            log.warn("Verificación HTTP bloqueada (destino no permitido): {}", safeLogValue(finalUrl));
             return false;
         }
 
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(TIMEOUT_MS))
-                // Sin redirecciones: evita saltar a destinos internos tras una redirección
-                .followRedirects(HttpClient.Redirect.NEVER)
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
@@ -180,10 +190,18 @@ public class TargetCheckService {
                 .GET()
                 .build();
         HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-        return response.statusCode() < 400;
+        // Se considera disponible si el servidor responde (incluye 401/403/404).
+        // Solo se marca caído ante errores 5xx o fallo de conexión/timeout.
+        return response.statusCode() < 500;
     }
 
-    /** Valida que el URI use http/https y que el host resuelva a direcciones públicas. */
+    private static final String CLOUD_METADATA_IP = "169.254.169.254";
+
+    /**
+     * Valida el URI de un objetivo HTTP. Permite destinos internos (monitoreo
+     * de red, función de administradores) salvo que allowPrivateTargets=false.
+     * Bloquea siempre el endpoint de metadatos de la nube y multicast.
+     */
     private boolean urlSegura(URI uri) {
         String scheme = uri.getScheme();
         if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
@@ -195,11 +213,15 @@ public class TargetCheckService {
         }
         try {
             for (InetAddress addr : InetAddress.getAllByName(host)) {
-                if (addr.isAnyLocalAddress()
-                        || addr.isLoopbackAddress()
-                        || addr.isLinkLocalAddress()
-                        || addr.isSiteLocalAddress()
-                        || addr.isMulticastAddress()) {
+                if (addr.isMulticastAddress() || addr.isAnyLocalAddress()) {
+                    return false;
+                }
+                // Nunca permitir el endpoint de metadatos de la nube
+                if (CLOUD_METADATA_IP.equals(addr.getHostAddress())) {
+                    return false;
+                }
+                if (!allowPrivateTargets
+                        && (addr.isLoopbackAddress() || addr.isSiteLocalAddress() || addr.isLinkLocalAddress())) {
                     return false;
                 }
             }
