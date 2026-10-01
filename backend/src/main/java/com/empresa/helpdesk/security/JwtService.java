@@ -72,9 +72,10 @@ public class JwtService {
             long expiration
     ) {
         // "tv" (token version): permite invalidar todos los tokens emitidos
-        // cuando cambia la contraseña (revocación de sesiones).
-        if (userDetails instanceof User user && user.getTokenVersion() != null) {
-            extraClaims.put("tv", user.getTokenVersion());
+        // cuando cambia la contraseña (revocación de sesiones). Se incluye
+        // siempre (0 si el usuario aún no tiene versión asignada).
+        if (userDetails instanceof User user) {
+            extraClaims.put("tv", user.getTokenVersion() != null ? user.getTokenVersion() : 0);
         }
         return Jwts
                 .builder()
@@ -95,11 +96,13 @@ public class JwtService {
         if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
             return false;
         }
-        // Verificar que el token no haya sido revocado por cambio de contraseña
+        // Verificar que el token no haya sido revocado por cambio de contraseña.
+        // Se normaliza null -> 0 para no invalidar tokens de usuarios que aún
+        // no tienen versión asignada (p. ej. cuentas creadas antes del cambio).
         if (userDetails instanceof User user) {
-            Integer tvToken = extractClaim(token, c -> c.get("tv", Integer.class));
-            Integer tvUser = user.getTokenVersion() != null ? user.getTokenVersion() : 0;
-            return tvToken != null && tvToken.equals(tvUser);
+            int tvToken = extractTokenVersion(token);
+            int tvUser = user.getTokenVersion() != null ? user.getTokenVersion() : 0;
+            return tvToken == tvUser;
         }
         return true;
     }
