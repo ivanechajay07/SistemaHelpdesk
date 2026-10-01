@@ -1,5 +1,6 @@
 package com.empresa.helpdesk.security;
 
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -48,6 +49,25 @@ public class RateLimiterService {
             synchronized (cola) {
                 cola.clear();
             }
+            intentos.remove(clave);
         }
+    }
+
+    /**
+     * Purga periódicamente las claves sin actividad reciente para evitar que el
+     * mapa crezca indefinidamente con muchas IPs/usuarios distintos.
+     */
+    @Scheduled(fixedDelayString = "${app.rate-limit.cleanup-ms:600000}", initialDelay = 600000)
+    public void limpiar() {
+        Instant corte = Instant.now().minusSeconds(3600);
+        intentos.entrySet().removeIf(entry -> {
+            Deque<Instant> cola = entry.getValue();
+            synchronized (cola) {
+                while (!cola.isEmpty() && cola.peekFirst().isBefore(corte)) {
+                    cola.pollFirst();
+                }
+                return cola.isEmpty();
+            }
+        });
     }
 }

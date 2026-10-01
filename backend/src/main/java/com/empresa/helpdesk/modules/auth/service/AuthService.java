@@ -57,18 +57,32 @@ public class AuthService {
     private final RateLimiterService rateLimiter;
     private final AuditService auditService;
 
+    private static final int MAX_LOGIN_ATTEMPTS = 5;
+    private static final int LOCK_MINUTES = 15;
+
     public AuthResponse login(AuthRequest request) {
         // Rate limiting: máx. 5 intentos por minuto por usuario
         rateLimiter.verificar("login:" + request.getUsername().toLowerCase(), 5, 60);
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
+        // Límite adicional por IP (defensa contra fuerza bruta distribuida)
+        rateLimiter.verificar("login-ip:" + currentIp(), 30, 60);
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            registrarIntentoFallido(request.getUsername());
+            throw e;
+        }
 
         User user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        // Login correcto: reiniciar el contador de bloqueo
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
 
         // Registrar presencia del usuario y desde qué dispositivo se conecta
         LocalDateTime now = LocalDateTime.now();
@@ -287,6 +301,39 @@ public class AuthService {
                 log.error("Error enviando notificación de cambio de contraseña a admin {}: {}", admin.getEmail(), e.getMessage());
             }
         }
+    }
+
+    /** Registra un intento fallido y bloquea temporalmente la cuenta al superar el máximo. */
+    private void registrarIntentoFallido(String usernameOrEmail) {
+        userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail).ifPresent(u -> {
+            int intentos = (u.getFailedLoginAttempts() != null ? u.getFailedLoginAttempts() : 0) + 1;
+            if (intentos >= MAX_LOGIN_ATTEMPTS) {
+                u.setFailedLoginAttempts(0);
+                u.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_MINUTES));
+            } else {
+                u.setFailedLoginAttempts(intentos);
+            }
+            userRepository.save(u);
+            auditService.registrar(usernameOrEmail, "LOGIN_FALLIDO", "USUARIO", u.getId(),
+                    "Intento de inicio de sesión fallido");
+        });
+    }
+
+    /** IP del cliente de la petición actual (para el rate limiting por IP). */
+    private String currentIp() {
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                DeviceInfoResolver.DeviceInfo di = DeviceInfoResolver.resolve(attrs.getRequest());
+                if (di != null && di.ip() != null && !di.ip().isBlank()) {
+                    return di.ip();
+                }
+            }
+        } catch (Exception ignored) {
+            // sin contexto de petición
+        }
+        return "desconocida";
     }
 
     /** Hash SHA-256 (hex) del token de restablecimiento para almacenarlo de forma segura. */

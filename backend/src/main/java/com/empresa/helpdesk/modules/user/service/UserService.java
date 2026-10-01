@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -111,6 +112,9 @@ public class UserService {
         }
 
         if (request.getRoleIds() != null) {
+            if (request.getRoleIds().isEmpty()) {
+                throw new RuntimeException("Debe asignar al menos un rol al usuario");
+            }
             Set<Role> roles = new HashSet<>();
             for (Long roleId : request.getRoleIds()) {
                 Role role = roleRepository.findById(roleId).orElseThrow(() -> new RuntimeException("Rol no encontrado"));
@@ -138,6 +142,21 @@ public class UserService {
     @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // No permitir que un usuario se elimine a sí mismo
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null
+                && (auth.getName().equalsIgnoreCase(user.getUsername())
+                    || auth.getName().equalsIgnoreCase(user.getEmail()))) {
+            throw new RuntimeException("No puedes eliminar tu propia cuenta");
+        }
+
+        // Proteger al último administrador del sistema
+        boolean esAdmin = user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
+        if (esAdmin && userRepository.findByRoles_Name("ADMIN").size() <= 1) {
+            throw new RuntimeException("No puedes eliminar al último administrador del sistema");
+        }
+
         userRepository.delete(user);
         auditService.registrar("ELIMINAR_USUARIO", "USUARIO", id, user.getUsername());
     }

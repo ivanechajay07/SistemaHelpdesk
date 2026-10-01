@@ -51,6 +51,14 @@ public class User implements UserDetails {
     @Column(name = "token_version")
     private Integer tokenVersion = 0;
 
+    // Bloqueo temporal por intentos fallidos de inicio de sesión
+    @Builder.Default
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private java.time.LocalDateTime lockedUntil;
+
     @Column(name = "last_login")
     private java.time.LocalDateTime lastLogin;
 
@@ -105,7 +113,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return lockedUntil == null || lockedUntil.isBefore(java.time.LocalDateTime.now());
     }
 
     @Override

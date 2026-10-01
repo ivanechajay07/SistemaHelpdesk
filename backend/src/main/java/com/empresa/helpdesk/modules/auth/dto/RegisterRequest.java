@@ -2,6 +2,7 @@ package com.empresa.helpdesk.modules.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,7 +32,9 @@ public class RegisterRequest {
     private String username;
 
     @NotBlank(message = "La contraseña es requerida")
-    @Size(min = 6, max = 100, message = "La contraseña debe tener entre 6 y 100 caracteres")
+    @Size(min = 8, max = 100, message = "La contraseña debe tener entre 8 y 100 caracteres")
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$",
+            message = "La contraseña debe incluir al menos una letra y un número")
     private String password;
 
     @Size(max = 20, message = "El teléfono no puede exceder 20 caracteres")

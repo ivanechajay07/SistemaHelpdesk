@@ -1,5 +1,6 @@
 package com.empresa.helpdesk.modules.audit.controller;
 
+import com.empresa.helpdesk.modules.audit.dto.AuditLogResponse;
 import com.empresa.helpdesk.modules.audit.entity.AuditLog;
 import com.empresa.helpdesk.modules.audit.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class AuditController {
     private final AuditLogRepository auditLogRepository;
 
     @GetMapping
-    public ResponseEntity<Page<AuditLog>> getAll(
+    public ResponseEntity<Page<AuditLogResponse>> getAll(
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -29,6 +30,22 @@ public class AuditController {
         Page<AuditLog> result = (q != null && !q.isBlank())
                 ? auditLogRepository.buscar(q.trim(), pageable)
                 : auditLogRepository.findAll(pageable);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(result.map(this::toResponse));
+    }
+
+    private AuditLogResponse toResponse(AuditLog a) {
+        return AuditLogResponse.builder()
+                .id(a.getId())
+                .usuario(a.getUsuario())
+                .accion(a.getAccion())
+                .entidad(a.getEntidad())
+                .entidadId(a.getEntidadId())
+                .detalle(a.getDetalle())
+                .dispositivoTipo(a.getDispositivoTipo())
+                .dispositivoModelo(a.getDispositivoModelo())
+                .navegador(a.getNavegador())
+                .ip(a.getIp())
+                .fecha(a.getFecha())
+                .build();
     }
 }

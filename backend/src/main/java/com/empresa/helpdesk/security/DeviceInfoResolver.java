@@ -2,6 +2,7 @@ package com.empresa.helpdesk.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.net.InetAddress;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -102,14 +103,33 @@ public final class DeviceInfoResolver {
     }
 
     private static String detectIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+        String remote = request.getRemoteAddr();
+        // Solo se confía en las cabeceras de proxy cuando la conexión directa
+        // proviene de un proxy local/privado (p. ej. nginx delante del backend).
+        // Así un cliente externo no puede falsificar su IP con X-Forwarded-For.
+        if (esProxyDeConfianza(remote)) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (xff != null && !xff.isBlank()) {
+                return xff.split(",")[0].trim();
+            }
+            String real = request.getHeader("X-Real-IP");
+            if (real != null && !real.isBlank()) {
+                return real.trim();
+            }
         }
-        String real = request.getHeader("X-Real-IP");
-        if (real != null && !real.isBlank()) {
-            return real.trim();
+        return remote;
+    }
+
+    private static boolean esProxyDeConfianza(String remoteAddr) {
+        if (remoteAddr == null || remoteAddr.isBlank()) {
+            return false;
         }
-        return request.getRemoteAddr();
+        try {
+            InetAddress addr = InetAddress.getByName(remoteAddr);
+            return addr.isLoopbackAddress() || addr.isSiteLocalAddress()
+                    || addr.isLinkLocalAddress() || addr.isAnyLocalAddress();
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

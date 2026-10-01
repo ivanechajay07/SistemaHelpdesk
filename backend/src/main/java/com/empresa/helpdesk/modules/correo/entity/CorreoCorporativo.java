@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -35,6 +37,8 @@ public class CorreoCorporativo {
     @Column(nullable = false, length = 150)
     private String empresa;
 
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Builder.Default
     @OneToMany(mappedBy = "correoCorporativo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CuentaCorreo> cuentas = new ArrayList<>();
