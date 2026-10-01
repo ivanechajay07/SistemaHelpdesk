@@ -1,5 +1,6 @@
 package com.empresa.helpdesk.modules.user.service;
 
+import com.empresa.helpdesk.modules.user.dto.ProfileUpdateRequest;
 import com.empresa.helpdesk.modules.user.dto.UserRequest;
 import com.empresa.helpdesk.modules.user.dto.UserResponse;
 import com.empresa.helpdesk.modules.user.dto.UserSummaryResponse;
@@ -136,6 +137,29 @@ public class UserService {
 
         auditService.registrar(wasActive ? "EDITAR_USUARIO" : "ACTIVAR_USUARIO", "USUARIO", saved.getId(), saved.getUsername());
 
+        return mapToResponse(saved);
+    }
+
+    /** Actualiza el perfil del usuario autenticado (nombre, apellidos, email, teléfono, dirección). */
+    @Transactional
+    public UserResponse updateMyProfile(ProfileUpdateRequest request) {
+        String principal = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsernameOrEmail(principal, principal)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        if (!user.getEmail().equalsIgnoreCase(request.getEmail())
+                && userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("El correo ya está en uso por otro usuario");
+        }
+
+        user.setNombre(request.getNombre());
+        user.setApellidos(request.getApellidos());
+        user.setEmail(request.getEmail());
+        user.setTelefono(request.getTelefono());
+        user.setDireccion(request.getDireccion());
+
+        User saved = userRepository.save(user);
+        auditService.registrar("EDITAR_PERFIL", "USUARIO", saved.getId(), saved.getUsername());
         return mapToResponse(saved);
     }
 

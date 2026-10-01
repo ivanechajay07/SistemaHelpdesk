@@ -1,5 +1,6 @@
 package com.empresa.helpdesk.modules.user.controller;
 
+import com.empresa.helpdesk.modules.user.dto.ProfileUpdateRequest;
 import com.empresa.helpdesk.modules.user.dto.UserRequest;
 import com.empresa.helpdesk.modules.user.dto.UserResponse;
 import com.empresa.helpdesk.modules.user.dto.UserSummaryResponse;
@@ -34,6 +35,12 @@ public class UserController {
     @Operation(summary = "Obtener usuarios por su rol (resumen sin datos sensibles)")
     public ResponseEntity<java.util.List<UserSummaryResponse>> getUsersByRole(@PathVariable String roleName) {
         return ResponseEntity.ok(userService.getUsersByRole(roleName));
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Actualizar el perfil del usuario autenticado")
+    public ResponseEntity<UserResponse> updateMyProfile(@Valid @RequestBody ProfileUpdateRequest request) {
+        return ResponseEntity.ok(userService.updateMyProfile(request));
     }
 
     @GetMapping("/{id}")

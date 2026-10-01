@@ -72,13 +72,14 @@ export default function Settings() {
     setProfileMessage(null);
     try {
       const payload: Record<string, any> = {
-        username: user.username,
         nombre: profileData.nombre,
         apellidos: profileData.apellidos,
         email: profileData.email,
+        telefono: profileData.telefono,
+        direccion: profileData.direccion,
       };
 
-      await api.put(`/users/${user.id}`, payload);
+      await api.put('/users/me', payload);
 
       setAuth({
         ...user,
@@ -97,12 +98,21 @@ export default function Settings() {
   };
 
   // Notifications
-  const [notifications, setNotifications] = useState([
+  const defaultNotifications = [
     { id: 'push', title: 'Notificaciones Push', desc: 'Recibir alertas en el navegador cuando se asigne un ticket.', active: true },
     { id: 'email', title: 'Correos Electrónicos', desc: 'Recibir un resumen diario de los tickets pendientes.', active: false },
     { id: 'sound', title: 'Alertas de Sonido', desc: 'Reproducir un sonido cuando llegue un nuevo mensaje.', active: true },
     { id: 'system', title: 'Mensajes de Sistema', desc: 'Alertas sobre mantenimientos y actualizaciones.', active: true }
-  ]);
+  ];
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = user?.id ? JSON.parse(localStorage.getItem(`notif_prefs_${user.id}`) || 'null') : null;
+      if (saved) {
+        return defaultNotifications.map((d) => ({ ...d, active: saved[d.id] ?? d.active }));
+      }
+    } catch { /* ignore */ }
+    return defaultNotifications;
+  });
   const [isSavingNotifs, setIsSavingNotifs] = useState(false);
   const [notifMessage, setNotifMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
@@ -115,10 +125,10 @@ export default function Settings() {
   const handleSaveNotifications = async () => {
     setIsSavingNotifs(true);
     setNotifMessage(null);
+    const prefs = notifications.reduce((acc, n) => ({ ...acc, [n.id]: n.active }), {} as Record<string, boolean>);
     try {
-      await api.put('/users/notifications', {
-        preferences: notifications.reduce((acc, n) => ({ ...acc, [n.id]: n.active }), {})
-      });
+      if (user?.id) localStorage.setItem(`notif_prefs_${user.id}`, JSON.stringify(prefs));
+      await api.put('/users/notifications', { preferences: prefs });
       setNotifMessage({ type: 'success', text: 'Preferencias guardadas.' });
     } catch {
       setNotifMessage({ type: 'success', text: 'Preferencias guardadas localmente.' });
@@ -143,8 +153,8 @@ export default function Settings() {
       setSecurityMessage({ type: 'error', text: 'Las nuevas contraseñas no coinciden.' });
       return;
     }
-    if (securityData.new.length < 6) {
-      setSecurityMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres.' });
+    if (securityData.new.length < 8 || !/[A-Za-z]/.test(securityData.new) || !/\d/.test(securityData.new)) {
+      setSecurityMessage({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres e incluir letras y números.' });
       return;
     }
 
@@ -422,7 +432,7 @@ export default function Settings() {
                           required
                           value={securityData.new}
                           onChange={(e) => setSecurityData({...securityData, new: e.target.value})}
-                          placeholder="Mínimo 6 caracteres" 
+                          placeholder="Mínimo 8 caracteres (letras y números)" 
                           className="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm" 
                         />
                         <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
