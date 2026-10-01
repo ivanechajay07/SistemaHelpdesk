@@ -417,19 +417,19 @@ export default function Tickets() {
             </div>
           )}
 
-          {/* Desktop Table */}
-          <div className="hidden md:block">
+          {/* Desktop Table (solo en pantallas grandes; en tablet/móvil se usan tarjetas) */}
+          <div className="hidden lg:block">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50/50 dark:bg-slate-900/20 text-slate-500 dark:text-slate-400 border-b border-slate-200/60 dark:border-slate-800/60">
                 <tr>
                   <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Código</th>
                   <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Asunto</th>
                   <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Categoría</th>
-                  <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Entidad</th>
-                  <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Sede</th>
+                  <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider hidden xl:table-cell">Entidad</th>
+                  <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider hidden xl:table-cell">Sede</th>
                   <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Estado</th>
                   <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Prioridad</th>
-                  <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider">Fecha</th>
+                  <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider hidden xl:table-cell">Fecha</th>
                   <th className="px-6 py-3 font-semibold text-xs uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
@@ -490,7 +490,7 @@ export default function Tickets() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 hidden xl:table-cell">
                         {ticket.entidad ? (
                           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
                             <Building2 className="w-3.5 h-3.5 text-violet-500 shrink-0" />
@@ -500,7 +500,7 @@ export default function Tickets() {
                           <span className="text-xs text-slate-400 dark:text-slate-500 italic">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-3">
+                      <td className="px-6 py-3 hidden xl:table-cell">
                         {ticket.sede ? (
                           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
                             <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
@@ -521,11 +521,11 @@ export default function Tickets() {
                           <span className="font-semibold text-slate-700 dark:text-slate-300 text-xs">{ticket.prioridad}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-slate-500 dark:text-slate-400 font-medium text-xs">
+                      <td className="px-6 py-3 text-slate-500 dark:text-slate-400 font-medium text-xs hidden xl:table-cell">
                         {new Date(ticket.fechaCreacion).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           {canReactivateTicket(ticket) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleReactivateTicket(ticket.id); }}
@@ -592,8 +592,8 @@ export default function Tickets() {
             </table>
           </div>
 
-          {/* Mobile Cards */}
-          <div className="md:hidden flex flex-col gap-3 p-4">
+          {/* Tarjetas para tablet y móvil */}
+          <div className="lg:hidden flex flex-col gap-3 p-4">
             {filteredTickets.length === 0 && !loading ? (
               <div className="text-center text-slate-500 py-8 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
                 <Search className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
@@ -652,48 +652,47 @@ export default function Tickets() {
                     </span>
                   </div>
 
-                  {ticket.estado === 'RESUELTO' && (isAdmin() || ticket.usuarioId === user?.id) && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleConfirmTicket(ticket.id); }}
-                        className="w-full flex items-center justify-center gap-1.5 p-2 text-teal-600 bg-teal-50 dark:bg-teal-500/10 rounded-xl text-xs font-medium transition-colors"
-                      >
-                        <ThumbsUp className="w-3.5 h-3.5" /> Confirmar solución
-                      </button>
-                    </div>
-                  )}
-
-                  {canReactivateTicket(ticket) && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleReactivateTicket(ticket.id); }}
-                        className="w-full flex items-center justify-center gap-1.5 p-2 text-cyan-600 bg-cyan-50 dark:bg-cyan-500/10 rounded-xl text-xs font-medium transition-colors"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" /> Reactivar ticket
-                      </button>
-                    </div>
-                  )}
-
-                  {ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && isStaff && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                      {canAssign && (
+                  {(canConfirmTicket(ticket) || canReactivateTicket(ticket) ||
+                    (ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && isStaff) ||
+                    canEdit || canDelete) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                      {canReactivateTicket(ticket) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleReactivateTicket(ticket.id); }}
+                          className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 p-2 text-cyan-600 bg-cyan-50 dark:bg-cyan-500/10 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" /> Reactivar
+                        </button>
+                      )}
+                      {canConfirmTicket(ticket) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleConfirmTicket(ticket.id); }}
+                          className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 p-2 text-teal-600 bg-teal-50 dark:bg-teal-500/10 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          <ThumbsUp className="w-3.5 h-3.5" /> Confirmar
+                        </button>
+                      )}
+                      {ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && canAssign && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsAssignModalOpen(true); }}
-                          className="flex-1 flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-xs font-medium transition-colors"
+                          className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-xs font-semibold transition-colors"
                         >
                           <UserCheck className="w-3.5 h-3.5" /> Asignar
                         </button>
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsResolveModalOpen(true); }}
-                        className="flex-1 flex items-center justify-center gap-1.5 p-2 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl text-xs font-medium transition-colors"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" /> Resolver
-                      </button>
+                      {ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && isStaff && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsResolveModalOpen(true); }}
+                          className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 p-2 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" /> Resolver
+                        </button>
+                      )}
                       {canEdit && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsEditModalOpen(true); }}
                           className="p-2 text-blue-600 bg-blue-50 dark:bg-blue-500/10 rounded-xl transition-colors"
+                          title="Editar"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -702,6 +701,7 @@ export default function Tickets() {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteTicket(ticket.id); }}
                           className="p-2 text-red-600 bg-red-50 dark:bg-red-500/10 rounded-xl transition-colors"
+                          title="Eliminar"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
