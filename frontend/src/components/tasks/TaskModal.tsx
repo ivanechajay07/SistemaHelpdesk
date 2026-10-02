@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { X, Loader2, CalendarDays } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
+import FormModal, { SectionTitle } from '../ui/FormModal';
 import { useTaskStore, type Task, type TaskPriority, type TaskStatus } from '../../store/taskStore';
 import { useUserStore } from '../../store/userStore';
 import { useToast } from '../ui/Toast';
@@ -115,28 +116,21 @@ export function TaskModal({ isOpen, onClose, task, defaultFecha }: TaskModalProp
     'w-full px-3 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-400/40 transition-all';
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm anim-fade-in" onClick={onClose}>
-      <div
-        className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl anim-scale-in overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-teal-500/10 to-emerald-500/10">
-          <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-teal-500" />
-            {task ? 'Editar Tarea' : 'Nueva Tarea'}
-          </h3>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {error && (
-            <div key={error} className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs font-semibold anim-shake">
-              {error}
-            </div>
-          )}
-
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={task ? 'Editar Tarea' : 'Nueva Tarea'}
+      subtitle="Planifica y asigna el trabajo"
+      icon={<CalendarDays className="w-5 h-5" />}
+      theme="tasks"
+      onSubmit={handleSubmit}
+      submitLabel={task ? 'Guardar Cambios' : 'Registrar Tarea'}
+      loading={saving}
+      error={error}
+      closeOnBackdrop
+      maxWidth="max-w-lg"
+    >
+      <SectionTitle>Detalle de la tarea</SectionTitle>
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Título *</label>
             <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} className={inputCls} placeholder="Ej. Instalación de red en área contable" maxLength={150} autoFocus />
@@ -186,21 +180,6 @@ export function TaskModal({ isOpen, onClose, task, defaultFecha }: TaskModalProp
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn-shine px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-600 disabled:opacity-50 transition-all shadow-md shadow-teal-500/25 active:scale-95 flex items-center gap-2"
-            >
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {task ? 'Guardar Cambios' : 'Registrar Tarea'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </FormModal>
   );
 }

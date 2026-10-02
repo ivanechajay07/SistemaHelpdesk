@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Layers, Save, Plus, Trash2 } from 'lucide-react';
+import { Layers, Plus, Trash2 } from 'lucide-react';
+import FormModal, { SectionTitle } from '../ui/FormModal';
 import type { Category, Subcategory } from '../../store/categoryStore';
 
 interface CategoryModalProps {
@@ -116,24 +117,19 @@ export function CategoryModal({ isOpen, onClose, onSubmit, category }: CategoryM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
-      <div className="my-auto bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] border border-slate-200 dark:border-slate-800">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg text-indigo-600 dark:text-indigo-400">
-              <Layers className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-semibold">{category ? 'Editar Categoría' : 'Nueva Categoría'}</h2>
-          </div>
-          <button 
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 space-y-3.5">
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={category ? 'Editar Categoría' : 'Nueva Categoría'}
+      subtitle="Organiza los temas de soporte"
+      icon={<Layers className="w-5 h-5" />}
+      theme="categories"
+      onSubmit={handleSubmit}
+      submitLabel="Guardar Categoría"
+      loading={loading}
+      maxWidth="max-w-2xl"
+    >
+      <SectionTitle>Información</SectionTitle>
           <div>
             <label className="block text-sm font-medium mb-1">Nombre de la Categoría</label>
             <input
@@ -214,25 +210,6 @@ export function CategoryModal({ isOpen, onClose, onSubmit, category }: CategoryM
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg font-medium transition-colors active:scale-95"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-lg font-medium transition-all shadow-md shadow-indigo-500/25 disabled:opacity-50 flex items-center gap-2 active:scale-95"
-            >
-              <Save className="w-4 h-4" />
-              {loading ? 'Guardando...' : 'Guardar Categoría'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </FormModal>
   );
 }

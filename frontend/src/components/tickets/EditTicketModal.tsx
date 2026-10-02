@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, AlertCircle, Building2, MapPin } from 'lucide-react';
+import { AlertCircle, Building2, MapPin, Ticket as TicketIcon } from 'lucide-react';
+import FormModal, { SectionTitle } from '../ui/FormModal';
 import { useTicketStore } from '../../store/ticketStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useCatalogStore } from '../../store/catalogStore';
@@ -139,31 +140,21 @@ export default function EditTicketModal({ isOpen, onClose, ticket }: EditTicketM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
-      <div className="my-auto w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)]">
-        
-        <div className="flex justify-between items-center px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Editar Ticket</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">{ticket.codigo}</p>
-          </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 space-y-3.5">
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <div>
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar Ticket"
+      subtitle={ticket.codigo}
+      icon={<TicketIcon className="w-5 h-5" />}
+      theme="tickets"
+      onSubmit={handleSubmit}
+      submitLabel="Actualizar Ticket"
+      loading={loading}
+      error={error}
+      maxWidth="max-w-lg"
+    >
+      <SectionTitle>Detalle del ticket</SectionTitle>
+      <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Título / Asunto</label>
             <input 
               type="text" 
@@ -285,26 +276,6 @@ export default function EditTicketModal({ isOpen, onClose, ticket }: EditTicketM
             {fieldErrors.descripcion && <p className="text-red-500 text-xs mt-1">{fieldErrors.descripcion}</p>}
           </div>
 
-          <div className="pt-3 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
-            <button 
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 rounded-xl transition-all shadow-md shadow-blue-500/25 flex items-center gap-2 active:scale-95"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? 'Guardando...' : 'Actualizar Ticket'}
-            </button>
-          </div>
-        </form>
-
-      </div>
-    </div>
+    </FormModal>
   );
 }

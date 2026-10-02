@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, AlertCircle, Building2, MapPin, FileStack } from 'lucide-react';
+import { AlertCircle, Building2, MapPin, FileStack, Ticket } from 'lucide-react';
+import FormModal, { SectionTitle } from '../ui/FormModal';
 import { useTicketStore } from '../../store/ticketStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useCatalogStore } from '../../store/catalogStore';
@@ -150,28 +151,22 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
-      <div className="my-auto w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)]">
-        
-        <div className="flex justify-between items-center px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Crear Nuevo Ticket</h2>
-          <button 
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 space-y-3.5">
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {templates.length > 0 && (
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Crear Nuevo Ticket"
+      subtitle="Registra una incidencia o solicitud"
+      icon={<Ticket className="w-5 h-5" />}
+      theme="tickets"
+      onSubmit={handleSubmit}
+      submitLabel="Crear Ticket"
+      loadingLabel="Creando..."
+      loading={loading}
+      error={error}
+      maxWidth="max-w-lg"
+    >
+      <SectionTitle>Detalle del ticket</SectionTitle>
+      {templates.length > 0 && (
             <div className="flex items-center gap-2.5 p-3 rounded-xl bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-500/10 dark:to-fuchsia-500/10 border border-violet-200/60 dark:border-violet-500/20">
               <FileStack className="w-4 h-4 text-violet-500 shrink-0" />
               <select
@@ -309,26 +304,6 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
             {fieldErrors.descripcion && <p className="text-red-500 text-xs mt-1">{fieldErrors.descripcion}</p>}
           </div>
 
-          <div className="pt-3 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
-            <button 
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 rounded-xl transition-all shadow-md shadow-blue-500/25 flex items-center gap-2 active:scale-95"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? 'Creando...' : 'Crear Ticket'}
-            </button>
-          </div>
-        </form>
-
-      </div>
-    </div>
+    </FormModal>
   );
 }
