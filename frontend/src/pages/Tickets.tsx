@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive, Lock, MessageSquare } from 'lucide-react';
 import { useTicketStore, type Ticket } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
+import { useChatNotificationsStore } from '../store/chatNotificationsStore';
 import NewTicketModal from '../components/tickets/NewTicketModal';
 import EditTicketModal from '../components/tickets/EditTicketModal';
 import { ResolveTicketModal } from '../components/tickets/ResolveTicketModal';
@@ -46,15 +47,21 @@ interface ActionButtonProps {
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
   className: string;
   disabled?: boolean;
+  badge?: number;
   children: React.ReactNode;
 }
 
-/** Icono de acción con tooltip animado que aparece al pasar el puntero. */
-function ActionButton({ label, onClick, className, disabled, children }: ActionButtonProps) {
+/** Icono de acción con tooltip animado y badge opcional de pendientes. */
+function ActionButton({ label, onClick, className, disabled, badge, children }: ActionButtonProps) {
   return (
     <div className="relative group/tt flex">
-      <button type="button" onClick={onClick} disabled={disabled} className={className} aria-label={label}>
+      <button type="button" onClick={onClick} disabled={disabled} className={`relative ${className}`} aria-label={label}>
         {children}
+        {!!badge && badge > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-rose-500 to-red-500 rounded-full shadow-md ring-2 ring-white dark:ring-slate-900">
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
       </button>
       <span
         role="tooltip"
@@ -70,6 +77,8 @@ function ActionButton({ label, onClick, className, disabled, children }: ActionB
 export default function Tickets() {
   const { tickets, loading, error, fetchTickets, deleteTicket, resolveTicket, confirmTicket, reactivateTicket } = useTicketStore();
   const { user, hasPermission, isAdmin, hasRole } = useAuthStore();
+  const { unreadByTicket, fetchUnreadCounts } = useChatNotificationsStore();
+  const unreadFor = (ticket: { id: number }) => unreadByTicket[ticket.id]?.noLeidos ?? 0;
   const [searchParams, setSearchParams] = useSearchParams();
   const vista = (searchParams.get('vista') || '') as Vista;
   const [searchTerm, setSearchTerm] = useState('');
@@ -190,7 +199,8 @@ export default function Tickets() {
 
   useEffect(() => {
     fetchTickets();
-  }, [fetchTickets]);
+    fetchUnreadCounts();
+  }, [fetchTickets, fetchUnreadCounts]);
 
   const handleResolveTicket = async (resolucion: string) => {
     if (selectedTicket) {
@@ -553,8 +563,13 @@ export default function Tickets() {
                       <td className="px-6 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           <ActionButton
-                            label={isTicketLocked(ticket) ? 'Disponible cuando se asigne un técnico' : 'Abrir chat / detalle'}
+                            label={isTicketLocked(ticket)
+                              ? 'Disponible cuando se asigne un técnico'
+                              : unreadFor(ticket) > 0
+                                ? `${unreadFor(ticket)} mensaje(s) sin leer · Abrir chat`
+                                : 'Abrir chat / detalle'}
                             disabled={isTicketLocked(ticket)}
+                            badge={unreadFor(ticket)}
                             onClick={(e) => { e.stopPropagation(); openTicket(ticket); }}
                             className={`p-2 rounded-lg transition-colors ${
                               isTicketLocked(ticket)
@@ -699,7 +714,16 @@ export default function Tickets() {
                   >
                     {isTicketLocked(ticket)
                       ? <><Lock className="w-3.5 h-3.5" /> Pendiente de asignación</>
-                      : <><MessageSquare className="w-3.5 h-3.5" /> Abrir chat</>}
+                      : (
+                        <>
+                          <MessageSquare className="w-3.5 h-3.5" /> Abrir chat
+                          {unreadFor(ticket) > 0 && (
+                            <span className="ml-1 min-w-[18px] h-[18px] px-1.5 inline-flex items-center justify-center text-[10px] font-black text-white bg-white/25 rounded-full">
+                              {unreadFor(ticket) > 9 ? '9+' : unreadFor(ticket)}
+                            </span>
+                          )}
+                        </>
+                      )}
                   </button>
 
                   {(canConfirmTicket(ticket) || canReactivateTicket(ticket) ||
