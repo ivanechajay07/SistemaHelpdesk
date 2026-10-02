@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Sparkles, Award, CalendarDays } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon } from 'lucide-react';
 import UserAvatar from '../components/ui/UserAvatar';
 import MiniCalendar from '../components/ui/MiniCalendar';
 import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
@@ -46,6 +46,21 @@ export default function Dashboard() {
   const profileImage = useProfileImage(user?.id);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Saludo dinamico segun la hora del dia + reloj en vivo
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const GreetingIcon = hour < 12 ? Sunrise : hour < 19 ? Sun : Moon;
+  const heroGradient = hour < 12
+    ? 'from-sky-500 via-blue-600 to-indigo-700'
+    : hour < 19
+      ? 'from-indigo-600 via-violet-600 to-purple-700'
+      : 'from-slate-800 via-indigo-900 to-violet-950';
 
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(
@@ -153,10 +168,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ===== HERO: Resumen General / Bienvenida ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-indigo-500/25 anim-fade-in-up">
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-fuchsia-400/20 rounded-full blur-3xl pointer-events-none" />
+      {/* ===== HERO: Bienvenida dinamica segun la hora ===== */}
+      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${heroGradient} px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-indigo-500/25 anim-fade-in-up transition-colors duration-700`}>
+        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
+        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-fuchsia-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
         <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
         <div className="absolute top-14 right-1/4 w-16 h-16 border border-white/10 rounded-full pointer-events-none hidden sm:block" />
 
@@ -175,29 +190,48 @@ export default function Dashboard() {
             )}
             <div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                Resumen General
+                <GreetingIcon className="w-3.5 h-3.5" />
+                {greeting}
               </span>
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-                Bienvenido al sistema,{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-200 to-yellow-200">
                   {user?.nombre} {user?.apellidos}
                 </span>
               </h1>
-              <p className="text-blue-100/90 mt-1.5 font-medium text-sm flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5" />
-                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-blue-100/90 font-medium text-xs sm:text-sm">
+                <span className="flex items-center gap-1.5 capitalize">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  {now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+                <span className="flex items-center gap-1.5 tabular-nums">
+                  <Clock className="w-3.5 h-3.5" />
+                  {now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => setIsNewTicketModalOpen(true)}
-            className="btn-shine self-start lg:self-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
-          >
-            <Ticket className="w-4 h-4" />
-            Nuevo Ticket
-          </button>
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center gap-3 self-start lg:self-auto">
+            <div className="flex items-center gap-2">
+              {[
+                { label: 'Total', value: totalCount },
+                { label: 'Abiertos', value: openCount },
+                { label: 'Vencidos', value: overdueCount },
+              ].map((c) => (
+                <div key={c.label} className="px-3 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center min-w-[74px]">
+                  <p className="text-lg font-black text-white leading-none tabular-nums">{c.value}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/70 mt-1">{c.label}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setIsNewTicketModalOpen(true)}
+              className="btn-shine inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
+            >
+              <Ticket className="w-4 h-4" />
+              Nuevo Ticket
+            </button>
+          </div>
         </div>
       </div>
 
