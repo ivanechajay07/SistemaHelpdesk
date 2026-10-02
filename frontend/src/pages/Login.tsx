@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import {
   Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft,
-  UserPlus, User, ShieldCheck, Zap, BarChart3, Headphones, Star, Sun, Moon
+  UserPlus, User, ShieldCheck, Zap, BarChart3, Headphones, Star, Sun, Moon, Sunrise
 } from 'lucide-react';
 
 type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
@@ -21,6 +21,11 @@ const inputRegCls = (hasError: boolean) =>
 export default function Login() {
   const [view, setView] = useState<View>('login');
   const { isDark, toggleTheme } = useThemeStore();
+
+  // Saludo segun la hora del dia
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const GreetingIcon = hour < 12 ? Sunrise : hour < 19 ? Sun : Moon;
 
   // Login state
   const [username, setUsername] = useState('');
@@ -383,16 +388,19 @@ export default function Login() {
           </div>
 
           <div
-            className="bg-white/85 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-slate-300/40 dark:shadow-black/50 p-6 sm:p-8 anim-fade-in-up"
+            className="relative overflow-hidden bg-white/85 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-slate-300/40 dark:shadow-black/50 p-6 sm:p-8 anim-fade-in-up"
             style={{ animationDelay: '120ms' }}
           >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-fuchsia-500 to-amber-400" />
             <div key={view} className="anim-fade-in-up">
 
               {/* === LOGIN === */}
               {view === 'login' && (
                 <>
-                  <div className="mb-7 hidden lg:block">
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Bienvenido de nuevo</h2>
+                  <div className="mb-7 text-center lg:text-left">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center justify-center lg:justify-start gap-2">
+                      <GreetingIcon className="w-6 h-6 text-blue-500" /> {greeting}
+                    </h2>
                     <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">Ingresa a tu cuenta para continuar</p>
                   </div>
 
