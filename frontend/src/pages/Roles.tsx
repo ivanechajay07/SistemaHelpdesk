@@ -12,7 +12,7 @@ const MENU_GROUPS: { label: string; description: string; icon: ElementType; colo
   { label: 'Categorías', description: 'Categorías, subcategorías y plantillas', icon: Layers, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-500/15', names: ['CATEGORY_MANAGE'] },
   { label: 'Monitoreo de Red', description: 'Menú Monitoreo: objetivos vigilados y alertas', icon: Activity, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/15', names: ['MONITORING_VIEW'] },
   { label: 'Reportes', description: 'Reportes e informes exportables', icon: FileText, color: 'text-lime-600 dark:text-lime-400', bg: 'bg-lime-100 dark:bg-lime-500/15', names: ['REPORT_VIEW'] },
-  { label: 'Roles y Configuración', description: 'Permisos del sistema y configuración', icon: Settings2, color: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-100 dark:bg-fuchsia-500/15', names: ['ROLE_MANAGE'] },
+  { label: 'Roles', description: 'Gestión de roles y permisos del sistema', icon: Settings2, color: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-100 dark:bg-fuchsia-500/15', names: ['ROLE_MANAGE'] },
 ];
 
 export default function Roles() {

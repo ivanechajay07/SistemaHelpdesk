@@ -504,8 +504,9 @@ export default function DashboardLayout() {
     {
       title: 'Administración',
       items: navItems.filter((i) =>
-        ['Usuarios', 'Roles', 'Entidad', 'Categorías', 'Plantillas', 'Reportes', 'Auditoría', 'Configuración'].includes(i.name)),
+        ['Usuarios', 'Roles', 'Entidad', 'Categorías', 'Plantillas', 'Reportes', 'Auditoría'].includes(i.name)),
     },
+    { title: 'Sistema', items: navItems.filter((i) => ['Configuración'].includes(i.name)) },
   ].filter((s) => s.items.length > 0);
 
   const ticketSubItems: TicketSubItem[] = [
