@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Loader2, Ticket, User as UserIcon, FileX2, X } from 'lucide-react';
+import { Search, Loader2, Ticket, User as UserIcon, FileX2, X, Package } from 'lucide-react';
 import api from '../../lib/axios';
 
 interface TicketResult {
@@ -18,6 +18,14 @@ interface UserResult {
   activo: boolean;
 }
 
+interface AssetResult {
+  id: number;
+  codigo: string;
+  nombre: string;
+  estado: string;
+  sede: string | null;
+}
+
 export default function GlobalSearch() {
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(false);
@@ -25,6 +33,7 @@ export default function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [tickets, setTickets] = useState<TicketResult[]>([]);
   const [usuarios, setUsuarios] = useState<UserResult[]>([]);
+  const [activos, setActivos] = useState<AssetResult[]>([]);
   const [highlight, setHighlight] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +66,7 @@ export default function GlobalSearch() {
     if (query.trim().length < 2) {
       setTickets([]);
       setUsuarios([]);
+      setActivos([]);
       setLoading(false);
       return;
     }
@@ -66,10 +76,12 @@ export default function GlobalSearch() {
         const { data } = await api.get(`/search?q=${encodeURIComponent(query.trim())}`);
         setTickets(data.tickets || []);
         setUsuarios(data.usuarios || []);
+        setActivos(data.activos || []);
         setHighlight(0);
       } catch {
         setTickets([]);
         setUsuarios([]);
+        setActivos([]);
       } finally {
         setLoading(false);
       }
@@ -79,8 +91,9 @@ export default function GlobalSearch() {
 
   const goTicket = (id: number) => { setOpen(false); closeSearch(); navigate(`/tickets/${id}`); };
   const goUsers = () => { setOpen(false); closeSearch(); navigate('/users'); };
+  const goAssets = () => { setOpen(false); closeSearch(); navigate('/inventario/activos'); };
 
-  const totalResults = tickets.length + usuarios.length;
+  const totalResults = tickets.length + usuarios.length + activos.length;
 
   return (
     <div className="relative" ref={boxRef}>
@@ -95,7 +108,7 @@ export default function GlobalSearch() {
           <Search className="h-5 w-5" />
         </button>
       ) : (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-[min(88vw,22rem)] anim-scale-in origin-right">
+        <div className="fixed left-2 right-2 top-[4.25rem] z-[60] anim-scale-in origin-top-right sm:absolute sm:left-auto sm:right-0 sm:top-1/2 sm:-translate-y-1/2 sm:w-72">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
@@ -175,6 +188,24 @@ export default function GlobalSearch() {
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
                       }`}>
                         {u.activo ? 'Activo' : 'Pendiente'}
+                      </span>
+                    </button>
+                  ))}
+                  {activos.length > 0 && (
+                    <p className="px-4 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Inventario</p>
+                  )}
+                  {activos.map((a) => (
+                    <button
+                      key={`a-${a.id}`}
+                      onClick={goAssets}
+                      className="w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                    >
+                      <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0">
+                        <Package className="w-3.5 h-3.5 text-white" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{a.codigo}</span>
+                        <span className="block text-[11px] text-slate-400 truncate">{a.nombre}{a.sede ? ` · ${a.sede}` : ''}</span>
                       </span>
                     </button>
                   ))}

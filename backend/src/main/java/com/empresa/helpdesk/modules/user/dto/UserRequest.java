@@ -26,10 +26,10 @@ public class UserRequest {
     @Email(message = "El correo electrónico no es válido")
     private String email;
 
-    @NotBlank(message = "La contraseña es requerida")
-    @Size(min = 8, max = 100, message = "La contraseña debe tener entre 8 y 100 caracteres")
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$",
-            message = "La contraseña debe incluir al menos una letra y un número")
+    // Opcional al editar (vacío = no cambiar). Al crear es obligatoria (se valida en el servicio).
+    @Size(max = 100, message = "La contraseña no puede superar 100 caracteres")
+    @Pattern(regexp = "^$|^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{8,100}$",
+            message = "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número")
     private String password;
 
     @NotBlank(message = "El nombre es requerido")

@@ -178,8 +178,13 @@ export default function Settings() {
       setSecurityMessage({ type: 'error', text: 'Las nuevas contraseñas no coinciden.' });
       return;
     }
-    if (securityData.new.length < 8 || !/[A-Za-z]/.test(securityData.new) || !/\d/.test(securityData.new)) {
-      setSecurityMessage({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres e incluir letras y números.' });
+    if (
+      securityData.new.length < 8 ||
+      !/[A-Z]/.test(securityData.new) ||
+      !/[a-z]/.test(securityData.new) ||
+      !/\d/.test(securityData.new)
+    ) {
+      setSecurityMessage({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.' });
       return;
     }
 
@@ -568,13 +573,28 @@ export default function Settings() {
                           required
                           value={securityData.new}
                           onChange={(e) => setSecurityData({...securityData, new: e.target.value})}
-                          placeholder="Mínimo 8 caracteres (letras y números)" 
+                          placeholder="Mínimo 8 caracteres" 
                           className="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm" 
                         />
                         <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                           {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                      {securityData.new && (
+                        <div className="mt-2 grid grid-cols-2 gap-1.5">
+                          {[
+                            { label: 'Mínimo 8 caracteres', ok: securityData.new.length >= 8 },
+                            { label: 'Una mayúscula', ok: /[A-Z]/.test(securityData.new) },
+                            { label: 'Una minúscula', ok: /[a-z]/.test(securityData.new) },
+                            { label: 'Un número', ok: /\d/.test(securityData.new) },
+                          ].map((c) => (
+                            <span key={c.label} className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${c.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                              <CheckCircle2 className={`w-3.5 h-3.5 ${c.ok ? '' : 'opacity-30'}`} />
+                              {c.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Confirmar Nueva Contraseña</label>
