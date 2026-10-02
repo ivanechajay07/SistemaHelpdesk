@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { SkeletonPage } from './components/ui/Skeleton';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { ToastProvider } from './components/ui/Toast';
@@ -36,14 +36,6 @@ const Prestamos = lazy(() => import('./pages/inventory/Prestamos'));
 const Historial = lazy(() => import('./pages/inventory/Historial'));
 const ReportesInventario = lazy(() => import('./pages/inventory/Reportes'));
 const QrPublic = lazy(() => import('./pages/QrPublic'));
-
-function PageLoader() {
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-    </div>
-  );
-}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -109,7 +101,7 @@ function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<SkeletonPage />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, Save, X, AlignLeft } from 'lucide-react';
+import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, AlignLeft } from 'lucide-react';
 import { useCatalogStore, type Entidad } from '../store/catalogStore';
 import SearchableSelect from '../components/ui/SearchableSelect';
+import FormModal, { SectionTitle } from '../components/ui/FormModal';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
@@ -21,6 +22,7 @@ export default function Entidades() {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Entidad | null>(null);
   const [pickValue, setPickValue] = useState('');
   const [nombre, setNombre] = useState('');
@@ -50,6 +52,11 @@ export default function Entidades() {
     setFieldErrors({});
   };
 
+  const openCreate = () => {
+    resetForm();
+    setFormOpen(true);
+  };
+
   const startEdit = (entidad: Entidad) => {
     setEditing(entidad);
     setPickValue(String(entidad.id));
@@ -60,6 +67,7 @@ export default function Entidades() {
         : [emptySedeRow()]
     );
     setFieldErrors({});
+    setFormOpen(true);
   };
 
   const handlePick = (value: string) => {
@@ -146,6 +154,7 @@ export default function Entidades() {
         });
       }
       resetForm();
+      setFormOpen(false);
     } catch (err: any) {
       toast({
         variant: 'error',
@@ -214,32 +223,34 @@ export default function Entidades() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight">Entidades y Sedes</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Registra cada entidad con una o varias sedes donde se reportan los inconvenientes.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight">Entidades y Sedes</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Registra cada entidad con una o varias sedes donde se reportan los inconvenientes.
+          </p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-orange-500/25 active:scale-95 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" /> Registrar Entidad
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
-
-        {/* ===== Formulario de registro ===== */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5 space-y-4 anim-fade-in-up"
-        >
-          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
-              {editing ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-            </div>
-            <div>
-              <h2 className="font-bold text-slate-900 dark:text-white leading-tight">
-                {editing ? 'Editar Entidad' : 'Registrar Entidad'}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Entidad y sus sedes</p>
-            </div>
-          </div>
-
+      <FormModal
+        isOpen={formOpen}
+        onClose={() => { setFormOpen(false); resetForm(); }}
+        title={editing ? 'Editar Entidad' : 'Registrar Entidad'}
+        subtitle="Entidad y sus sedes"
+        icon={<Building2 className="w-5 h-5" />}
+        theme="categories"
+        onSubmit={handleSubmit}
+        submitLabel={editing ? 'Guardar Cambios' : 'Registrar Entidad'}
+        loading={submitting}
+        maxWidth="max-w-lg"
+      >
+        <SectionTitle>Datos de la entidad</SectionTitle>
           <div>
             <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               <Building2 className="w-3.5 h-3.5" /> Entidad *
@@ -340,26 +351,7 @@ export default function Entidades() {
             </div>
           </div>
 
-          <div className="flex gap-2 pt-1">
-            {editing && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95 flex items-center gap-1.5"
-              >
-                <X className="w-4 h-4" /> Cancelar
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-shine flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-orange-500/25 active:scale-95"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {submitting ? 'Guardando...' : editing ? 'Guardar Cambios' : 'Registrar Entidad'}
-            </button>
-          </div>
-        </form>
+      </FormModal>
 
         {/* ===== Listado de entidades ===== */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden anim-fade-in-up" style={{ animationDelay: '80ms' }}>
@@ -459,7 +451,6 @@ export default function Entidades() {
             </div>
           </div>
         </div>
-      </div>
 
       {!loading && filteredEntidades.length > 0 && (
         <Pagination
