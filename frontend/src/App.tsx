@@ -1,42 +1,53 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { ToastProvider } from './components/ui/Toast';
-import Login from './pages/Login';
-import ResetPassword from './pages/ResetPassword';
 import DashboardLayout from './layouts/DashboardLayout';
-import Dashboard from './pages/Dashboard';
-import Tickets from './pages/Tickets';
-import TicketDetail from './pages/TicketDetail';
-import ActasConformidad from './pages/ActasConformidad';
-import Users from './pages/Users';
-import Roles from './pages/Roles';
-import Categories from './pages/Categories';
-import Entidades from './pages/Entidades';
-import Tasks from './pages/Tasks';
-import TaskCalendar from './pages/TaskCalendar';
-import TaskGantt from './pages/TaskGantt';
-import Settings from './pages/Settings';
-import Reports from './pages/Reports';
-import Knowledge from './pages/Knowledge';
-import CorreoCorporativo from './pages/CorreoCorporativo';
-import Monitoring from './pages/Monitoring';
-import Templates from './pages/Templates';
-import Audit from './pages/Audit';
-import DashboardInventario from './pages/inventory/DashboardInventario';
-import Activos from './pages/inventory/Activos';
-import Movimientos from './pages/inventory/Movimientos';
-import Transferencias from './pages/inventory/Transferencias';
-import Mantenimientos from './pages/inventory/Mantenimientos';
-import Prestamos from './pages/inventory/Prestamos';
-import Historial from './pages/inventory/Historial';
-import ReportesInventario from './pages/inventory/Reportes';
-import QrPublic from './pages/QrPublic';
+
+// Rutas con carga diferida (code-splitting): cada página se descarga solo al entrar.
+const Login = lazy(() => import('./pages/Login'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Tickets = lazy(() => import('./pages/Tickets'));
+const TicketDetail = lazy(() => import('./pages/TicketDetail'));
+const ActasConformidad = lazy(() => import('./pages/ActasConformidad'));
+const Users = lazy(() => import('./pages/Users'));
+const Roles = lazy(() => import('./pages/Roles'));
+const Categories = lazy(() => import('./pages/Categories'));
+const Entidades = lazy(() => import('./pages/Entidades'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const TaskCalendar = lazy(() => import('./pages/TaskCalendar'));
+const TaskGantt = lazy(() => import('./pages/TaskGantt'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Knowledge = lazy(() => import('./pages/Knowledge'));
+const CorreoCorporativo = lazy(() => import('./pages/CorreoCorporativo'));
+const Monitoring = lazy(() => import('./pages/Monitoring'));
+const Templates = lazy(() => import('./pages/Templates'));
+const Audit = lazy(() => import('./pages/Audit'));
+const DashboardInventario = lazy(() => import('./pages/inventory/DashboardInventario'));
+const Activos = lazy(() => import('./pages/inventory/Activos'));
+const Movimientos = lazy(() => import('./pages/inventory/Movimientos'));
+const Transferencias = lazy(() => import('./pages/inventory/Transferencias'));
+const Mantenimientos = lazy(() => import('./pages/inventory/Mantenimientos'));
+const Prestamos = lazy(() => import('./pages/inventory/Prestamos'));
+const Historial = lazy(() => import('./pages/inventory/Historial'));
+const ReportesInventario = lazy(() => import('./pages/inventory/Reportes'));
+const QrPublic = lazy(() => import('./pages/QrPublic'));
+
+function PageLoader() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -47,15 +58,15 @@ function ProtectedRouteWithPermission({ children, permission }: { children: Reac
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasPermission = useAuthStore((state) => state.hasPermission);
   const isAdmin = useAuthStore((state) => state.isAdmin);
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   if (permission && !hasPermission(permission) && !isAdmin()) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -98,125 +109,127 @@ function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/qr/:token" element={<QrPublic />} />
-        
-        <Route path="/" element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="tickets" element={<Tickets />} />
-          <Route path="tickets/actas" element={<ActasConformidad />} />
-          <Route path="tickets/:id" element={<TicketDetail />} />
-          <Route path="knowledge" element={<Knowledge />} />
-          <Route path="knowledge/correos" element={<CorreoCorporativo />} />
-          <Route path="monitoring" element={
-            <ProtectedRouteWithPermission permission="MONITORING_VIEW">
-              <Monitoring />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="users" element={
-            <ProtectedRouteWithPermission permission="USER_MANAGE">
-              <Users />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="roles" element={
-            <ProtectedRouteWithPermission permission="ROLE_MANAGE">
-              <Roles />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="categories" element={
-            <ProtectedRouteWithPermission permission="CATEGORY_MANAGE">
-              <Categories />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="plantillas" element={
-            <ProtectedRouteWithPermission permission="CATEGORY_MANAGE">
-              <Templates />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="auditoria" element={
-            <AdminRoute>
-              <Audit />
-            </AdminRoute>
-          } />
-          <Route path="entidades" element={
-            <ProtectedRouteWithPermission permission="ENTITY_MANAGE">
-              <Entidades />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="tareas" element={
-            <ProtectedRouteWithPermission permission="TASK_MANAGE">
-              <Tasks />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="tareas/calendario" element={
-            <ProtectedRouteWithPermission permission="TASK_MANAGE">
-              <TaskCalendar />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="tareas/gantt" element={
-            <ProtectedRouteWithPermission permission="TASK_MANAGE">
-              <TaskGantt />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="reports" element={
-            <ProtectedRouteWithPermission permission="REPORT_VIEW">
-              <Reports />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="settings" element={
-            <ProtectedRouteWithPermission permission="ROLE_MANAGE">
-              <Settings />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario" element={
-            <ProtectedRouteWithPermission permission="INV_VIEW">
-              <DashboardInventario />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/activos" element={
-            <ProtectedRouteWithPermission permission="INV_VIEW">
-              <Activos />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/movimientos" element={
-            <ProtectedRouteWithPermission permission="INV_VIEW">
-              <Movimientos />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/transferencias" element={
-            <ProtectedRouteWithPermission permission="INV_TRANSFER">
-              <Transferencias />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/mantenimientos" element={
-            <ProtectedRouteWithPermission permission="INV_MANT">
-              <Mantenimientos />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/prestamos" element={
-            <ProtectedRouteWithPermission permission="INV_PRESTAMO">
-              <Prestamos />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/historial" element={
-            <ProtectedRouteWithPermission permission="INV_HISTORIAL">
-              <Historial />
-            </ProtectedRouteWithPermission>
-          } />
-          <Route path="inventario/reportes" element={
-            <ProtectedRouteWithPermission permission="INV_VIEW">
-              <ReportesInventario />
-            </ProtectedRouteWithPermission>
-          } />
-        </Route>
-      </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/qr/:token" element={<QrPublic />} />
+
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="tickets" element={<Tickets />} />
+              <Route path="tickets/actas" element={<ActasConformidad />} />
+              <Route path="tickets/:id" element={<TicketDetail />} />
+              <Route path="knowledge" element={<Knowledge />} />
+              <Route path="knowledge/correos" element={<CorreoCorporativo />} />
+              <Route path="monitoring" element={
+                <ProtectedRouteWithPermission permission="MONITORING_VIEW">
+                  <Monitoring />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="users" element={
+                <ProtectedRouteWithPermission permission="USER_MANAGE">
+                  <Users />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="roles" element={
+                <ProtectedRouteWithPermission permission="ROLE_MANAGE">
+                  <Roles />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="categories" element={
+                <ProtectedRouteWithPermission permission="CATEGORY_MANAGE">
+                  <Categories />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="plantillas" element={
+                <ProtectedRouteWithPermission permission="CATEGORY_MANAGE">
+                  <Templates />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="auditoria" element={
+                <AdminRoute>
+                  <Audit />
+                </AdminRoute>
+              } />
+              <Route path="entidades" element={
+                <ProtectedRouteWithPermission permission="ENTITY_MANAGE">
+                  <Entidades />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="tareas" element={
+                <ProtectedRouteWithPermission permission="TASK_MANAGE">
+                  <Tasks />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="tareas/calendario" element={
+                <ProtectedRouteWithPermission permission="TASK_MANAGE">
+                  <TaskCalendar />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="tareas/gantt" element={
+                <ProtectedRouteWithPermission permission="TASK_MANAGE">
+                  <TaskGantt />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="reports" element={
+                <ProtectedRouteWithPermission permission="REPORT_VIEW">
+                  <Reports />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="settings" element={
+                <ProtectedRouteWithPermission permission="ROLE_MANAGE">
+                  <Settings />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario" element={
+                <ProtectedRouteWithPermission permission="INV_VIEW">
+                  <DashboardInventario />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/activos" element={
+                <ProtectedRouteWithPermission permission="INV_VIEW">
+                  <Activos />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/movimientos" element={
+                <ProtectedRouteWithPermission permission="INV_VIEW">
+                  <Movimientos />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/transferencias" element={
+                <ProtectedRouteWithPermission permission="INV_TRANSFER">
+                  <Transferencias />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/mantenimientos" element={
+                <ProtectedRouteWithPermission permission="INV_MANT">
+                  <Mantenimientos />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/prestamos" element={
+                <ProtectedRouteWithPermission permission="INV_PRESTAMO">
+                  <Prestamos />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/historial" element={
+                <ProtectedRouteWithPermission permission="INV_HISTORIAL">
+                  <Historial />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="inventario/reportes" element={
+                <ProtectedRouteWithPermission permission="INV_VIEW">
+                  <ReportesInventario />
+                </ProtectedRouteWithPermission>
+              } />
+            </Route>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ToastProvider>
   );
