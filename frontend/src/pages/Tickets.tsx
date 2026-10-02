@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive, Lock } from 'lucide-react';
+import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive, Lock, MessageSquare } from 'lucide-react';
 import { useTicketStore, type Ticket } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
 import NewTicketModal from '../components/tickets/NewTicketModal';
@@ -526,6 +526,18 @@ export default function Tickets() {
                       </td>
                       <td className="px-6 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openTicket(ticket); }}
+                            disabled={isTicketLocked(ticket)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              isTicketLocked(ticket)
+                                ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                                : 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20'
+                            }`}
+                            title={isTicketLocked(ticket) ? 'Disponible cuando se asigne un técnico' : 'Abrir chat / detalle'}
+                          >
+                            {isTicketLocked(ticket) ? <Lock className="w-3.5 h-3.5" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                          </button>
                           {canReactivateTicket(ticket) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleReactivateTicket(ticket.id); }}
@@ -651,6 +663,21 @@ export default function Tickets() {
                       {new Date(ticket.fechaCreacion).toLocaleDateString()}
                     </span>
                   </div>
+
+                  {/* Acceso directo al detalle / chat */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openTicket(ticket); }}
+                    disabled={isTicketLocked(ticket)}
+                    className={`w-full flex items-center justify-center gap-1.5 mt-3 p-2.5 rounded-xl text-xs font-bold transition-colors ${
+                      isTicketLocked(ticket)
+                        ? 'text-slate-400 bg-slate-100 dark:bg-slate-800 cursor-not-allowed'
+                        : 'text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 active:scale-[0.99]'
+                    }`}
+                  >
+                    {isTicketLocked(ticket)
+                      ? <><Lock className="w-3.5 h-3.5" /> Pendiente de asignación</>
+                      : <><MessageSquare className="w-3.5 h-3.5" /> Abrir chat</>}
+                  </button>
 
                   {(canConfirmTicket(ticket) || canReactivateTicket(ticket) ||
                     (ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && isStaff) ||
