@@ -45,6 +45,8 @@ export default function Dashboard() {
   const { user } = useAuthStore();
   const profileImage = useProfileImage(user?.id);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
+  const [activeStatus, setActiveStatus] = useState<number | null>(null);
+  const [activePriority, setActivePriority] = useState<number | null>(null);
   const navigate = useNavigate();
 
   // Saludo dinamico segun la hora del dia + reloj en vivo
@@ -415,8 +417,12 @@ export default function Dashboard() {
               <AreaChart data={volume} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="strokeTickets" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#60a5fa" />
+                    <stop offset="100%" stopColor="#a78bfa" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
@@ -427,7 +433,17 @@ export default function Dashboard() {
                   itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
                   cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '5 5' }}
                 />
-                <Area type="monotone" dataKey="tickets" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorTickets)" activeDot={{ r: 6, strokeWidth: 0, fill: '#3b82f6' }} />
+                <Area
+                  type="monotone"
+                  dataKey="tickets"
+                  stroke="url(#strokeTickets)"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorTickets)"
+                  isAnimationActive
+                  animationDuration={1200}
+                  activeDot={{ r: 7, strokeWidth: 3, stroke: '#fff', fill: '#3b82f6' }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -436,41 +452,65 @@ export default function Dashboard() {
         {/* Status Distribution (Pie) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
           <h2 className="text-base font-bold mb-4">Distribución por Estado</h2>
-          <div className="flex-1 flex items-center justify-center">
+          <div className="relative flex-1 flex items-center justify-center">
             {statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                    formatter={(value: any, name: any) => [`${value} tickets`, name]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={210}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={88}
+                      paddingAngle={3}
+                      cornerRadius={6}
+                      dataKey="value"
+                      stroke="none"
+                      isAnimationActive
+                      animationDuration={900}
+                      onMouseEnter={(_, index) => setActiveStatus(index)}
+                      onMouseLeave={() => setActiveStatus(null)}
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                          opacity={activeStatus === null || activeStatus === index ? 1 : 0.4}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                      formatter={(value: any, name: any) => [`${value} tickets`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-slate-800 dark:text-white tabular-nums leading-none">
+                    {activeStatus != null ? statusData[activeStatus]?.value : totalCount}
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-1">
+                    {activeStatus != null ? statusData[activeStatus]?.name : 'Total'}
+                  </span>
+                </div>
+              </>
             ) : (
               <p className="text-slate-400 text-sm">Sin datos</p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2 mt-2">
-            {statusData.map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-xs">
+            {statusData.map((d, i) => (
+              <button
+                key={d.name}
+                onMouseEnter={() => setActiveStatus(i)}
+                onMouseLeave={() => setActiveStatus(null)}
+                className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 transition-colors ${activeStatus === i ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+              >
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
                 <span className="text-slate-600 dark:text-slate-400 truncate">{d.name}</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 ml-auto">{d.value}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -493,9 +533,21 @@ export default function Dashboard() {
                     formatter={(value: any) => [`${value} tickets`, 'Cantidad']}
                     cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
                   />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={50}>
+                  <Bar
+                    dataKey="value"
+                    radius={[8, 8, 0, 0]}
+                    maxBarSize={50}
+                    isAnimationActive
+                    animationDuration={900}
+                    onMouseEnter={(_, index) => setActivePriority(index)}
+                    onMouseLeave={() => setActivePriority(null)}
+                  >
                     {priorityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        opacity={activePriority === null || activePriority === index ? 1 : 0.35}
+                      />
                     ))}
                   </Bar>
                 </BarChart>
@@ -513,6 +565,12 @@ export default function Dashboard() {
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="catGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#818cf8" />
+                      <stop offset="100%" stopColor="#6366f1" />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.15} />
                   <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={110} />
@@ -521,7 +579,7 @@ export default function Dashboard() {
                     formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
                     cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
                   />
-                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={28} fill="#6366f1" />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={28} fill="url(#catGrad)" isAnimationActive animationDuration={900} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

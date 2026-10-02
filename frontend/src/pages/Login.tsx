@@ -262,7 +262,7 @@ export default function Login() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden flex items-center transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
       <button
         onClick={toggleTheme}
