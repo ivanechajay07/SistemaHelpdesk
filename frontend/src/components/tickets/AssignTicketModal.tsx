@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, UserCheck } from 'lucide-react';
+import { UserCheck } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
+import FormModal from '../ui/FormModal';
 
 interface AssignTicketModalProps {
   isOpen: boolean;
@@ -46,29 +47,20 @@ export default function AssignTicketModal({ isOpen, onClose, onAssign, currentTe
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
-      <div className="my-auto bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 anim-scale-in">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-          <h3 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-slate-100">
-            <UserCheck className="w-5 h-5 text-blue-500" />
-            Asignar Técnico
-          </h3>
-          <button 
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm rounded-lg border border-red-200 dark:border-red-500/20">
-              {error}
-            </div>
-          )}
-          
-          <div className="mb-6">
+    <FormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Asignar Técnico"
+      subtitle="Selecciona el técnico responsable"
+      icon={<UserCheck className="w-5 h-5" />}
+      theme="tickets"
+      onSubmit={handleSubmit}
+      submitLabel="Asignar"
+      loading={isSubmitting}
+      error={error || undefined}
+      maxWidth="max-w-md"
+    >
+      <div className="mb-2">
             <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
               Seleccionar Técnico
             </label>
@@ -89,31 +81,6 @@ export default function AssignTicketModal({ isOpen, onClose, onAssign, currentTe
             {technicians.length === 0 && !loading && <p className="text-sm text-amber-500 mt-2">No hay técnicos disponibles.</p>}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !selectedTecnicoId}
-              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                'Asignar'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </FormModal>
   );
 }

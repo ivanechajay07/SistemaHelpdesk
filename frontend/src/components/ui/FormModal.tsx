@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 
-export type FormTheme = 'users' | 'tickets' | 'tasks' | 'monitoring' | 'inventory' | 'categories' | 'templates';
+export type FormTheme = 'users' | 'tickets' | 'tasks' | 'monitoring' | 'inventory' | 'categories' | 'templates' | 'knowledge';
 
 const THEMES: Record<FormTheme, {
   header: string;
@@ -49,6 +49,12 @@ const THEMES: Record<FormTheme, {
     header: 'from-violet-50 to-fuchsia-50 dark:from-violet-500/10 dark:to-fuchsia-500/10',
     iconBg: 'bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-violet-500/25',
     submit: 'from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700',
+    submitShadow: 'shadow-violet-500/25',
+  },
+  knowledge: {
+    header: 'from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/25',
+    submit: 'from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700',
     submitShadow: 'shadow-violet-500/25',
   },
 };

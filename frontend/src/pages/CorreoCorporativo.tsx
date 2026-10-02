@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  Mail, Plus, Search, Loader2, Eye, EyeOff, Edit2, Trash2, Copy, Building2, Briefcase, Lock, AtSign, X, Save, AlertCircle, FileText,
+  Mail, Plus, Search, Loader2, Eye, EyeOff, Edit2, Trash2, Copy, Building2, Briefcase, Lock, AtSign, AlertCircle, FileText,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useCorreoStore, type CorreoCorporativo } from '../store/correoStore';
 import { useToast } from '../components/ui/Toast';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
+import FormModal from '../components/ui/FormModal';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
 import jsPDF from 'jspdf';
@@ -414,26 +415,19 @@ export default function CorreoCorporativo() {
       )}
 
       {/* ===== Modal Crear / Editar ===== */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
-          <div className="my-auto w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)]">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0">
-                  {modal.mode === 'edit' ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{modal.mode === 'edit' ? 'Editar Correo Corporativo' : 'Nuevo Correo Corporativo'}</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Las contraseñas se guardan cifradas</p>
-                </div>
-              </div>
-              <button onClick={() => setModal(null)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3.5">
-              {modal.mode === 'edit' && (
+      <FormModal
+        isOpen={!!modal}
+        onClose={() => setModal(null)}
+        title={modal?.mode === 'edit' ? 'Editar Correo Corporativo' : 'Nuevo Correo Corporativo'}
+        subtitle="Las contraseñas se guardan cifradas"
+        icon={<Mail className="w-5 h-5" />}
+        theme="users"
+        onSubmit={handleSubmit}
+        submitLabel={modal?.mode === 'edit' ? 'Guardar Cambios' : 'Registrar'}
+        loading={submitting}
+        maxWidth="max-w-xl"
+      >
+              {modal?.mode === 'edit' && (
                 <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-medium">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   Al editar, ingrese nuevamente la contraseña de cada cuenta.
@@ -520,19 +514,7 @@ export default function CorreoCorporativo() {
                 </div>
               </div>
 
-              <div className="pt-3 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
-                <button type="button" onClick={() => setModal(null)} className="px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors active:scale-95">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={submitting} className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 rounded-xl transition-all shadow-md shadow-blue-500/25 flex items-center gap-2 active:scale-95">
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {submitting ? 'Guardando...' : modal.mode === 'edit' ? 'Guardar Cambios' : 'Registrar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      </FormModal>
 
       <ConfirmDialog
         isOpen={!!dialog}

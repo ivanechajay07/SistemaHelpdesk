@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Search, Plus, Loader2, Eye, Pencil, Trash2, ArrowLeft, X, Save, FileText } from 'lucide-react';
+import { BookOpen, Search, Plus, Loader2, Eye, Pencil, Trash2, ArrowLeft, FileText } from 'lucide-react';
 import { useKnowledgeStore, type KnowledgeArticle } from '../store/knowledgeStore';
 import { useAuthStore } from '../store/authStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
+import FormModal, { SectionTitle } from '../components/ui/FormModal';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
@@ -311,19 +312,19 @@ export default function Knowledge() {
       )}
 
       {/* Modal editor */}
-      {editorOpen && (
-        <div className="fixed inset-0 z-[90] flex items-start sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 sm:p-6 anim-fade-in">
-          <form onSubmit={handleSave} className="anim-scale-in my-auto w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)]">
-            <div className="h-1.5 bg-gradient-to-r from-violet-500 to-purple-600 shrink-0" />
-            <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 shrink-0">
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                {editingId ? 'Editar artículo' : 'Nuevo artículo'}
-              </h3>
-              <button type="button" onClick={() => setEditorOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="px-4 sm:px-6 pb-4 space-y-3.5 overflow-y-auto flex-1 min-h-0">
+      <FormModal
+        isOpen={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        title={editingId ? 'Editar artículo' : 'Nuevo artículo'}
+        subtitle="Documenta una solución para el equipo"
+        icon={<BookOpen className="w-5 h-5" />}
+        theme="knowledge"
+        onSubmit={handleSave}
+        submitLabel={editingId ? 'Guardar cambios' : 'Publicar artículo'}
+        loading={saving}
+        maxWidth="max-w-2xl"
+      >
+        <SectionTitle>Contenido del artículo</SectionTitle>
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Título *</label>
                 <input
@@ -369,23 +370,7 @@ export default function Knowledge() {
                 />
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Publicado (visible para todos los usuarios)</span>
               </label>
-            </div>
-            <div className="flex justify-end gap-3 px-4 sm:px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 shrink-0">
-              <button type="button" onClick={() => setEditorOpen(false)} className="px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors">
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={saving || !form.titulo.trim() || !form.contenido.trim()}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-md shadow-violet-500/25 active:scale-95"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {editingId ? 'Guardar cambios' : 'Publicar artículo'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      </FormModal>
 
       <ConfirmDialog
         isOpen={!!dialog}
