@@ -1,11 +1,14 @@
 package com.empresa.helpdesk.modules.ticket.repository;
 
 import com.empresa.helpdesk.modules.ticket.entity.Ticket;
+import com.empresa.helpdesk.modules.ticket.enums.TicketStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,6 +29,13 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     Page<Ticket> findBySolicitanteId(Long solicitanteId, Pageable pageable);
     Page<Ticket> findByTecnicoId(Long tecnicoId, Pageable pageable);
     Page<Ticket> findBySolicitanteIdOrTecnicoId(Long solicitanteId, Long tecnicoId, Pageable pageable);
+
+    // Carga de trabajo por técnico (para la asignación automática)
+    long countByTecnicoIdAndEstadoNotIn(Long tecnicoId, List<TicketStatus> estados);
+
+    // Tickets vencidos de SLA que aún no han sido escalados
+    List<Ticket> findByEscaladoSlaFalseAndEstadoNotInAndFechaEstimadaResolucionBefore(
+            List<TicketStatus> estados, LocalDateTime corte);
 
     // Métodos para el Dashboard (globales - admin)
     long countByEstadoIn(java.util.List<com.empresa.helpdesk.modules.ticket.enums.TicketStatus> estados);

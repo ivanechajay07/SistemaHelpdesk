@@ -19,6 +19,8 @@ import com.empresa.helpdesk.modules.user.entity.User;
 import com.empresa.helpdesk.modules.user.repository.UserRepository;
 import com.empresa.helpdesk.modules.notification.service.EmailService;
 import com.empresa.helpdesk.modules.notification.service.NotificationPublisher;
+import com.empresa.helpdesk.modules.settings.service.AutoAssignmentService;
+import com.empresa.helpdesk.modules.settings.service.AutomationSettingsService;
 import com.empresa.helpdesk.modules.chat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -42,6 +44,8 @@ public class TicketService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final NotificationPublisher notificationPublisher;
+    private final AutoAssignmentService autoAssignmentService;
+    private final AutomationSettingsService automationSettings;
     private final MessageRepository messageRepository;
     private final SlaService slaService;
     private final TicketRatingRepository ticketRatingRepository;
@@ -106,7 +110,47 @@ public class TicketService {
 
         auditService.registrar("CREAR_TICKET", "TICKET", ticket.getId(), currentUser.getUsername() + " creó " + codigo);
 
+        // Asignación automática al técnico menos cargado (si está habilitada)
+        if (automationSettings.isAutoAssignmentEnabled()) {
+            autoAsignar(ticket);
+        }
+
         return mapToResponse(ticket);
+    }
+
+    /** Asigna el ticket al técnico con menor carga de trabajo (asignación automática). */
+    private void autoAsignar(Ticket ticket) {
+        autoAssignmentService.elegirTecnico().ifPresent(tecnico -> {
+            ticket.setTecnico(tecnico);
+            ticket.setEstado(TicketStatus.ASIGNADO);
+            ticket.setFechaAsignacion(LocalDateTime.now());
+            ticketRepository.save(ticket);
+
+            ticketHistoryRepository.save(TicketHistory.builder()
+                    .ticket(ticket)
+                    .usuario(tecnico)
+                    .accion("ASIGNACION_AUTOMATICA")
+                    .detalle("Asignado automáticamente al técnico " + tecnico.getUsername()
+                            + " (menor carga de trabajo)")
+                    .build());
+
+            // Precargar asociaciones lazy para los correos asíncronos
+            ticket.getSolicitante().getNombre();
+            ticket.getSolicitante().getApellidos();
+            tecnico.getNombre();
+            tecnico.getApellidos();
+
+            notificationPublisher.notificarTicket(tecnico.getUsername(), "ASIGNADO", "Ticket asignado a ti",
+                    ticket.getCodigo() + " · " + ticket.getTitulo(), ticket.getId());
+            notificationPublisher.notificarTicket(ticket.getSolicitante().getUsername(), "ASIGNADO", "Tu ticket fue asignado",
+                    "Técnico: " + tecnico.getNombre() + " " + tecnico.getApellidos() + " · " + ticket.getCodigo(), ticket.getId());
+
+            emailService.sendTicketAssignmentEmail(tecnico.getEmail(), ticket, tecnico);
+            emailService.sendTicketAssignedToClientEmail(ticket.getSolicitante().getEmail(), ticket, tecnico);
+
+            auditService.registrar("AUTO_ASIGNAR_TICKET", "TICKET", ticket.getId(),
+                    ticket.getCodigo() + " asignado automáticamente a " + tecnico.getUsername());
+        });
     }
 
     @Transactional(readOnly = true)

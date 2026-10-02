@@ -52,6 +52,11 @@ public class Ticket {
     @Column(nullable = false)
     private boolean reactivado = false;
 
+    /** Marca si el ticket ya disparó la alerta de SLA vencido (evita repetir notificaciones). */
+    @Builder.Default
+    @Column(name = "escalado_sla", nullable = false)
+    private boolean escaladoSla = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subcategoria_id", nullable = false)
     private Subcategory subcategoria;

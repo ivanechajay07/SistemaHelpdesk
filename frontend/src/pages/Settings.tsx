@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../lib/axios';
@@ -7,7 +7,7 @@ import { PROFILE_IMAGE_EVENT } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 
 export default function Settings() {
-  const { user, setAuth } = useAuthStore();
+  const { user, setAuth, isAdmin } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
   const [activeTab, setActiveTab] = useState('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -174,11 +174,41 @@ export default function Settings() {
     }
   };
 
+  // Automation (solo administrador)
+  const canManageAutomation = isAdmin();
+  const [automation, setAutomation] = useState<{ autoAssignment: boolean; slaEscalation: boolean } | null>(null);
+  const [isSavingAutomation, setIsSavingAutomation] = useState(false);
+  const [automationMessage, setAutomationMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  useEffect(() => {
+    if (!canManageAutomation) return;
+    api.get('/settings/automation')
+      .then((r) => setAutomation(r.data))
+      .catch(() => setAutomation({ autoAssignment: false, slaEscalation: true }));
+  }, [canManageAutomation]);
+
+  const handleSaveAutomation = async () => {
+    if (!automation) return;
+    setIsSavingAutomation(true);
+    setAutomationMessage(null);
+    try {
+      const { data } = await api.put('/settings/automation', automation);
+      setAutomation(data);
+      setAutomationMessage({ type: 'success', text: 'Configuración guardada.' });
+    } catch (err: any) {
+      setAutomationMessage({ type: 'error', text: err.response?.data?.message || 'No se pudo guardar la configuración.' });
+    } finally {
+      setIsSavingAutomation(false);
+      setTimeout(() => setAutomationMessage(null), 4000);
+    }
+  };
+
   const tabs = [
     { id: 'profile', name: 'Perfil', icon: User },
     { id: 'notifications', name: 'Notificaciones', icon: Bell },
     { id: 'security', name: 'Seguridad', icon: Lock },
     { id: 'appearance', name: 'Apariencia', icon: Palette },
+    ...(canManageAutomation ? [{ id: 'automation', name: 'Automatización', icon: Zap }] : []),
   ];
 
   return (
@@ -517,6 +547,64 @@ export default function Settings() {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* AUTOMATION TAB (solo administrador) */}
+            {activeTab === 'automation' && canManageAutomation && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <h2 className="text-xl font-bold">Automatización</h2>
+                  {automationMessage && (
+                    <span className={`flex items-center gap-1.5 text-sm font-semibold ${automationMessage.type === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {automationMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {automationMessage.text}
+                    </span>
+                  )}
+                </div>
+
+                {!automation ? (
+                  <div className="flex items-center gap-2 text-slate-500 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Cargando configuración...
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-w-2xl">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                      Reglas automáticas del sistema. Solo aplican a tickets nuevos o vencidos.
+                    </p>
+
+                    {[
+                      { key: 'autoAssignment' as const, title: 'Asignación automática', desc: 'Asigna cada ticket nuevo al técnico con menor carga de trabajo.' },
+                      { key: 'slaEscalation' as const, title: 'Escalado por SLA', desc: 'Notifica a administradores y supervisores cuando un ticket vence su SLA.' },
+                    ].map((item) => (
+                      <div
+                        key={item.key}
+                        onClick={() => setAutomation((a) => (a ? { ...a, [item.key]: !a[item.key] } : a))}
+                        className="flex items-center justify-between p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                      >
+                        <div>
+                          <h4 className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">{item.title}</h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer pointer-events-none shrink-0 ml-4">
+                          <input type="checkbox" className="sr-only peer" checked={automation[item.key]} readOnly />
+                          <div className="w-11 h-6 bg-slate-200 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    ))}
+
+                    <div className="flex justify-end pt-4">
+                      <button
+                        onClick={handleSaveAutomation}
+                        disabled={isSavingAutomation}
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20 min-w-[160px]"
+                      >
+                        {isSavingAutomation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
