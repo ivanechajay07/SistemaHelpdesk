@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import {
   Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft,
-  UserPlus, User, ShieldCheck, Zap, BarChart3, Headphones, Star, Sun, Moon, Sunrise
+  UserPlus, User, ShieldCheck, Zap, BarChart3, Headphones, Star, Sun, Moon, Sunrise, LogIn
 } from 'lucide-react';
 
 type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
@@ -51,6 +51,11 @@ export default function Login() {
 
   const setAuth = useAuthStore((state) => state.setAuth);
   const navigate = useNavigate();
+
+  // Precarga el panel en segundo plano para acelerar la transicion tras iniciar sesion
+  useEffect(() => {
+    import('./Dashboard').catch(() => {});
+  }, []);
   const [mfaToken, setMfaToken] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [mfaError, setMfaError] = useState('');
@@ -76,7 +81,7 @@ export default function Login() {
         !roles.includes('TECNICO') && !roles.includes('ROLE_TECNICO') &&
         !roles.includes('SUPERVISOR') && !roles.includes('ROLE_SUPERVISOR');
         navigate(isClientOnly ? '/tickets' : '/dashboard');
-      }, 1600);
+      }, 1100);
   };
 
   const handleVerifyMfa = async (e: React.FormEvent) => {
@@ -337,13 +342,13 @@ export default function Login() {
           <h1 className="text-4xl xl:text-5xl font-black leading-[1.1] tracking-tight text-slate-900 dark:text-white anim-fade-in-up" style={{ animationDelay: '80ms' }}>
             Soporte técnico que{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-fuchsia-500 to-amber-400 dark:from-blue-400 dark:via-fuchsia-400 dark:to-amber-300 anim-gradient-text">
-              impulsa
+              conecta
             </span>{' '}
-            a tu empresa
+            a tu equipo
           </h1>
 
           <p className="mt-5 text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-md anim-fade-in-up" style={{ animationDelay: '160ms' }}>
-            Gestiona tickets, asigna técnicos y monitorea el rendimiento de tu mesa de ayuda desde una sola plataforma.
+            Centraliza tickets, técnicos e inventario, automatiza los SLA y toma decisiones con métricas en tiempo real.
           </p>
 
           <ul className="mt-9 space-y-4 max-w-md">
@@ -468,12 +473,12 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || !username || !password}
-                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       {loading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Ingresando...</>
                       ) : (
-                        'Iniciar Sesión'
+                        <><LogIn className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5" /> Iniciar Sesión</>
                       )}
                     </button>
                   </form>
