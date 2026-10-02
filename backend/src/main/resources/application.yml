@@ -24,12 +24,22 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # El esquema lo gestiona Flyway; Hibernate solo valida que coincida.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
     show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: ${JPA_FORMAT_SQL:false}
         dialect: org.hibernate.dialect.MySQLDialect
+
+  # Migraciones versionadas. En una BD ya existente (sin historial Flyway) se
+  # marca el baseline en la versión 1 y no se re-ejecuta V1__baseline.sql.
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: baseline-esquema-inicial
+    locations: classpath:db/migration
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
