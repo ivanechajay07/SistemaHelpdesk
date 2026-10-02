@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,9 +25,19 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
 
+    /** Orden jerárquico de los roles por defecto; el resto se ordena alfabéticamente. */
+    private static final List<String> ROLE_ORDER = List.of("ADMIN", "SUPERVISOR", "TECNICO", "CLIENTE");
+
     @Transactional(readOnly = true)
     public List<RoleResponse> getAllRoles() {
         return roleRepository.findAll().stream()
+                .sorted(Comparator
+                        .comparingInt((Role r) -> {
+                            String nombre = r.getName() != null ? r.getName().toUpperCase() : "";
+                            int idx = ROLE_ORDER.indexOf(nombre);
+                            return idx < 0 ? ROLE_ORDER.size() : idx;
+                        })
+                        .thenComparing(r -> r.getName() != null ? r.getName() : ""))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

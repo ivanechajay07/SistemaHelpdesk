@@ -1,16 +1,25 @@
 import { useEffect, useState, type ElementType } from 'react';
 import { useRoleStore, type Role } from '../store/roleStore';
 import { useToast } from '../components/ui/Toast';
-import { Shield, ShieldAlert, Check, Ticket, ListTodo, Users, Settings2, Building2, Layers, FileText, Puzzle, Activity } from 'lucide-react';
+import { Shield, ShieldAlert, Check, Ticket, ListTodo, Boxes, Users, Settings2, Building2, Layers, FileText, Puzzle, Activity } from 'lucide-react';
 
-// Agrupación de permisos por menú del sistema (lo que cada rol podrá visualizar)
+// Agrupación de permisos por módulo del sistema (lo que cada rol podrá visualizar).
+// El orden de los grupos sigue el orden del menú lateral.
 const MENU_GROUPS: { label: string; description: string; icon: ElementType; color: string; bg: string; names: string[] }[] = [
   { label: 'Tickets', description: 'Ver, asignar, editar y eliminar tickets', icon: Ticket, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-500/15', names: ['TICKET_VIEW_ALL', 'TICKET_ASSIGN', 'TICKET_EDIT', 'TICKET_DELETE'] },
   { label: 'Gestor de Tareas', description: 'Menú Tareas, Calendario y Diagrama de Gantt', icon: ListTodo, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-500/15', names: ['TASK_MANAGE'] },
-  { label: 'Usuarios', description: 'Administración de cuentas de usuario', icon: Users, color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-100 dark:bg-cyan-500/15', names: ['USER_MANAGE'] },
+  {
+    label: 'Inventario',
+    description: 'Activos, movimientos, transferencias, préstamos y reportes',
+    icon: Boxes,
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bg: 'bg-cyan-100 dark:bg-cyan-500/15',
+    names: ['INV_VIEW', 'INV_CREATE', 'INV_EDIT', 'INV_DELETE', 'INV_BAJA', 'INV_MOVER', 'INV_TRANSFER', 'INV_MANT', 'INV_PRESTAMO', 'INV_HISTORIAL', 'INV_QR', 'INV_EXPORT'],
+  },
+  { label: 'Monitoreo de Red', description: 'Menú Monitoreo: objetivos vigilados y alertas', icon: Activity, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/15', names: ['MONITORING_VIEW'] },
+  { label: 'Usuarios', description: 'Administración de cuentas de usuario', icon: Users, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-100 dark:bg-sky-500/15', names: ['USER_MANAGE'] },
   { label: 'Entidades y Sedes', description: 'Menú Entidad: registro de entidades y sedes', icon: Building2, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-500/15', names: ['ENTITY_MANAGE'] },
   { label: 'Categorías', description: 'Categorías, subcategorías y plantillas', icon: Layers, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-500/15', names: ['CATEGORY_MANAGE'] },
-  { label: 'Monitoreo de Red', description: 'Menú Monitoreo: objetivos vigilados y alertas', icon: Activity, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/15', names: ['MONITORING_VIEW'] },
   { label: 'Reportes', description: 'Reportes e informes exportables', icon: FileText, color: 'text-lime-600 dark:text-lime-400', bg: 'bg-lime-100 dark:bg-lime-500/15', names: ['REPORT_VIEW'] },
   { label: 'Roles', description: 'Gestión de roles y permisos del sistema', icon: Settings2, color: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-100 dark:bg-fuchsia-500/15', names: ['ROLE_MANAGE'] },
 ];
@@ -22,18 +31,6 @@ export default function Roles() {
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    fetchRoles();
-    fetchPermissions();
-  }, [fetchRoles, fetchPermissions]);
-
-  // Select the first role by default
-  useEffect(() => {
-    if (roles.length > 0 && !selectedRole) {
-      handleSelectRole(roles[0]);
-    }
-  }, [roles]);
-
   const handleSelectRole = (role: Role) => {
     setSelectedRole(role);
     setSelectedPermissionIds(role.permissions.map(p => p.id));
@@ -44,6 +41,19 @@ export default function Roles() {
       prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
     );
   };
+
+  useEffect(() => {
+    fetchRoles();
+    fetchPermissions();
+  }, [fetchRoles, fetchPermissions]);
+
+  // Selecciona el primer rol por defecto (ya viene ordenado por jerarquía)
+  useEffect(() => {
+    if (roles.length > 0 && !selectedRole) {
+      handleSelectRole(roles[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roles]);
 
   const handleSave = async () => {
     if (!selectedRole) return;
