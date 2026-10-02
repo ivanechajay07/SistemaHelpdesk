@@ -145,6 +145,7 @@ export default function DashboardLayout() {
     totalUnread,
     unreadByTicket,
     lastEvent,
+    lastAppNotification,
     connect,
     disconnect,
     fetchUnreadCounts: fetchChatUnread,
@@ -273,11 +274,23 @@ export default function DashboardLayout() {
     });
   }, [lastEvent]);
 
+  // Notificación de ticket en tiempo real: refresca la campana y muestra un aviso
+  useEffect(() => {
+    if (!lastAppNotification) return;
+    fetchNotifications();
+    if (lastAppNotification.titulo) {
+      toast({
+        variant: 'info',
+        title: lastAppNotification.titulo,
+        message: lastAppNotification.mensaje || '',
+      });
+    }
+  }, [lastAppNotification]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Carga inicial del feed; el resto de novedades llegan por WebSocket en tiempo real.
   useEffect(() => {
     fetchTickets();
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
   }, [fetchTickets, fetchNotifications]);
 
   // Heartbeat de presencia: mantiene actualizada la última actividad del usuario

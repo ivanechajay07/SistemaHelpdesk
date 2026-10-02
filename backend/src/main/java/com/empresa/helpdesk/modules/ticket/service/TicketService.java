@@ -18,6 +18,7 @@ import com.empresa.helpdesk.modules.audit.service.AuditService;
 import com.empresa.helpdesk.modules.user.entity.User;
 import com.empresa.helpdesk.modules.user.repository.UserRepository;
 import com.empresa.helpdesk.modules.notification.service.EmailService;
+import com.empresa.helpdesk.modules.notification.service.NotificationPublisher;
 import com.empresa.helpdesk.modules.chat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ public class TicketService {
     private final SubcategoryRepository subcategoryRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationPublisher notificationPublisher;
     private final MessageRepository messageRepository;
     private final SlaService slaService;
     private final TicketRatingRepository ticketRatingRepository;
@@ -98,6 +100,8 @@ public class TicketService {
         // Notificar a los administradores del nuevo ticket
         for (User admin : admins) {
             emailService.sendTicketCreatedAdminNotification(admin.getEmail(), ticket);
+            notificationPublisher.notificarTicket(admin.getUsername(), "CREADO", "Nuevo ticket",
+                    codigo + " · " + ticket.getTitulo(), ticket.getId());
         }
 
         auditService.registrar("CREAR_TICKET", "TICKET", ticket.getId(), currentUser.getUsername() + " creó " + codigo);
@@ -229,6 +233,12 @@ public class TicketService {
         // Notificar al cliente qué técnico atenderá su ticket (y que ya puede abrirlo)
         emailService.sendTicketAssignedToClientEmail(ticket.getSolicitante().getEmail(), ticket, tecnico);
 
+        // Notificación en tiempo real a la campana
+        notificationPublisher.notificarTicket(tecnico.getUsername(), "ASIGNADO", "Ticket asignado a ti",
+                ticket.getCodigo() + " · " + ticket.getTitulo(), ticket.getId());
+        notificationPublisher.notificarTicket(ticket.getSolicitante().getUsername(), "ASIGNADO", "Tu ticket fue asignado",
+                "Técnico: " + tecnico.getNombre() + " " + tecnico.getApellidos() + " · " + ticket.getCodigo(), ticket.getId());
+
         auditService.registrar("ASIGNAR_TICKET", "TICKET", ticket.getId(),
                 ticket.getCodigo() + " asignado a " + tecnico.getUsername());
 
@@ -260,6 +270,9 @@ public class TicketService {
 
         // Notificar al cliente para que confirme la solución
         emailService.sendTicketResolvedEmail(ticket.getSolicitante().getEmail(), ticket, request.getResolucion());
+
+        notificationPublisher.notificarTicket(ticket.getSolicitante().getUsername(), "RESUELTO", "Ticket resuelto",
+                ticket.getCodigo() + " · Confirma la solución para cerrarlo", ticket.getId());
 
         auditService.registrar("RESOLVER_TICKET", "TICKET", ticket.getId(),
                 currentUser.getUsername() + " resolvió " + ticket.getCodigo());
@@ -303,6 +316,12 @@ public class TicketService {
         List<User> admins = userRepository.findByRoles_Name("ADMIN");
         for (User admin : admins) {
             emailService.sendTicketConfirmedAdminNotification(admin.getEmail(), ticket);
+            notificationPublisher.notificarTicket(admin.getUsername(), "CERRADO", "Ticket cerrado",
+                    ticket.getCodigo() + " · Confirmado por el cliente", ticket.getId());
+        }
+        if (ticket.getTecnico() != null) {
+            notificationPublisher.notificarTicket(ticket.getTecnico().getUsername(), "CERRADO", "Ticket cerrado",
+                    ticket.getCodigo() + " · El cliente confirmó la solución", ticket.getId());
         }
 
         auditService.registrar("CERRAR_TICKET", "TICKET", ticket.getId(),
@@ -365,6 +384,17 @@ public class TicketService {
                         + currentUser.getApellidos() + ". Estado cambiado a EN_REVISION. Chat habilitado nuevamente.")
                 .build();
         ticketHistoryRepository.save(history);
+
+        String mensajeReactivacion = ticket.getCodigo() + " · " + currentUser.getNombre()
+                + " " + currentUser.getApellidos() + " lo reactivó";
+        if (ticket.getTecnico() != null) {
+            notificationPublisher.notificarTicket(ticket.getTecnico().getUsername(), "REACTIVADO",
+                    "Ticket reactivado", mensajeReactivacion, ticket.getId());
+        }
+        for (User admin : userRepository.findByRoles_Name("ADMIN")) {
+            notificationPublisher.notificarTicket(admin.getUsername(), "REACTIVADO",
+                    "Ticket reactivado", mensajeReactivacion, ticket.getId());
+        }
 
         return mapToResponse(ticket);
     }

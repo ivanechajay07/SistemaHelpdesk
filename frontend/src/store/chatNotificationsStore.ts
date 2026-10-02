@@ -20,6 +20,15 @@ export interface ChatNotificationEvent {
   fechaLectura?: string;
 }
 
+export interface AppNotificationEvent {
+  tipo: string;
+  accion?: string;
+  titulo?: string;
+  mensaje?: string;
+  ticketId?: number | null;
+  fecha?: string;
+}
+
 export interface ChatUnreadEntry {
   ticketId: number;
   ticketCodigo: string | null;
@@ -35,6 +44,7 @@ interface ChatNotificationsState {
   totalUnread: number;
   unreadByTicket: Record<number, ChatUnreadEntry>;
   lastEvent: (ChatNotificationEvent & { receivedAt: number }) | null;
+  lastAppNotification: (AppNotificationEvent & { receivedAt: number }) | null;
   connect: (token: string) => void;
   disconnect: () => void;
   fetchUnreadCounts: () => Promise<void>;
@@ -55,6 +65,7 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
   totalUnread: 0,
   unreadByTicket: {},
   lastEvent: null,
+  lastAppNotification: null,
 
   /** Conecta el socket global de notificaciones de chat (una sola vez por sesión). */
   connect: (token) => {
@@ -89,6 +100,16 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
             set({
               lastEvent: { ...event, receivedAt: Date.now() },
             });
+          } catch {
+            /* payload inválido */
+          }
+        });
+
+        // Eventos de ticket en tiempo real para la campana de notificaciones
+        client.subscribe('/user/queue/notifications', (message) => {
+          try {
+            const event: AppNotificationEvent = JSON.parse(message.body);
+            set({ lastAppNotification: { ...event, receivedAt: Date.now() } });
           } catch {
             /* payload inválido */
           }
