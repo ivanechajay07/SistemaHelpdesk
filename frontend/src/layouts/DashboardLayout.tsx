@@ -160,6 +160,7 @@ export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatPulse, setChatPulse] = useState(false);
   const [ticketsSubOpen, setTicketsSubOpen] = useState(false);
   const [tasksSubOpen, setTasksSubOpen] = useState(false);
   const [invSubOpen, setInvSubOpen] = useState(false);
@@ -167,6 +168,7 @@ export default function DashboardLayout() {
   const [notifFilter, setNotifFilter] = useState<'todos' | 'tickets' | 'tareas' | 'seguridad' | 'usuarios'>('todos');
   const notifRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const chatPulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileImage = useProfileImage(user?.id);
 
   // Estado para el diseño interactivo flotante al pasar el puntero en modo colapsado
@@ -276,6 +278,10 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!lastEvent) return;
     playNotificationSound();
+    // Pulso en el icono de chat para llamar la atención
+    setChatPulse(true);
+    if (chatPulseTimeoutRef.current) clearTimeout(chatPulseTimeoutRef.current);
+    chatPulseTimeoutRef.current = setTimeout(() => setChatPulse(false), 2600);
     toast({
       variant: 'info',
       title: `Nuevo mensaje de ${lastEvent.remitenteNombre || 'un usuario'}`,
@@ -942,9 +948,16 @@ export default function DashboardLayout() {
                   if (next) fetchChatUnread();
                 }}
                 title="Mensajes de chat"
-                className="relative p-2.5 text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                className={`relative p-2.5 rounded-xl transition-all ${
+                  chatPulse
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 animate-pulse'
+                    : 'text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
+                }`}
               >
-                <MessageCircle className="h-5 w-5" />
+                {chatPulse && (
+                  <span className="absolute inset-0 rounded-xl bg-emerald-400/40 animate-ping" />
+                )}
+                <MessageCircle className="relative h-5 w-5" />
                 {totalUnread > 0 && (
                   <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg shadow-emerald-500/30 border-2 border-white dark:border-slate-900">
                     {totalUnread > 99 ? '99+' : totalUnread}
