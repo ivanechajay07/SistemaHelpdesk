@@ -469,6 +469,19 @@ export default function DashboardLayout() {
     { name: 'Inventario', icon: Boxes, path: '/inventario', show: canSeeInventario, gradient: 'from-cyan-500 to-teal-600', shadow: 'shadow-cyan-500/30' },
     { name: 'Configuración', icon: Settings, path: '/settings', show: hasPermission('ROLE_MANAGE'), gradient: 'from-slate-500 to-slate-700', shadow: 'shadow-slate-500/30' },
   ].filter(item => item.show);
+
+  // Menú lateral agrupado por módulos. Las secciones sin elementos visibles se omiten.
+  const navSections: { title: string; items: NavItem[] }[] = [
+    { title: 'Principal', items: navItems.filter((i) => ['Dashboard'].includes(i.name)) },
+    { title: 'Mesa de Ayuda', items: navItems.filter((i) => ['Tickets', 'Tareas', 'Conocimiento'].includes(i.name)) },
+    { title: 'Inventario y Monitoreo', items: navItems.filter((i) => ['Inventario', 'Monitoreo'].includes(i.name)) },
+    {
+      title: 'Administración',
+      items: navItems.filter((i) =>
+        ['Usuarios', 'Roles', 'Entidad', 'Categorías', 'Plantillas', 'Reportes', 'Auditoría', 'Configuración'].includes(i.name)),
+    },
+  ].filter((s) => s.items.length > 0);
+
   const ticketSubItems: TicketSubItem[] = [
     {
       key: 'recientes',
@@ -603,9 +616,17 @@ export default function DashboardLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.name}>
+          {navSections.map((section) => (
+            <div key={section.title} className="mb-2">
+              {!collapsed && (
+                <p className="px-3 pt-3 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 select-none">
+                  {section.title}
+                </p>
+              )}
+              {collapsed && <div className="mx-3 my-2 border-t border-slate-200/70 dark:border-slate-800/70" />}
+              <ul className="space-y-1">
+                {section.items.map((item) => (
+                  <li key={item.name}>
                 <div className="relative">
                   <NavLink
                     to={item.path}
@@ -790,8 +811,10 @@ export default function DashboardLayout() {
                   </ul>
                 )}
               </li>
-            ))}
-          </ul>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
         
         {/* User Section */}
