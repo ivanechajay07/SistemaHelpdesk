@@ -38,54 +38,36 @@ export function SkeletonList({ rows = 5 }: { rows?: number }) {
   );
 }
 
-/** Pantalla completa de carga (sidebar + header + contenido) mostrada al recargar. */
+/** Pantalla de carga centrada (marca + esqueletos) mostrada al recargar. */
 export function SkeletonPage() {
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-72 shrink-0 flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 gap-4">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <Skeleton className="h-10 w-10 rounded-xl" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="space-y-3 mt-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-2">
-              <Skeleton className="h-5 w-5 rounded-md shrink-0" />
-              <Skeleton className="h-3.5 flex-1" />
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      {/* Contenido */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="h-16 shrink-0 bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between px-4 lg:px-6">
-          <Skeleton className="h-9 w-9 rounded-xl lg:hidden" />
-          <Skeleton className="h-4 w-40 hidden sm:block" />
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-9 w-9 rounded-full" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950 flex flex-col items-center justify-center p-6">
+      {/* Marca con anillo giratorio */}
+      <div className="relative mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 via-indigo-500 to-violet-600 p-[2px] shadow-xl shadow-blue-500/30">
+          <div className="w-full h-full rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
+            <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
           </div>
-        </header>
-
-        {/* Body */}
-        <main className="flex-1 p-4 sm:p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <Skeleton className="h-28 w-full rounded-3xl" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)}
-            </div>
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
-              <Skeleton className="h-5 w-44 mb-5" />
-              <SkeletonList rows={5} />
-            </div>
-          </div>
-        </main>
+        </div>
+        <span className="absolute -inset-2 rounded-[22px] border-2 border-blue-500/40 anim-spin-ring" />
       </div>
+
+      <Skeleton className="h-4 w-40 mb-2" />
+      <Skeleton className="h-3 w-56 mb-8" />
+
+      <div className="w-full max-w-3xl grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 rounded-2xl" />
+        ))}
+      </div>
+
+      <div className="w-full max-w-3xl mt-5 space-y-2.5">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-5/6" />
+        <Skeleton className="h-3 w-2/3" />
+      </div>
+
+      <p className="mt-8 text-xs font-semibold text-slate-400 dark:text-slate-500">Cargando HelpDesk PRO...</p>
     </div>
   );
 }

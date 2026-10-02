@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import {
   Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft,
-  UserPlus, User, ShieldCheck, Zap, BarChart3, Headphones, Star, Sun, Moon, Sunrise, LogIn
+  UserPlus, User, ShieldCheck, Sun, Moon, Sunrise, LogIn
 } from 'lucide-react';
 
 type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
@@ -254,18 +254,6 @@ export default function Login() {
     setRegData({ nombre: '', apellidos: '', email: '', username: '', password: '', confirmPassword: '', telefono: '', direccion: '' });
   };
 
-  const features = [
-    { icon: ShieldCheck, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10', text: 'Seguridad con roles y permisos por usuario' },
-    { icon: Zap, color: 'text-amber-500 dark:text-amber-400', bg: 'bg-amber-500/10', text: 'Respuestas rápidas con SLA por prioridad' },
-    { icon: BarChart3, color: 'text-sky-500 dark:text-sky-400', bg: 'bg-sky-500/10', text: 'Métricas y reportes en tiempo real' },
-  ];
-
-  const floatCards = [
-    { icon: Star, color: 'text-amber-500 dark:text-amber-300', value: '98%', label: 'Satisfacción', pos: 'top-4 -right-4 xl:-right-8', anim: 'anim-float-slow', delay: '0s' },
-    { icon: Headphones, color: 'text-emerald-500 dark:text-emerald-300', value: '24/7', label: 'Soporte activo', pos: 'bottom-28 -left-6 xl:-left-12', anim: 'anim-float-slower', delay: '-3s' },
-    { icon: BarChart3, color: 'text-sky-500 dark:text-sky-300', value: '+1.2k', label: 'Tickets resueltos', pos: 'bottom-6 right-8', anim: 'anim-float-slow', delay: '-5s' },
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
@@ -280,32 +268,33 @@ export default function Login() {
       {/* ===== Overlay de bienvenida al iniciar sesión ===== */}
       {welcomeName && (
         <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-xl anim-overlay-in">
-          <div className="relative mb-6 anim-check-pop">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center shadow-2xl shadow-emerald-500/40">
-              <svg viewBox="0 0 52 52" className="w-14 h-14">
-                <path
-                  className="anim-check"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M14 27l8 8 16-16"
-                />
-              </svg>
+          <div className="relative w-28 h-28 mb-6">
+            <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="loginRing" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#60a5fa" />
+                  <stop offset="100%" stopColor="#a78bfa" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="6" />
+              <circle cx="50" cy="50" r="44" fill="none" stroke="url(#loginRing)" strokeWidth="6" strokeLinecap="round" className="anim-ring-fill" />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-white font-black text-2xl">
+                {welcomeName.charAt(0).toUpperCase()}
+              </div>
             </div>
-            <span className="absolute -inset-2 rounded-full border-2 border-emerald-400/40 anim-spin-ring" />
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight anim-fade-in-up">
-            ¡Acceso exitoso!
-          </h2>
+          <h2 className="text-2xl font-black text-white tracking-tight anim-fade-in-up">Preparando tu espacio</h2>
           <p className="mt-2 text-sm text-slate-400 anim-fade-in-up" style={{ animationDelay: '120ms' }}>
-            Bienvenido, {welcomeName}
+            Hola, {welcomeName}
           </p>
-          <div className="mt-6 h-1.5 w-56 rounded-full bg-white/10 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 anim-progress" />
+          <div className="flex items-center gap-1.5 mt-6">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-violet-400 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+            ))}
           </div>
-          <p className="mt-2 text-xs text-slate-400">Redirigiendo al panel...</p>
+          <p className="mt-3 text-xs text-slate-500">Redirigiendo al panel...</p>
         </div>
       )}
 
@@ -324,73 +313,22 @@ export default function Login() {
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16 lg:grid lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:items-center">
+      <div className="relative z-10 w-full max-w-md mx-auto px-4 sm:px-6 py-10">
 
-        {/* ===== Panel de marca (desktop) ===== */}
-        <section className="hidden lg:block relative pr-10 select-none">
-          <div className="flex items-center gap-3 mb-8 anim-fade-in-up">
-            <div className="p-[2px] rounded-2xl bg-gradient-to-tr from-blue-500 via-fuchsia-500 to-amber-400 anim-gradient-text shadow-lg shadow-blue-500/25">
-              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
-                <span className="font-black text-xl text-slate-900 dark:text-white">H</span>
-              </div>
+        {/* ===== Marca (centrado) ===== */}
+        <div className="text-center mb-7 anim-fade-in-up">
+          <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-500 via-fuchsia-500 to-amber-400 anim-gradient-text shadow-lg shadow-blue-500/25 mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
+              <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
             </div>
-            <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-              HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
-            </span>
           </div>
-
-          <h1 className="text-4xl xl:text-5xl font-black leading-[1.1] tracking-tight text-slate-900 dark:text-white anim-fade-in-up" style={{ animationDelay: '80ms' }}>
-            Soporte técnico que{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-fuchsia-500 to-amber-400 dark:from-blue-400 dark:via-fuchsia-400 dark:to-amber-300 anim-gradient-text">
-              conecta
-            </span>{' '}
-            a tu equipo
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
           </h1>
-
-          <p className="mt-5 text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-md anim-fade-in-up" style={{ animationDelay: '160ms' }}>
-            Centraliza tickets, técnicos e inventario, automatiza los SLA y toma decisiones con métricas en tiempo real.
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            Tu mesa de ayuda, simple y potente
           </p>
-
-          <ul className="mt-9 space-y-4 max-w-md">
-            {features.map((f, i) => (
-              <li key={i} className="flex items-center gap-3.5 anim-fade-in-up" style={{ animationDelay: `${240 + i * 90}ms` }}>
-                <span className={`w-10 h-10 rounded-xl ${f.bg} border border-slate-200/60 dark:border-white/5 flex items-center justify-center shrink-0`}>
-                  <f.icon className={`w-5 h-5 ${f.color}`} />
-                </span>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{f.text}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Tarjetas flotantes */}
-          {floatCards.map((c, i) => (
-            <div
-              key={i}
-              className={`absolute ${c.pos} ${c.anim} flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/80 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 backdrop-blur-md shadow-xl shadow-slate-300/40 dark:shadow-black/30`}
-              style={{ animationDelay: c.delay }}
-            >
-              <c.icon className={`w-5 h-5 ${c.color}`} />
-              <div className="leading-tight">
-                <p className="font-black text-sm tabular-nums text-slate-900 dark:text-white">{c.value}</p>
-                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{c.label}</p>
-              </div>
-            </div>
-          ))}
-        </section>
-
-        {/* ===== Columna de formulario ===== */}
-        <section className="w-full max-w-md mx-auto lg:mx-0 lg:justify-self-end w-full">
-          {/* Logo compacto móvil */}
-          <div className="lg:hidden text-center mb-7 anim-fade-in-up">
-            <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-500 via-fuchsia-500 to-amber-400 anim-gradient-text shadow-lg shadow-blue-500/25 mb-3">
-              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
-                <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
-              </div>
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
-            </h1>
-          </div>
+        </div>
 
           <div
             className="relative overflow-hidden bg-white/85 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-slate-300/40 dark:shadow-black/50 p-6 sm:p-8 anim-fade-in-up"
@@ -816,10 +754,9 @@ export default function Login() {
             </div>
           </div>
 
-          <p className="text-center text-slate-400 dark:text-slate-600 text-xs mt-6 anim-fade-in" style={{ animationDelay: '400ms' }}>
-            Sistema de Gestión de Soporte Técnico v1.0
-          </p>
-        </section>
+        <p className="text-center text-slate-400 dark:text-slate-600 text-xs mt-6 anim-fade-in" style={{ animationDelay: '400ms' }}>
+          HelpDesk PRO · Sistema de Gestión de Soporte Técnico
+        </p>
       </div>
     </div>
   );
