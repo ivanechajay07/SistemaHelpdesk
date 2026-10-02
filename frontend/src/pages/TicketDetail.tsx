@@ -47,6 +47,42 @@ export default function TicketDetail() {
   // Mensajes recibidos mientras la pestaña está en segundo plano: se marcan como leídos al volver
   const pendingReadRef = useRef(false);
 
+  // "Escribiendo…" y presencia (en línea)
+  const [typingName, setTypingName] = useState<string | null>(null);
+  const [otherOnline, setOtherOnline] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingSentRef = useRef(false);
+  const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const presenceClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** Avisa por WebSocket si el usuario está escribiendo (efímero). */
+  const notifyTyping = (typing: boolean) => {
+    if (!stompClient.current?.connected) return;
+    stompClient.current.publish({
+      destination: `/app/chat/${id}/typing`,
+      body: JSON.stringify({ typing }),
+    });
+  };
+
+  const handleMessageChange = (value: string) => {
+    setNewMessage(value);
+    if (value.trim()) {
+      if (!typingSentRef.current) {
+        notifyTyping(true);
+        typingSentRef.current = true;
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        notifyTyping(false);
+        typingSentRef.current = false;
+      }, 2500);
+    } else if (typingSentRef.current) {
+      notifyTyping(false);
+      typingSentRef.current = false;
+    }
+  };
+
   /** Marca los mensajes del ticket como leídos (REST) y limpia el badge global. */
   const markAsRead = async () => {
     try {
@@ -125,6 +161,45 @@ export default function TicketDetail() {
             /* payload inválido */
           }
         });
+
+        // Indicador "escribiendo…" del otro participante
+        client.subscribe(`/topic/ticket/${id}/typing`, (frame) => {
+          try {
+            const t = JSON.parse(frame.body);
+            if (!t.usuarioId || t.usuarioId === user?.id) return;
+            if (t.typing) {
+              setTypingName(t.usuarioNombre || 'Alguien');
+              if (typingClearRef.current) clearTimeout(typingClearRef.current);
+              typingClearRef.current = setTimeout(() => setTypingName(null), 4000);
+            } else {
+              setTypingName(null);
+            }
+          } catch {
+            /* payload inválido */
+          }
+        });
+
+        // Presencia del otro participante
+        client.subscribe(`/topic/ticket/${id}/presence`, (frame) => {
+          try {
+            const p = JSON.parse(frame.body);
+            if (!p.usuarioId || p.usuarioId === user?.id) return;
+            setOtherOnline(true);
+            if (presenceClearRef.current) clearTimeout(presenceClearRef.current);
+            presenceClearRef.current = setTimeout(() => setOtherOnline(false), 50000);
+          } catch {
+            /* payload inválido */
+          }
+        });
+
+        // Anunciar la presencia propia de forma periódica mientras se ve el ticket
+        const announcePresence = () => {
+          if (client.connected) {
+            client.publish({ destination: `/app/chat/${id}/presence`, body: '{}' });
+          }
+        };
+        announcePresence();
+        presenceIntervalRef.current = setInterval(announcePresence, 25000);
       },
       onStompError: (frame) => {
         console.error('Broker reported error: ' + frame.headers['message']);
@@ -143,6 +218,10 @@ export default function TicketDetail() {
 
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      if (presenceIntervalRef.current) clearInterval(presenceIntervalRef.current);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typingClearRef.current) clearTimeout(typingClearRef.current);
+      if (presenceClearRef.current) clearTimeout(presenceClearRef.current);
       if (stompClient.current) {
         stompClient.current.deactivate();
       }
@@ -179,6 +258,11 @@ export default function TicketDetail() {
       destination: `/app/chat/${id}`,
       body: JSON.stringify(chatMessage)
     });
+
+    // Dejar de indicar "escribiendo" al enviar
+    notifyTyping(false);
+    typingSentRef.current = false;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     setNewMessage('');
   };
@@ -486,7 +570,27 @@ export default function TicketDetail() {
 
       {/* Chat Container */}
       <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-0">
-        
+
+        {/* Encabezado del chat: participante + presencia / escribiendo */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                {(ticket?.usuarioId === user?.id ? (ticket?.tecnicoNombre || 'T') : (ticket?.solicitanteNombre || 'C')).charAt(0).toUpperCase()}
+              </div>
+              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${otherOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                {ticket?.usuarioId === user?.id ? (ticket?.tecnicoNombre || 'Sin asignar') : (ticket?.solicitanteNombre || 'Cliente')}
+              </p>
+              <p className={`text-[11px] font-semibold ${typingName ? 'text-blue-600 dark:text-blue-400' : otherOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                {typingName ? `${typingName} está escribiendo…` : otherOnline ? 'En línea' : 'Desconectado'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50/30 dark:bg-slate-900/30">
           
@@ -573,6 +677,20 @@ export default function TicketDetail() {
                </div>
              );
            })}
+          {typingName && (
+            <div className="flex items-start gap-3 anim-fade-in">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs shrink-0">
+                {typingName.charAt(0).toUpperCase()}
+              </div>
+              <div className="px-4 py-3 rounded-2xl rounded-tl-md bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -664,7 +782,7 @@ export default function TicketDetail() {
                <textarea 
                  id="chat-textarea"
                  value={newMessage}
-                 onChange={(e) => setNewMessage(e.target.value)}
+                 onChange={(e) => handleMessageChange(e.target.value)}
                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                        e.preventDefault();

@@ -2,6 +2,8 @@ package com.empresa.helpdesk.modules.chat.controller;
 
 import com.empresa.helpdesk.modules.chat.dto.ChatMessageRequest;
 import com.empresa.helpdesk.modules.chat.dto.ChatMessageResponse;
+import com.empresa.helpdesk.modules.chat.dto.ChatPresenceDto;
+import com.empresa.helpdesk.modules.chat.dto.ChatTypingDto;
 import com.empresa.helpdesk.modules.chat.dto.UnreadCountResponse;
 import com.empresa.helpdesk.modules.chat.entity.Message;
 import com.empresa.helpdesk.modules.chat.entity.FileAttachment;
@@ -21,6 +23,7 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -50,6 +53,7 @@ public class ChatController {
     private final UserRepository userRepository;
     private final ChatNotificationService chatNotificationService;
     private final AttachmentLinkService attachmentLinkService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * WebSocket Endpoint
@@ -113,6 +117,50 @@ public class ChatController {
         chatNotificationService.notificarNuevoMensaje(ticket, message, response);
 
         return response;
+    }
+
+    /**
+     * Indicador "escribiendo…": se difunde a los participantes del ticket.
+     * Es efímero (no se persiste).
+     */
+    @MessageMapping("/chat/{ticketId}/typing")
+    public void typing(@DestinationVariable Long ticketId, @Payload ChatTypingDto request, Principal principal) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+        if (ticket == null || principal == null || principal.getName() == null) {
+            return;
+        }
+        User remitente = userRepository.findByUsernameOrEmail(principal.getName(), principal.getName()).orElse(null);
+        if (remitente == null) {
+            return;
+        }
+        validateParticipant(ticket, remitente);
+        ChatTypingDto payload = new ChatTypingDto(
+                remitente.getId(), nombreCompleto(remitente), request != null && request.typing());
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId + "/typing", payload);
+    }
+
+    /** Presencia: marca al usuario en línea y lo difunde a los participantes del ticket. */
+    @MessageMapping("/chat/{ticketId}/presence")
+    public void presence(@DestinationVariable Long ticketId, Principal principal) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+        if (ticket == null || principal == null || principal.getName() == null) {
+            return;
+        }
+        User remitente = userRepository.findByUsernameOrEmail(principal.getName(), principal.getName()).orElse(null);
+        if (remitente == null) {
+            return;
+        }
+        validateParticipant(ticket, remitente);
+        remitente.setLastActivity(LocalDateTime.now());
+        userRepository.save(remitente);
+        ChatPresenceDto payload = new ChatPresenceDto(
+                remitente.getId(), nombreCompleto(remitente), true, LocalDateTime.now());
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId + "/presence", payload);
+    }
+
+    private String nombreCompleto(User u) {
+        return ((u.getNombre() != null ? u.getNombre() : "") + " "
+                + (u.getApellidos() != null ? u.getApellidos() : "")).trim();
     }
 
     /**
