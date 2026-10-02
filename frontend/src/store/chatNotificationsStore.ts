@@ -39,10 +39,23 @@ export interface ChatUnreadEntry {
   ultimaFecha?: string | null;
 }
 
+/** Mensaje reciente recibido (para el feed del panel de chat). */
+export interface RecentChatMessage {
+  mensajeId?: number;
+  ticketId: number;
+  ticketCodigo?: string | null;
+  ticketTitulo?: string | null;
+  remitenteNombre?: string | null;
+  contenido?: string | null;
+  fechaEnvio?: string | null;
+  adjuntoUrl?: string | null;
+}
+
 interface ChatNotificationsState {
   connected: boolean;
   totalUnread: number;
   unreadByTicket: Record<number, ChatUnreadEntry>;
+  recentMessages: RecentChatMessage[];
   lastEvent: (ChatNotificationEvent & { receivedAt: number }) | null;
   lastAppNotification: (AppNotificationEvent & { receivedAt: number }) | null;
   connect: (token: string) => void;
@@ -64,6 +77,7 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
   connected: false,
   totalUnread: 0,
   unreadByTicket: {},
+  recentMessages: [],
   lastEvent: null,
   lastAppNotification: null,
 
@@ -96,6 +110,20 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
               ultimaFecha: event.fechaEnvio ?? existing?.ultimaFecha ?? null,
             };
             set({ unreadByTicket: prev, totalUnread: recomputeTotal(prev) });
+
+            // Feed de mensajes recientes (persiste aunque se marquen como leídos)
+            const recientes = get().recentMessages.filter((m) => m.mensajeId !== event.mensajeId);
+            recientes.unshift({
+              mensajeId: event.mensajeId,
+              ticketId: event.ticketId,
+              ticketCodigo: event.ticketCodigo,
+              ticketTitulo: event.ticketTitulo,
+              remitenteNombre: event.remitenteNombre,
+              contenido: event.contenido,
+              fechaEnvio: event.fechaEnvio,
+              adjuntoUrl: event.adjuntoUrl,
+            });
+            set({ recentMessages: recientes.slice(0, 20) });
 
             set({
               lastEvent: { ...event, receivedAt: Date.now() },

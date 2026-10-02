@@ -144,6 +144,7 @@ export default function DashboardLayout() {
   const {
     totalUnread,
     unreadByTicket,
+    recentMessages,
     lastEvent,
     lastAppNotification,
     connect,
@@ -263,10 +264,34 @@ export default function DashboardLayout() {
     return () => disconnect();
   }, [token, connect, disconnect]);
 
+  // Reproduce un tono breve si el usuario tiene activada la preferencia de sonido.
+  const playNotificationSound = () => {
+    try {
+      const prefs = user?.id ? JSON.parse(localStorage.getItem(`notif_prefs_${user.id}`) || '{}') : {};
+      if (prefs.sound === false) return;
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.26);
+      setTimeout(() => ctx.close().catch(() => {}), 400);
+    } catch { /* audio no disponible */ }
+  };
+
   // Toast instantáneo cuando llega un mensaje nuevo de chat
   const toast = useToast();
   useEffect(() => {
     if (!lastEvent) return;
+    playNotificationSound();
     toast({
       variant: 'info',
       title: `Nuevo mensaje de ${lastEvent.remitenteNombre || 'un usuario'}`,
@@ -279,6 +304,7 @@ export default function DashboardLayout() {
     if (!lastAppNotification) return;
     fetchNotifications();
     if (lastAppNotification.titulo) {
+      playNotificationSound();
       toast({
         variant: 'info',
         title: lastAppNotification.titulo,
@@ -467,7 +493,7 @@ export default function DashboardLayout() {
     { name: 'Reportes', icon: FileText, path: '/reports', show: hasPermission('REPORT_VIEW'), gradient: 'from-lime-500 to-green-600', shadow: 'shadow-lime-500/30' },
     { name: 'Auditoría', icon: ScrollText, path: '/auditoria', show: isAdmin(), gradient: 'from-slate-600 to-slate-800', shadow: 'shadow-slate-600/30' },
     { name: 'Inventario', icon: Boxes, path: '/inventario', show: canSeeInventario, gradient: 'from-cyan-500 to-teal-600', shadow: 'shadow-cyan-500/30' },
-    { name: 'Configuración', icon: Settings, path: '/settings', show: hasPermission('ROLE_MANAGE'), gradient: 'from-slate-500 to-slate-700', shadow: 'shadow-slate-500/30' },
+    { name: 'Configuración', icon: Settings, path: '/settings', show: true, gradient: 'from-slate-500 to-slate-700', shadow: 'shadow-slate-500/30' },
   ].filter(item => item.show);
 
   // Menú lateral agrupado por módulos. Las secciones sin elementos visibles se omiten.
@@ -954,18 +980,18 @@ export default function DashboardLayout() {
                     </div>
                   </div>
                   <div className="overflow-y-auto max-h-[380px]">
-                    {Object.keys(unreadByTicket).length === 0 ? (
+                    {recentMessages.length === 0 ? (
                       <div className="py-10 text-center">
                         <MessageCircle className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                        <p className="text-sm text-slate-500 font-medium">Todo leído</p>
+                        <p className="text-sm text-slate-500 font-medium">Sin mensajes recientes</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Los mensajes nuevos aparecerán aquí al instante</p>
                       </div>
                     ) : (
-                      Object.values(unreadByTicket)
-                        .sort((a, b) => b.noLeidos - a.noLeidos)
-                        .map((chat) => (
+                      recentMessages.map((chat, idx) => {
+                        const unread = unreadByTicket[chat.ticketId]?.noLeidos ?? 0;
+                        return (
                           <button
-                            key={chat.ticketId}
+                            key={`${chat.mensajeId ?? idx}`}
                             onClick={() => {
                               setChatOpen(false);
                               clearTicketUnread(chat.ticketId);
@@ -975,28 +1001,31 @@ export default function DashboardLayout() {
                           >
                             <div className="flex items-start gap-3">
                               <div className="mt-0.5 w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0 text-white font-bold text-xs shadow-sm shadow-emerald-500/25 overflow-hidden">
-                                {(chat.ultimoRemitente || chat.ticketCodigo || '?').charAt(0).toUpperCase()}
+                                {(chat.remitenteNombre || chat.ticketCodigo || '?').charAt(0).toUpperCase()}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2 mb-0.5">
                                   <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                    {chat.ultimoRemitente || chat.ticketCodigo || `Ticket #${chat.ticketId}`}
+                                    {chat.remitenteNombre || 'Usuario'}
                                   </p>
-                                  <span className="min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center text-[10px] font-black text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-sm shrink-0">
-                                    {chat.noLeidos > 9 ? '9+' : chat.noLeidos}
-                                  </span>
+                                  {unread > 0 && (
+                                    <span className="min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center text-[10px] font-black text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-sm shrink-0">
+                                      {unread > 9 ? '9+' : unread}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 truncate">
                                   {chat.ticketCodigo ?? `Ticket #${chat.ticketId}`}
                                   {chat.ticketTitulo ? ` · ${chat.ticketTitulo}` : ''}
                                 </p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mt-0.5">
-                                  {chat.ultimoContenido || 'Mensaje nuevo'}
+                                  {chat.contenido || (chat.adjuntoUrl ? '📎 Archivo adjunto' : 'Mensaje')}
                                 </p>
                               </div>
                             </div>
                           </button>
-                        ))
+                        );
+                      })
                     )}
                   </div>
                 </div>

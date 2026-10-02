@@ -182,11 +182,7 @@ function App() {
                   <Reports />
                 </ProtectedRouteWithPermission>
               } />
-              <Route path="settings" element={
-                <ProtectedRouteWithPermission permission="ROLE_MANAGE">
-                  <Settings />
-                </ProtectedRouteWithPermission>
-              } />
+              <Route path="settings" element={<Settings />} />
               <Route path="inventario" element={
                 <ProtectedRouteWithPermission permission="INV_VIEW">
                   <DashboardInventario />
