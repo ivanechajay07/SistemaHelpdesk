@@ -191,6 +191,24 @@ public class AuthService {
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
+    /**
+     * Cierra todas las demás sesiones: incrementa la versión de token (los tokens
+     * de otros dispositivos quedan inválidos) y emite tokens nuevos para el
+     * dispositivo actual, de modo que este permanece activo.
+     */
+    @Transactional
+    public AuthResponse cerrarOtrasSesiones() {
+        User user = getAuthenticatedUser();
+        user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
+        userRepository.save(user);
+        auditService.registrar("CERRAR_SESIONES", "USUARIO", user.getId(),
+                user.getUsername() + " cerró las demás sesiones");
+
+        String accessToken = jwtService.generateToken(new HashMap<>(), user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+        return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
     private String otpauthUrl(User user, String secreto) {
         String cuenta = user.getEmail() != null ? user.getEmail() : user.getUsername();
         return totpService.otpauthUrl(secreto, cuenta, "HelpDesk PRO");

@@ -107,6 +107,13 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/sessions/revoke-others")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Cerrar otras sesiones", description = "Invalida los tokens de los demás dispositivos y renueva el de este")
+    public ResponseEntity<AuthResponse> revokeOtherSessions() {
+        return ResponseEntity.ok(authService.cerrarOtrasSesiones());
+    }
+
     @PostMapping("/2fa/verify")
     @Operation(summary = "Verificar código 2FA", description = "Segundo paso del login cuando la cuenta tiene 2FA activo")
     public ResponseEntity<AuthResponse> verify2fa(@Valid @RequestBody MfaVerifyRequest request) {

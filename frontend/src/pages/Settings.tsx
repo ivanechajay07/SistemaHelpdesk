@@ -270,6 +270,33 @@ export default function Settings() {
     }
   };
 
+  const handleRevokeOtherSessions = async () => {
+    try {
+      const { data } = await api.post('/auth/sessions/revoke-others');
+      setAuth({
+        id: data.id,
+        username: data.username,
+        email: data.email,
+        nombre: data.nombre,
+        apellidos: data.apellidos,
+        roles: data.roles || [],
+        permissions: data.permissions || [],
+        twoFactorEnabled: data.twoFactorEnabled,
+      }, data.accessToken, data.refreshToken);
+      setDialog({
+        variant: 'success',
+        title: 'Sesiones cerradas',
+        message: 'Todas las demás sesiones han sido cerradas. Solo permaneces activo en este dispositivo.',
+      });
+    } catch {
+      setDialog({
+        variant: 'error',
+        title: 'Error',
+        message: 'No se pudieron cerrar las sesiones. Intenta nuevamente.',
+      });
+    }
+  };
+
   const tabs = [
     { id: 'profile', name: 'Perfil', icon: User },
     { id: 'notifications', name: 'Notificaciones', icon: Bell },
@@ -655,11 +682,7 @@ export default function Settings() {
                   <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Sesiones Activas</h3>
                   <p className="text-sm text-slate-500 mb-4">Cierra la sesión en todos los demás dispositivos si notas actividad sospechosa.</p>
                   <button
-                    onClick={() => setDialog({
-                      variant: 'success',
-                      title: 'Sesiones cerradas',
-                      message: 'Todas las demás sesiones han sido cerradas correctamente. Solo permaneces activo en este dispositivo.',
-                    })}
+                    onClick={handleRevokeOtherSessions}
                     className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 rounded-xl text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all border border-red-200 dark:border-red-500/20"
                   >
                     <LogOut className="w-4 h-4" /> Cerrar otras sesiones
