@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Sparkles, Award, CalendarDays } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Sparkles, Award, CalendarDays, User } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTicketStore } from '../store/ticketStore';
@@ -26,6 +26,58 @@ const PRIORITY_COLORS: Record<string, string> = {
   MEDIA: '#eab308',
   BAJA: '#10b981',
 };
+
+const PRIORITY_DOT: Record<string, string> = {
+  CRITICA: 'text-rose-500',
+  ALTA: 'text-orange-500',
+  MEDIA: 'text-yellow-500',
+  BAJA: 'text-emerald-500',
+};
+
+const AVATAR_GRADIENTS = [
+  'from-blue-500 to-indigo-600',
+  'from-emerald-500 to-teal-600',
+  'from-fuchsia-500 to-pink-600',
+  'from-amber-500 to-orange-600',
+  'from-cyan-500 to-sky-600',
+  'from-violet-500 to-purple-600',
+];
+
+/** Avatar de usuario: usa la foto de perfil guardada o iniciales con color. */
+function UserAvatar({ userId, name, size = 34 }: { userId?: number | null; name?: string | null; size?: number }) {
+  const image = useProfileImage(userId ?? undefined);
+  const clean = (name || '').trim();
+  if (!clean) {
+    return (
+      <div
+        style={{ width: size, height: size }}
+        className="rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 shrink-0"
+        title="Sin asignar"
+      >
+        <User className="w-4 h-4" />
+      </div>
+    );
+  }
+  const initials = clean.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
+  const idx = clean.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_GRADIENTS.length;
+  return image ? (
+    <img
+      src={image}
+      alt={clean}
+      style={{ width: size, height: size }}
+      className="rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow shrink-0"
+      title={clean}
+    />
+  ) : (
+    <div
+      style={{ width: size, height: size }}
+      className={`rounded-full bg-gradient-to-br ${AVATAR_GRADIENTS[idx]} flex items-center justify-center text-white font-bold text-[11px] ring-2 ring-white dark:ring-slate-900 shadow shrink-0`}
+      title={clean}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { stats: dbStats, volume, technicianStats, technicianYear, fetchDashboardData, fetchTechnicianStats } = useDashboardStore();
@@ -97,11 +149,36 @@ export default function Dashboard() {
     return Math.round((resolved / tickets.length) * 100);
   }, [tickets]);
 
+  const totalCount = dbStats?.totalTickets ?? tickets.length;
+  const openCount = tickets.filter((t) => t.estado !== 'CERRADO' && t.estado !== 'RESUELTO').length;
+  const overdueCount = dbStats?.overdueTickets || 0;
+
   const stats = [
-    { title: 'Total Tickets', value: dbStats?.totalTickets || tickets.length, icon: Ticket, color: 'text-blue-500', bg: 'bg-blue-500/10', gradient: 'from-blue-500/20 to-blue-600/5' },
-    { title: 'En Proceso', value: dbStats?.inProgressTickets || 0, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10', gradient: 'from-amber-500/20 to-amber-600/5' },
-    { title: 'Resueltos', value: dbStats?.resolvedTickets || 0, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10', gradient: 'from-emerald-500/20 to-emerald-600/5' },
-    { title: 'Vencidos', value: dbStats?.overdueTickets || 0, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10', gradient: 'from-rose-500/20 to-rose-600/5' },
+    {
+      title: 'Total Tickets', value: totalCount, icon: Ticket,
+      color: 'text-blue-500', bg: 'bg-blue-500/10', gradient: 'from-blue-500/20 to-blue-600/5',
+      bar: 'from-blue-500 to-indigo-500', pct: 100, subtitle: `${openCount} abiertos`,
+    },
+    {
+      title: 'En Proceso', value: dbStats?.inProgressTickets || 0, icon: Clock,
+      color: 'text-amber-500', bg: 'bg-amber-500/10', gradient: 'from-amber-500/20 to-amber-600/5',
+      bar: 'from-amber-400 to-orange-500',
+      pct: totalCount ? Math.round(((dbStats?.inProgressTickets || 0) / totalCount) * 100) : 0,
+      subtitle: 'En gestión',
+    },
+    {
+      title: 'Resueltos', value: dbStats?.resolvedTickets || 0, icon: CheckCircle,
+      color: 'text-emerald-500', bg: 'bg-emerald-500/10', gradient: 'from-emerald-500/20 to-emerald-600/5',
+      bar: 'from-emerald-400 to-teal-500', pct: resolutionRate, subtitle: `Tasa ${resolutionRate}%`,
+    },
+    {
+      title: 'Vencidos', value: overdueCount, icon: AlertTriangle,
+      color: 'text-rose-500', bg: 'bg-rose-500/10', gradient: 'from-rose-500/20 to-rose-600/5',
+      bar: 'from-rose-500 to-red-500',
+      pct: totalCount ? Math.round((overdueCount / totalCount) * 100) : 0,
+      subtitle: overdueCount > 0 ? 'Requieren atención' : 'Todo al día',
+      alert: overdueCount > 0,
+    },
   ];
 
   return (
@@ -157,16 +234,25 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <div key={index} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden">
+          <div
+            key={index}
+            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden anim-fade-in-up"
+            style={{ animationDelay: `${index * 60}ms` }}
+          >
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.gradient} to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150`}></div>
-            <div className="relative flex items-center justify-between">
+            <div className="relative flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stat.title}</p>
-                <p className="text-3xl font-black mt-1.5 text-slate-800 dark:text-white tracking-tight">{stat.value}</p>
+                <p className="text-3xl font-black mt-1.5 text-slate-800 dark:text-white tracking-tight tabular-nums">{stat.value}</p>
+                <p className={`text-[11px] font-semibold mt-1 ${stat.alert ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}>{stat.subtitle}</p>
               </div>
-              <div className={`p-3 rounded-2xl ${stat.bg} shadow-inner transition-transform group-hover:scale-110 group-hover:rotate-3`}>
+              <div className={`relative p-3 rounded-2xl ${stat.bg} shadow-inner transition-transform group-hover:scale-110 group-hover:rotate-3 ${stat.alert ? 'animate-pulse' : ''}`}>
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                {stat.alert && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />}
               </div>
+            </div>
+            <div className="relative mt-4 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full bg-gradient-to-r ${stat.bar} transition-all duration-700`} style={{ width: `${Math.min(100, stat.pct)}%` }} />
             </div>
           </div>
         ))}
@@ -437,68 +523,77 @@ export default function Dashboard() {
             <Ticket className="w-5 h-5 text-indigo-500" />
             Tickets Recientes
           </h2>
-          <button 
-            onClick={() => navigate('/tickets')} 
+          <button
+            onClick={() => navigate('/tickets')}
             className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
           >
             Ver todos <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
-                <th className="text-left pb-3 font-semibold">Código</th>
-                <th className="text-left pb-3 font-semibold">Asunto</th>
-                <th className="text-left pb-3 font-semibold hidden sm:table-cell">Categoría</th>
-                <th className="text-left pb-3 font-semibold">Estado</th>
-                <th className="text-left pb-3 font-semibold hidden sm:table-cell">Fecha</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-              {recentTickets.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500 text-sm">No hay tickets recientes</td>
-                </tr>
-              ) : (
-                recentTickets.map(ticket => (
-                  <tr 
-                    key={ticket.id} 
-                    onClick={() => navigate(`/tickets/${ticket.id}`)}
-                    className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group"
-                  >
-                    <td className="py-3 pr-4">
-                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-100/50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
-                        {ticket.codigo}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
-                        {ticket.titulo}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell text-xs">
-                      {ticket.subcategoriaNombre || 'Sin categoría'}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
-                        ticket.estado === 'NUEVO' ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' :
-                        ticket.estado === 'EN_PROCESO' ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
-                        ticket.estado === 'RESUELTO' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
-                        'bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-400'
-                      }`}>
-                        {ticket.estado.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3 text-xs text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                      {new Date(ticket.fechaCreacion).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+
+        {recentTickets.length === 0 ? (
+          <div className="py-10 text-center text-slate-500 text-sm">
+            <Ticket className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+            No hay tickets recientes
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {recentTickets.map((ticket, i) => (
+              <button
+                key={ticket.id}
+                onClick={() => navigate(`/tickets/${ticket.id}`)}
+                className="group w-full text-left flex items-center gap-3 sm:gap-4 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/20 hover:bg-white dark:hover:bg-slate-800/60 hover:border-blue-200 dark:hover:border-blue-500/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                {/* Código + prioridad */}
+                <div className="flex flex-col items-start gap-1.5 shrink-0">
+                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-lg bg-blue-100/60 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                    {ticket.codigo}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${PRIORITY_DOT[ticket.prioridad] || 'text-slate-400'}`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current shadow-[0_0_6px_currentColor]" />
+                    {ticket.prioridad}
+                  </span>
+                </div>
+
+                {/* Asunto + meta */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {ticket.titulo}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {ticket.subcategoriaNombre || 'Sin categoría'}
+                    {ticket.entidad ? ` · ${ticket.entidad}` : ''}
+                    <span className="hidden sm:inline"> · {new Date(ticket.fechaCreacion).toLocaleDateString()}</span>
+                  </p>
+                </div>
+
+                {/* Estado */}
+                <span className={`hidden md:inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase shrink-0 ${
+                  ticket.estado === 'NUEVO' ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' :
+                  ticket.estado === 'EN_PROCESO' ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
+                  ticket.estado === 'RESUELTO' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                  'bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-400'
+                }`}>
+                  {ticket.estado.replace('_', ' ')}
+                </span>
+
+                {/* Técnico asignado con avatar */}
+                <div className="flex items-center gap-2.5 shrink-0 pl-2 border-l border-slate-100 dark:border-slate-800">
+                  <UserAvatar userId={ticket.tecnicoId} name={ticket.tecnicoNombre} />
+                  <div className="hidden sm:block min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Técnico</p>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+                      {ticket.tecnicoNombre || 'Sin asignar'}
+                    </p>
+                  </div>
+                </div>
+
+                <ArrowUpRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 shrink-0 transition-colors" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <NewTicketModal 
