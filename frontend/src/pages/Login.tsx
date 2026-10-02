@@ -8,7 +8,7 @@ import {
   UserPlus, User, ShieldCheck, Zap, BarChart3, Headphones, Star, Sun, Moon
 } from 'lucide-react';
 
-type View = 'login' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
+type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
 
 const inputCls =
   'block w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400/40 hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300';
@@ -46,6 +46,47 @@ export default function Login() {
 
   const setAuth = useAuthStore((state) => state.setAuth);
   const navigate = useNavigate();
+  const [mfaToken, setMfaToken] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+
+  // Finaliza la sesión con los datos devueltos por el backend (login o verificación 2FA)
+  const finalizeLogin = (data: any) => {
+    const roles: string[] = data.roles || [];
+    setAuth({
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      nombre: data.nombre,
+      apellidos: data.apellidos,
+      roles,
+      permissions: data.permissions || [],
+    }, data.accessToken, data.refreshToken);
+    setWelcomeName(data.nombre || data.username || '');
+    setTimeout(() => {
+      const isClientOnly =
+        (roles.includes('CLIENTE') || roles.includes('USUARIO') || roles.includes('ROLE_CLIENTE') || roles.includes('ROLE_USUARIO')) &&
+        !roles.includes('ADMIN') && !roles.includes('ROLE_ADMIN') &&
+        !roles.includes('TECNICO') && !roles.includes('ROLE_TECNICO') &&
+        !roles.includes('SUPERVISOR') && !roles.includes('ROLE_SUPERVISOR');
+      navigate(isClientOnly ? '/tickets' : '/dashboard');
+    }, 1200);
+  };
+
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMfaError('');
+    setMfaLoading(true);
+    try {
+      const { data } = await api.post('/auth/2fa/verify', { mfaToken, code: mfaCode.trim() });
+      finalizeLogin(data);
+    } catch (err: any) {
+      setMfaError(err.response?.data?.message || 'Código inválido. Intenta nuevamente.');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,26 +94,14 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', { username, password });
-      const roles: string[] = data.roles || [];
-      setAuth({
-        id: data.id,
-        username: data.username,
-        email: data.email,
-        nombre: data.nombre,
-        apellidos: data.apellidos,
-        roles,
-        permissions: data.permissions || [],
-      }, data.accessToken);
-      // Animación de bienvenida antes de entrar
-      setWelcomeName(data.nombre || data.username || '');
-      setTimeout(() => {
-        const isClientOnly =
-          (roles.includes('CLIENTE') || roles.includes('USUARIO') || roles.includes('ROLE_CLIENTE') || roles.includes('ROLE_USUARIO')) &&
-          !roles.includes('ADMIN') && !roles.includes('ROLE_ADMIN') &&
-          !roles.includes('TECNICO') && !roles.includes('ROLE_TECNICO') &&
-          !roles.includes('SUPERVISOR') && !roles.includes('ROLE_SUPERVISOR');
-        navigate(isClientOnly ? '/tickets' : '/dashboard');
-      }, 1200);
+      if (data.mfaRequired) {
+        setMfaToken(data.mfaToken);
+        setMfaCode('');
+        setMfaError('');
+        setView('mfa');
+        return;
+      }
+      finalizeLogin(data);
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError(err.response?.data?.message || 'Credenciales inválidas. Verifica tu usuario y contraseña.');
@@ -453,6 +482,61 @@ export default function Login() {
               )}
 
               {/* === OLVIDÉ MI CONTRASEÑA === */}
+              {/* === VERIFICACIÓN 2FA === */}
+              {view === 'mfa' && (
+                <>
+                  <div className="mb-7">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Verificación en dos pasos</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">Ingresa el código de 6 dígitos de tu app autenticadora.</p>
+                  </div>
+
+                  {mfaError && (
+                    <div className="mb-5 flex items-start gap-2.5 p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 dark:text-red-300 text-sm anim-shake">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      {mfaError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleVerifyMfa} className="space-y-5">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Código de verificación</label>
+                      <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                          <ShieldCheck className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                        </div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          maxLength={6}
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                          className={inputCls + ' tracking-[0.5em] font-mono text-center'}
+                          placeholder="000000"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={mfaLoading || mfaCode.length !== 6}
+                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20"
+                    >
+                      {mfaLoading ? 'Verificando...' : 'Verificar e ingresar'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setView('login'); setMfaError(''); setMfaCode(''); }}
+                      className="w-full text-center text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium"
+                    >
+                      Volver al inicio de sesión
+                    </button>
+                  </form>
+                </>
+              )}
+
               {view === 'forgot' && (
                 <>
                   <button

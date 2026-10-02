@@ -59,6 +59,15 @@ public class User implements UserDetails {
     @Column(name = "locked_until")
     private java.time.LocalDateTime lockedUntil;
 
+    // Doble factor (TOTP). El secreto se almacena cifrado (AES-GCM).
+    @Builder.Default
+    @Column(name = "two_factor_enabled", nullable = false)
+    private boolean twoFactorEnabled = false;
+
+    @ToString.Exclude
+    @Column(name = "two_factor_secret", columnDefinition = "TEXT")
+    private String twoFactorSecret;
+
     @Column(name = "last_login")
     private java.time.LocalDateTime lastLogin;
 

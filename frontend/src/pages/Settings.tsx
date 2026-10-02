@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap } from 'lucide-react';
+import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../lib/axios';
+import { QRCodeSVG } from 'qrcode.react';
 import { PROFILE_IMAGE_EVENT } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 
@@ -171,6 +172,60 @@ export default function Settings() {
     } finally {
       setIsSavingSecurity(false);
       setTimeout(() => setSecurityMessage(null), 4000);
+    }
+  };
+
+  // 2FA (verificación en dos pasos)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(!!user?.twoFactorEnabled);
+  const [mfaSetup, setMfaSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaMsg, setMfaMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [mfaBusy, setMfaBusy] = useState(false);
+
+  const startMfaSetup = async () => {
+    setMfaBusy(true);
+    setMfaMsg(null);
+    try {
+      const { data } = await api.post('/auth/2fa/setup');
+      setMfaSetup({ secret: data.secret, otpauthUrl: data.otpauthUrl });
+      setMfaCode('');
+    } catch (e: any) {
+      setMfaMsg({ type: 'error', text: e.response?.data?.message || 'No se pudo iniciar la configuración 2FA.' });
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const enableMfa = async () => {
+    setMfaBusy(true);
+    setMfaMsg(null);
+    try {
+      await api.post('/auth/2fa/enable', { code: mfaCode.trim() });
+      setTwoFactorEnabled(true);
+      setMfaSetup(null);
+      setMfaCode('');
+      setMfaMsg({ type: 'success', text: 'Verificación en dos pasos activada.' });
+    } catch (e: any) {
+      setMfaMsg({ type: 'error', text: e.response?.data?.message || 'Código inválido.' });
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    setMfaBusy(true);
+    setMfaMsg(null);
+    try {
+      await api.post('/auth/2fa/disable', { password: mfaPassword });
+      setTwoFactorEnabled(false);
+      setMfaPassword('');
+      setMfaSetup(null);
+      setMfaMsg({ type: 'success', text: 'Verificación en dos pasos desactivada.' });
+    } catch (e: any) {
+      setMfaMsg({ type: 'error', text: e.response?.data?.message || 'No se pudo desactivar.' });
+    } finally {
+      setMfaBusy(false);
     }
   };
 
@@ -491,6 +546,98 @@ export default function Settings() {
                     </button>
                   </div>
                 </form>
+
+                {/* Verificación en dos pasos (2FA) */}
+                <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <h3 className="text-lg font-semibold">Verificación en dos pasos (2FA)</h3>
+                    {mfaMsg && (
+                      <span className={`flex items-center gap-1.5 text-sm font-semibold ${mfaMsg.type === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {mfaMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                        {mfaMsg.text}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-500 mb-4">Añade una capa extra de seguridad con una app autenticadora (Google Authenticator, Authy, etc.).</p>
+
+                  {!twoFactorEnabled && !mfaSetup && (
+                    <button
+                      onClick={startMfaSetup}
+                      disabled={mfaBusy}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-70 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20"
+                    >
+                      {mfaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                      Activar 2FA
+                    </button>
+                  )}
+
+                  {!twoFactorEnabled && mfaSetup && (
+                    <div className="space-y-4 max-w-md">
+                      <div className="flex flex-col sm:flex-row gap-4 items-start">
+                        <div className="bg-white p-3 rounded-xl border border-slate-200 shrink-0">
+                          <QRCodeSVG value={mfaSetup.otpauthUrl} size={132} />
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="mb-1 font-semibold text-slate-700 dark:text-slate-300">1. Escanea el código QR</p>
+                          <p className="mb-2">O ingresa la clave manualmente en tu app:</p>
+                          <code className="block break-all bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1.5 font-mono text-[11px] text-slate-700 dark:text-slate-300">{mfaSetup.secret}</code>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">2. Ingresa el código de 6 dígitos</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                          placeholder="000000"
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm tracking-[0.4em] font-mono"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={enableMfa}
+                          disabled={mfaBusy || mfaCode.length !== 6}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all"
+                        >
+                          {mfaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Activar
+                        </button>
+                        <button
+                          onClick={() => { setMfaSetup(null); setMfaCode(''); }}
+                          className="px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-sm font-semibold transition-all"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {twoFactorEnabled && (
+                    <div className="space-y-3 max-w-md">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 text-sm font-semibold">
+                        <CheckCircle2 className="w-4 h-4" /> 2FA activo en tu cuenta
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Confirma tu contraseña para desactivar</label>
+                        <input
+                          type="password"
+                          value={mfaPassword}
+                          onChange={(e) => setMfaPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={disableMfa}
+                        disabled={mfaBusy || !mfaPassword}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 rounded-xl text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 disabled:opacity-60 transition-all border border-red-200 dark:border-red-500/20"
+                      >
+                        {mfaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />} Desactivar 2FA
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
                   <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Sesiones Activas</h3>

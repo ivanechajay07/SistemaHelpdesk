@@ -29,6 +29,10 @@ public class JwtService {
     @Value("${app.jwt.refresh-expiration:604800000}")
     private long refreshExpiration;
 
+    /** Expiración del token temporal de 2FA (por defecto 5 minutos). */
+    @Value("${app.jwt.mfa-expiration:300000}")
+    private long mfaExpiration;
+
     /** Falla rápido si el secreto es débil o no está configurado. */
     @PostConstruct
     public void validateSecret() {
@@ -64,6 +68,21 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("tipo", "refresh");
         return buildToken(claims, userDetails, refreshExpiration);
+    }
+
+    /** Token temporal emitido tras validar credenciales cuando la cuenta tiene 2FA activo. */
+    public String generateMfaToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tipo", "mfa");
+        return buildToken(claims, userDetails, mfaExpiration);
+    }
+
+    public boolean isMfaToken(String token) {
+        try {
+            return "mfa".equals(extractClaim(token, c -> c.get("tipo", String.class)));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String buildToken(

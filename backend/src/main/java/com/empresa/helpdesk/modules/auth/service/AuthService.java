@@ -4,6 +4,10 @@ import com.empresa.helpdesk.modules.auth.dto.AuthRequest;
 import com.empresa.helpdesk.modules.auth.dto.AuthResponse;
 import com.empresa.helpdesk.modules.auth.dto.ChangePasswordRequest;
 import com.empresa.helpdesk.modules.auth.dto.ForgotPasswordRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaCodeRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaDisableRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaSetupResponse;
+import com.empresa.helpdesk.modules.auth.dto.MfaVerifyRequest;
 import com.empresa.helpdesk.modules.auth.dto.RefreshRequest;
 import com.empresa.helpdesk.modules.auth.dto.RegisterRequest;
 import com.empresa.helpdesk.modules.auth.dto.ResetPasswordRequest;
@@ -15,8 +19,10 @@ import com.empresa.helpdesk.modules.user.repository.PasswordResetRequestReposito
 import com.empresa.helpdesk.modules.user.repository.RoleRepository;
 import com.empresa.helpdesk.modules.user.repository.UserRepository;
 import com.empresa.helpdesk.modules.notification.service.EmailService;
+import com.empresa.helpdesk.security.CryptoService;
 import com.empresa.helpdesk.security.JwtService;
 import com.empresa.helpdesk.security.RateLimiterService;
+import com.empresa.helpdesk.security.TotpService;
 import com.empresa.helpdesk.security.DeviceInfoResolver;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,6 +62,8 @@ public class AuthService {
     private final EmailService emailService;
     private final RateLimiterService rateLimiter;
     private final AuditService auditService;
+    private final TotpService totpService;
+    private final CryptoService cryptoService;
 
     private static final int MAX_LOGIN_ATTEMPTS = 5;
     private static final int LOCK_MINUTES = 15;
@@ -91,13 +99,108 @@ public class AuthService {
         aplicarDispositivoActual(user);
         user = userRepository.save(user);
 
+        rateLimiter.resetear("login:" + request.getUsername().toLowerCase());
+
+        // Si la cuenta tiene 2FA activo, no se emiten tokens todavía:
+        // se devuelve un token temporal para completar la verificación TOTP.
+        if (user.isTwoFactorEnabled()) {
+            String mfaToken = jwtService.generateMfaToken(user);
+            return AuthResponse.builder()
+                    .mfaRequired(true)
+                    .mfaToken(mfaToken)
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .build();
+        }
+
         String jwtToken = jwtService.generateToken(new HashMap<>(), user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        rateLimiter.resetear("login:" + request.getUsername().toLowerCase());
         auditService.registrar(user.getUsername(), "LOGIN", "USUARIO", user.getId(), user.getUsername() + " inició sesión");
 
         return buildAuthResponse(user, jwtToken, refreshToken);
+    }
+
+    /** Inicia la configuración de 2FA: genera un secreto y devuelve la URL otpauth. */
+    @Transactional
+    public MfaSetupResponse iniciar2fa() {
+        User user = getAuthenticatedUser();
+        String secreto = totpService.generarSecreto();
+        user.setTwoFactorSecret(cryptoService.encrypt(secreto));
+        user.setTwoFactorEnabled(false);
+        userRepository.save(user);
+        return new MfaSetupResponse(secreto, otpauthUrl(user, secreto), false);
+    }
+
+    /** Confirma la configuración de 2FA verificando el primer código. */
+    @Transactional
+    public MfaSetupResponse activar2fa(MfaCodeRequest request) {
+        User user = getAuthenticatedUser();
+        if (user.getTwoFactorSecret() == null) {
+            throw new RuntimeException("Primero genera el secreto (paso de configuración).");
+        }
+        String secreto = cryptoService.decrypt(user.getTwoFactorSecret());
+        if (!totpService.verificar(secreto, request.getCode())) {
+            throw new RuntimeException("Código inválido. Verifica la hora del dispositivo e inténtalo de nuevo.");
+        }
+        user.setTwoFactorEnabled(true);
+        userRepository.save(user);
+        auditService.registrar("ACTIVAR_2FA", "USUARIO", user.getId(), user.getUsername());
+        return new MfaSetupResponse(secreto, otpauthUrl(user, secreto), true);
+    }
+
+    /** Desactiva 2FA (requiere la contraseña actual). */
+    @Transactional
+    public void desactivar2fa(MfaDisableRequest request) {
+        User user = getAuthenticatedUser();
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("La contraseña es incorrecta");
+        }
+        user.setTwoFactorEnabled(false);
+        user.setTwoFactorSecret(null);
+        userRepository.save(user);
+        auditService.registrar("DESACTIVAR_2FA", "USUARIO", user.getId(), user.getUsername());
+    }
+
+    /** Segundo paso del login: valida el código TOTP y emite los tokens definitivos. */
+    public AuthResponse verificarMfa(MfaVerifyRequest request) {
+        String username;
+        try {
+            if (!jwtService.isMfaToken(request.getMfaToken())) {
+                throw new RuntimeException("Token inválido");
+            }
+            username = jwtService.extractUsername(request.getMfaToken());
+        } catch (Exception e) {
+            throw new RuntimeException("La verificación expiró. Inicia sesión nuevamente.");
+        }
+
+        User user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        if (!user.isTwoFactorEnabled() || user.getTwoFactorSecret() == null) {
+            throw new RuntimeException("La verificación 2FA no está activa para este usuario.");
+        }
+        String secreto = cryptoService.decrypt(user.getTwoFactorSecret());
+        if (!totpService.verificar(secreto, request.getCode())) {
+            throw new RuntimeException("Código de verificación inválido.");
+        }
+
+        String accessToken = jwtService.generateToken(new HashMap<>(), user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+        auditService.registrar(user.getUsername(), "LOGIN", "USUARIO", user.getId(),
+                user.getUsername() + " inició sesión (2FA)");
+        return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    private String otpauthUrl(User user, String secreto) {
+        String cuenta = user.getEmail() != null ? user.getEmail() : user.getUsername();
+        return totpService.otpauthUrl(secreto, cuenta, "HelpDesk PRO");
+    }
+
+    private User getAuthenticatedUser() {
+        String principal = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+        return userRepository.findByUsernameOrEmail(principal, principal)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
     }
 
     /** Renueva el access token usando un refresh token válido. */
@@ -387,6 +490,7 @@ public class AuthService {
                 .apellidos(user.getApellidos())
                 .roles(roleNames)
                 .permissions(permissionNames)
+                .twoFactorEnabled(user.isTwoFactorEnabled())
                 .build();
     }
 }

@@ -21,4 +21,11 @@ public class AuthResponse {
     private String apellidos;
     private List<String> roles;
     private List<String> permissions;
+
+    /** 2FA: true cuando se requiere verificar el código TOTP para completar el login. */
+    private Boolean mfaRequired;
+    /** 2FA: token temporal para completar la verificación en /auth/2fa/verify. */
+    private String mfaToken;
+    /** 2FA: indica si la cuenta tiene la verificación en dos pasos activada. */
+    private Boolean twoFactorEnabled;
 }

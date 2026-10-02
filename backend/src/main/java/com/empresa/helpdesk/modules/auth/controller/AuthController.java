@@ -4,6 +4,10 @@ import com.empresa.helpdesk.modules.auth.dto.AuthRequest;
 import com.empresa.helpdesk.modules.auth.dto.AuthResponse;
 import com.empresa.helpdesk.modules.auth.dto.ChangePasswordRequest;
 import com.empresa.helpdesk.modules.auth.dto.ForgotPasswordRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaCodeRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaDisableRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaSetupResponse;
+import com.empresa.helpdesk.modules.auth.dto.MfaVerifyRequest;
 import com.empresa.helpdesk.modules.auth.dto.RefreshRequest;
 import com.empresa.helpdesk.modules.auth.dto.RegisterRequest;
 import com.empresa.helpdesk.modules.auth.dto.ResetPasswordRequest;
@@ -14,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -100,5 +105,33 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @PostMapping("/2fa/verify")
+    @Operation(summary = "Verificar código 2FA", description = "Segundo paso del login cuando la cuenta tiene 2FA activo")
+    public ResponseEntity<AuthResponse> verify2fa(@Valid @RequestBody MfaVerifyRequest request) {
+        return ResponseEntity.ok(authService.verificarMfa(request));
+    }
+
+    @PostMapping("/2fa/setup")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Iniciar configuración 2FA", description = "Genera el secreto y la URL otpauth para la app autenticadora")
+    public ResponseEntity<MfaSetupResponse> setup2fa() {
+        return ResponseEntity.ok(authService.iniciar2fa());
+    }
+
+    @PostMapping("/2fa/enable")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Activar 2FA", description = "Verifica el primer código y activa la verificación en dos pasos")
+    public ResponseEntity<MfaSetupResponse> enable2fa(@Valid @RequestBody MfaCodeRequest request) {
+        return ResponseEntity.ok(authService.activar2fa(request));
+    }
+
+    @PostMapping("/2fa/disable")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Desactivar 2FA", description = "Desactiva 2FA; requiere la contraseña actual")
+    public ResponseEntity<Map<String, String>> disable2fa(@Valid @RequestBody MfaDisableRequest request) {
+        authService.desactivar2fa(request);
+        return ResponseEntity.ok(Map.of("message", "La verificación en dos pasos fue desactivada."));
     }
 }
