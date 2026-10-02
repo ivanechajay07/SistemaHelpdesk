@@ -291,36 +291,48 @@ export default function Login() {
         {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
-      {/* ===== Overlay de bienvenida al iniciar sesión ===== */}
+      {/* ===== Overlay de bienvenida al iniciar sesión (suave y animado) ===== */}
       {welcomeName && (
-        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-xl anim-overlay-in">
-          <div className="relative w-28 h-28 mb-6">
-            <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
-              <defs>
-                <linearGradient id="loginRing" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#60a5fa" />
-                  <stop offset="100%" stopColor="#a78bfa" />
-                </linearGradient>
-              </defs>
-              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="6" />
-              <circle cx="50" cy="50" r="44" fill="none" stroke="url(#loginRing)" strokeWidth="6" strokeLinecap="round" className="anim-ring-fill" />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-white font-black text-2xl">
-                {welcomeName.charAt(0).toUpperCase()}
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-sky-100 via-blue-50 to-cyan-100 dark:from-blue-950 dark:via-slate-950 dark:to-slate-950 backdrop-blur-xl anim-overlay-in overflow-hidden">
+          {/* Blobs suaves animados */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-24 -right-20 w-80 h-80 bg-sky-300/40 dark:bg-cyan-500/10 rounded-full blur-3xl anim-blob" />
+            <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-cyan-200/50 dark:bg-sky-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
+            <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-blue-200/50 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
+          </div>
+
+          <div className="relative anim-float-slow">
+            <div className="relative w-28 h-28">
+              <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+                <defs>
+                  <linearGradient id="loginRing" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#0ea5e9" />
+                  </linearGradient>
+                </defs>
+                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(100,116,139,0.25)" strokeWidth="6" />
+                <circle cx="50" cy="50" r="44" fill="none" stroke="url(#loginRing)" strokeWidth="6" strokeLinecap="round" className="anim-ring-fill" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-lg shadow-sky-500/20 flex items-center justify-center text-slate-900 dark:text-white font-black text-2xl">
+                  {welcomeName.charAt(0).toUpperCase()}
+                </div>
               </div>
             </div>
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight anim-fade-in-up">Preparando tu espacio</h2>
-          <p className="mt-2 text-sm text-slate-400 anim-fade-in-up" style={{ animationDelay: '120ms' }}>
-            Hola, {welcomeName}
+
+          <h2 className="relative mt-6 text-2xl font-black text-slate-900 dark:text-white tracking-tight anim-fade-in-up">
+            ¡Todo listo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-cyan-500">{welcomeName}</span>!
+          </h2>
+          <p className="relative mt-2 text-sm text-slate-500 dark:text-slate-400 anim-fade-in-up" style={{ animationDelay: '120ms' }}>
+            Preparando tu espacio de trabajo...
           </p>
-          <div className="flex items-center gap-1.5 mt-6">
+          <div className="relative flex items-center gap-1.5 mt-6">
             {[0, 1, 2].map((i) => (
-              <span key={i} className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-violet-400 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+              <span key={i} className="w-2 h-2 rounded-full bg-gradient-to-r from-sky-400 to-cyan-400 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-500">Redirigiendo al panel...</p>
+          <p className="relative mt-3 text-xs text-sky-600/70 dark:text-sky-400/60">Redirigiendo al panel...</p>
         </div>
       )}
 
