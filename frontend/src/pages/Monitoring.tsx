@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Activity, Plus, Loader2, Pencil, Trash2, X, Zap, Globe, Network,
+  Activity, Plus, Loader2, Pencil, Trash2, Zap, Globe, Network,
   AlertTriangle, CheckCircle2, Clock, Link2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import FormModal, { SectionTitle } from '../components/ui/FormModal';
 import { useMonitoringStore, type MonitoredTarget, type MonitoredTargetRequest, type TargetType } from '../store/monitoringStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
@@ -303,19 +304,19 @@ export default function Monitoring() {
       )}
 
       {/* Modal editor */}
-      {editorOpen && (
-        <div className="fixed inset-0 z-[90] flex items-start sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 sm:p-6 anim-fade-in">
-          <form onSubmit={handleSave} className="anim-scale-in my-auto w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-1.5rem)]">
-            <div className="h-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 shrink-0" />
-            <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 shrink-0">
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                {editingId ? 'Editar objetivo' : 'Nuevo objetivo de monitoreo'}
-              </h3>
-              <button type="button" onClick={() => setEditorOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="px-4 sm:px-6 pb-4 space-y-3.5 overflow-y-auto flex-1 min-h-0">
+      <FormModal
+        isOpen={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        title={editingId ? 'Editar objetivo' : 'Nuevo objetivo de monitoreo'}
+        subtitle="Vigila la disponibilidad de un servicio"
+        icon={<Activity className="w-5 h-5" />}
+        theme="monitoring"
+        onSubmit={handleSave}
+        submitLabel={editingId ? 'Guardar cambios' : 'Agregar objetivo'}
+        loading={saving}
+        maxWidth="max-w-lg"
+      >
+        <SectionTitle>Configuración del objetivo</SectionTitle>
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Nombre *</label>
                 <input type="text" required maxLength={120} value={form.nombre}
@@ -378,20 +379,7 @@ export default function Monitoring() {
                 ticket automático de prioridad CRÍTICA y se notificará por correo a los administradores.
                 Solo se abre un ticket por caída; al recuperarse, se registra en el historial del ticket.
               </p>
-            </div>
-            <div className="flex justify-end gap-3 px-4 sm:px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 shrink-0">
-              <button type="button" onClick={() => setEditorOpen(false)} className="px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors">
-                Cancelar
-              </button>
-              <button type="submit" disabled={saving || !form.nombre.trim() || !form.host.trim()}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-md shadow-emerald-500/25 active:scale-95">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                {editingId ? 'Guardar cambios' : 'Agregar objetivo'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      </FormModal>
 
       <ConfirmDialog
         isOpen={!!dialog}

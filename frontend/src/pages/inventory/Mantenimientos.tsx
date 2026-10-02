@@ -4,6 +4,7 @@ import {
 } from '../../store/inventoryStore';
 import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import FormModal, { SectionTitle } from '../../components/ui/FormModal';
 import { useUserStore } from '../../store/userStore';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
@@ -105,15 +106,19 @@ export default function Mantenimientos() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in overflow-y-auto">
-          <div className="my-auto relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in">
-            <div className="h-1.5 w-full bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500" />
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-              <div><h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Registrar Mantenimiento</h3><p className="text-xs text-slate-400 font-medium">Programa el mantenimiento de un activo</p></div>
-              <button onClick={() => setShowModal(false)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-4">
+      <FormModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Registrar Mantenimiento"
+        subtitle="Programa el mantenimiento de un activo"
+        icon={<Wrench className="w-5 h-5" />}
+        theme="inventory"
+        onSubmit={(e) => { e.preventDefault(); submit(); }}
+        submitLabel="Registrar"
+        loading={saving}
+        maxWidth="max-w-lg"
+      >
+        <SectionTitle>Datos del mantenimiento</SectionTitle>
               <label className="block"><span className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Activo *</span>
                 <select value={form.activoId ?? ''} onChange={(e) => setForm({ ...form, activoId: Number(e.target.value) || undefined })} className={inputCls}>
                   <option value="">Seleccionar activo</option>
@@ -151,16 +156,7 @@ export default function Mantenimientos() {
                   <input type="number" value={form.costo ?? ''} onChange={(e) => setForm({ ...form, costo: e.target.value === '' ? undefined : Number(e.target.value) })} className={inputCls} />
                 </label>
               </div>
-            </div>
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800">
-              <button onClick={() => setShowModal(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={submit} disabled={saving} className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 shadow-lg shadow-teal-500/25 rounded-xl hover:shadow-xl disabled:opacity-60 transition-all hover:-translate-y-0.5 active:scale-95">
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />} Registrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </FormModal>
 
       {detalle && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
