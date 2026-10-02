@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import {
   Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft,
-  UserPlus, User, ShieldCheck, Sun, Moon, Sunrise, LogIn
+  UserPlus, User, ShieldCheck, Sun, Moon, Sunrise, LogIn,
+  Headphones, Zap, BarChart3, Star, Sparkles
 } from 'lucide-react';
 
 type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
@@ -254,8 +255,33 @@ export default function Login() {
     setRegData({ nombre: '', apellidos: '', email: '', username: '', password: '', confirmPassword: '', telefono: '', direccion: '' });
   };
 
+  // Destello que sigue al cursor sobre el panel azul/celeste (efecto interactivo)
+  const handleBrandMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+    el.style.setProperty('--my', `${e.clientY - rect.top}px`);
+  };
+
+  const brandFeatures = [
+    { icon: Headphones, text: 'Mesa de ayuda 24/7 con tickets y SLAs automatizados' },
+    { icon: BarChart3, text: 'Métricas y reportes en tiempo real' },
+    { icon: ShieldCheck, text: 'Seguridad con roles y permisos por usuario' },
+  ];
+
+  const brandStats = [
+    { value: '98%', label: 'Satisfacción' },
+    { value: '24/7', label: 'Soporte' },
+    { value: '+1.2k', label: 'Tickets' },
+  ];
+
+  const floatCards = [
+    { icon: Star, color: 'text-amber-300', value: '4.9', label: 'Valoración', pos: 'top-24 -right-8', anim: 'anim-float-slow', delay: '0s' },
+    { icon: Zap, color: 'text-cyan-200', value: '< 5 min', label: 'Respuesta SLA', pos: 'bottom-44 -left-8', anim: 'anim-float-slower', delay: '-3s' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950 relative overflow-hidden flex items-center transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-sky-600 to-cyan-500 dark:from-blue-950 dark:via-slate-950 dark:to-blue-950 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
       <button
         onClick={toggleTheme}
@@ -298,43 +324,122 @@ export default function Login() {
         </div>
       )}
 
-      {/* ===== Fondo animado ===== */}
+      {/* ===== Fondo animado azul/celeste ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-blue-500/15 dark:bg-blue-600/20 rounded-full blur-[140px] anim-blob" />
-        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-violet-500/15 dark:bg-violet-600/20 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
-        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-fuchsia-400/10 dark:bg-fuchsia-500/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
+        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-cyan-300/40 dark:bg-cyan-500/20 rounded-full blur-[140px] anim-blob" />
+        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-sky-400/40 dark:bg-sky-600/20 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
+        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-blue-500/30 dark:bg-blue-700/20 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
         <div
-          className="absolute inset-0 opacity-[0.05] dark:opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.06] dark:opacity-[0.05]"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(100,116,139,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(100,116,139,.4) 1px, transparent 1px)',
+              'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
             backgroundSize: '56px 56px',
           }}
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-md mx-auto px-4 sm:px-6 py-10">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16">
 
-        {/* ===== Marca (centrado) ===== */}
-        <div className="text-center mb-7 anim-fade-in-up">
-          <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-500 via-fuchsia-500 to-amber-400 anim-gradient-text shadow-lg shadow-blue-500/25 mb-3">
-            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
-              <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
-            </div>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Tu mesa de ayuda, simple y potente
-          </p>
-        </div>
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-2xl shadow-blue-900/20 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-cyan-300" />
 
-          <div
-            className="relative overflow-hidden bg-white/85 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl shadow-slate-300/40 dark:shadow-black/50 p-6 sm:p-8 anim-fade-in-up"
-            style={{ animationDelay: '120ms' }}
+          {/* ===== Panel de marca (azul/celeste degradado interactivo) ===== */}
+          <section
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 dark:from-blue-700 dark:via-sky-600 dark:to-cyan-500 p-10 xl:p-14 text-white select-none anim-gradient-bg"
+            onMouseMove={handleBrandMouseMove}
           >
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-fuchsia-500 to-amber-400" />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(620px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.28), transparent 55%)' }}
+            />
+            <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/20 rounded-full blur-3xl anim-blob" />
+              <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-cyan-300/30 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
+              <div className="absolute top-1/3 -left-10 w-40 h-40 bg-sky-200/25 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
+            </div>
+
+            {/* Logo */}
+            <div className="relative flex items-center gap-3 anim-fade-in-up">
+              <div className="p-[2px] rounded-2xl bg-white/90 shadow-lg shadow-blue-900/20">
+                <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center">
+                  <span className="font-black text-lg text-blue-600">H</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-lg font-black tracking-tight leading-none">HelpDesk PRO</p>
+                <p className="text-[11px] text-white/70 font-semibold mt-1">Sistema de Soporte Técnico</p>
+              </div>
+            </div>
+
+            {/* Bienvenida */}
+            <div className="relative mt-10">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-[11px] font-bold uppercase tracking-wider anim-fade-in-up">
+                <Sparkles className="w-3.5 h-3.5" /> Bienvenido al sistema
+              </div>
+              <h1 className="mt-4 text-4xl xl:text-[2.75rem] font-black leading-[1.15] tracking-tight anim-fade-in-up" style={{ animationDelay: '80ms' }}>
+                Soporte técnico que{' '}
+                <span className="underline decoration-cyan-200/60 decoration-4 underline-offset-8">conecta</span>{' '}
+                a tu equipo
+              </h1>
+              <p className="mt-4 text-white/85 text-base leading-relaxed max-w-md anim-fade-in-up" style={{ animationDelay: '160ms' }}>
+                Centraliza tickets, técnicos e inventario, automatiza los SLA y toma decisiones con métricas en tiempo real.
+              </p>
+            </div>
+
+            {/* Features */}
+            <ul className="relative mt-8 space-y-3.5 max-w-md">
+              {brandFeatures.map((f, i) => (
+                <li key={i} className="flex items-center gap-3 anim-fade-in-up" style={{ animationDelay: `${240 + i * 90}ms` }}>
+                  <span className="w-9 h-9 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center shrink-0">
+                    <f.icon className="w-5 h-5" />
+                  </span>
+                  <span className="text-sm font-medium text-white/95">{f.text}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Stats */}
+            <div className="relative mt-9 grid grid-cols-3 gap-3 max-w-md">
+              {brandStats.map((s, i) => (
+                <div key={i} className="rounded-2xl bg-white/15 border border-white/25 backdrop-blur-sm px-3 py-3 text-center anim-fade-in-up" style={{ animationDelay: `${520 + i * 90}ms` }}>
+                  <p className="font-black text-xl tabular-nums">{s.value}</p>
+                  <p className="text-[10px] font-semibold text-white/80 mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Tarjetas flotantes */}
+            {floatCards.map((c, i) => (
+              <div
+                key={i}
+                className={`absolute ${c.pos} ${c.anim} hidden xl:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-md shadow-xl shadow-blue-900/20`}
+                style={{ animationDelay: c.delay }}
+              >
+                <c.icon className={`w-5 h-5 ${c.color}`} />
+                <div className="leading-tight">
+                  <p className="font-black text-sm tabular-nums text-white">{c.value}</p>
+                  <p className="text-[10px] font-medium text-white/80">{c.label}</p>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          {/* ===== Columna de formulario ===== */}
+          <section className="w-full p-6 sm:p-10 lg:p-12">
+            <div className="lg:hidden text-center mb-7 anim-fade-in-up">
+              <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-400 anim-gradient-text shadow-lg shadow-blue-500/25 mb-3">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
+                  <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
+                </div>
+              </div>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Tu mesa de ayuda, simple y potente</p>
+            </div>
+
             <div key={view} className="anim-fade-in-up">
 
               {/* === LOGIN === */}
@@ -752,12 +857,13 @@ export default function Login() {
                 </div>
               )}
             </div>
+            </section>
           </div>
 
-        <p className="text-center text-slate-400 dark:text-slate-600 text-xs mt-6 anim-fade-in" style={{ animationDelay: '400ms' }}>
-          HelpDesk PRO · Sistema de Gestión de Soporte Técnico
-        </p>
+          <p className="text-center text-slate-400 dark:text-slate-600 text-xs mt-6 anim-fade-in" style={{ animationDelay: '400ms' }}>
+            HelpDesk PRO · Sistema de Gestión de Soporte Técnico
+          </p>
+        </div>
       </div>
-    </div>
   );
 }
