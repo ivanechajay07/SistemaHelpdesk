@@ -41,6 +41,32 @@ const vistaConfig: Record<string, { label: string; icon: React.ElementType; grad
   cerrados: { label: 'Cerrados', icon: Archive, gradient: 'from-slate-500 to-slate-700' },
 };
 
+interface ActionButtonProps {
+  label: string;
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  className: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+
+/** Icono de acción con tooltip animado que aparece al pasar el puntero. */
+function ActionButton({ label, onClick, className, disabled, children }: ActionButtonProps) {
+  return (
+    <div className="relative group/tt flex">
+      <button type="button" onClick={onClick} disabled={disabled} className={className} aria-label={label}>
+        {children}
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 z-40 whitespace-nowrap rounded-lg bg-slate-900 dark:bg-slate-700 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 translate-x-1 scale-95 transition-all duration-200 ease-out group-hover/tt:opacity-100 group-hover/tt:translate-x-0 group-hover/tt:scale-100 shadow-xl ring-1 ring-white/10"
+      >
+        {label}
+        <span className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-slate-900 dark:border-l-slate-700" />
+      </span>
+    </div>
+  );
+}
+
 export default function Tickets() {
   const { tickets, loading, error, fetchTickets, deleteTicket, resolveTicket, confirmTicket, reactivateTicket } = useTicketStore();
   const { user, hasPermission, isAdmin, hasRole } = useAuthStore();
@@ -526,74 +552,71 @@ export default function Tickets() {
                       </td>
                       <td className="px-6 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openTicket(ticket); }}
+                          <ActionButton
+                            label={isTicketLocked(ticket) ? 'Disponible cuando se asigne un técnico' : 'Abrir chat / detalle'}
                             disabled={isTicketLocked(ticket)}
+                            onClick={(e) => { e.stopPropagation(); openTicket(ticket); }}
                             className={`p-2 rounded-lg transition-colors ${
                               isTicketLocked(ticket)
                                 ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
                                 : 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20'
                             }`}
-                            title={isTicketLocked(ticket) ? 'Disponible cuando se asigne un técnico' : 'Abrir chat / detalle'}
                           >
                             {isTicketLocked(ticket) ? <Lock className="w-3.5 h-3.5" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                          </button>
+                          </ActionButton>
                           {canReactivateTicket(ticket) && (
-                            <button
+                            <ActionButton
+                              label="Reactivar ticket"
                               onClick={(e) => { e.stopPropagation(); handleReactivateTicket(ticket.id); }}
                               className="p-2 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 rounded-lg transition-colors"
-                              title="Reactivar ticket"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
-                            </button>
+                            </ActionButton>
                           )}
                           {canConfirmTicket(ticket) && (
-                            <button
+                            <ActionButton
+                              label="Confirmar solución"
                               onClick={(e) => { e.stopPropagation(); handleConfirmTicket(ticket.id); }}
                               className="p-2 text-teal-600 bg-teal-50 hover:bg-teal-100 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 rounded-lg transition-colors"
-                              title="Confirmar solución"
                             >
                               <ThumbsUp className="w-3.5 h-3.5" />
-                            </button>
+                            </ActionButton>
                           )}
                           {ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && canAssign && (
-                            <button
+                            <ActionButton
+                              label="Asignar técnico"
                               onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsAssignModalOpen(true); }}
                               className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
-                              title="Asignar Técnico"
                             >
                               <UserCheck className="w-3.5 h-3.5" />
-                            </button>
+                            </ActionButton>
                           )}
                           {ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && isStaff && (
-                            <button
+                            <ActionButton
+                              label="Resolver"
                               onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsResolveModalOpen(true); }}
                               className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-lg transition-colors"
-                              title="Resolver"
                             >
                               <CheckCircle className="w-3.5 h-3.5" />
-                            </button>
+                            </ActionButton>
                           )}
                           {canEdit && (
-                            <button
+                            <ActionButton
+                              label="Editar"
                               onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsEditModalOpen(true); }}
                               className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-lg transition-colors"
-                              title="Editar"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
-                            </button>
+                            </ActionButton>
                           )}
                           {canDelete && (
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                handleDeleteTicket(ticket.id);
-                              }}
+                            <ActionButton
+                              label="Eliminar"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteTicket(ticket.id); }}
                               className="p-2 text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition-colors"
-                              title="Eliminar"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            </ActionButton>
                           )}
                         </div>
                       </td>
