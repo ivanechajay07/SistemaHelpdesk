@@ -12,4 +12,4 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 ENV APP_TZ=America/Lima
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "exec java -Duser.timezone=${APP_TZ} -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Duser.timezone=${APP_TZ} -jar app.jar"]

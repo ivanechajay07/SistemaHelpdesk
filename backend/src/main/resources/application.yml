@@ -2,6 +2,10 @@ spring:
   application:
     name: helpdesk
 
+  main:
+    # Arranque más rápido: oculta el banner de Spring Boot.
+    banner-mode: off
+
   jackson:
     time-zone: ${APP_TZ:America/Lima}
 
