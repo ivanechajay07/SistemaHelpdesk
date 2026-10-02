@@ -303,6 +303,11 @@ export default function DashboardLayout() {
     fetchNotifications();
   }, [fetchTickets, fetchNotifications]);
 
+  // Título de la pestaña del navegador con el número de mensajes sin leer
+  useEffect(() => {
+    document.title = totalUnread > 0 ? `(${totalUnread}) HelpDesk PRO` : 'HelpDesk PRO';
+  }, [totalUnread]);
+
   // Heartbeat de presencia: mantiene actualizada la última actividad del usuario
   useEffect(() => {
     const beat = () => api.post('/auth/heartbeat').catch(() => {});
@@ -465,7 +470,7 @@ export default function DashboardLayout() {
 
   const navItems: NavItem[] = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', show: !isClientOnly, gradient: 'from-sky-500 to-blue-600', shadow: 'shadow-sky-500/30' },
-    { name: 'Tickets', icon: Ticket, path: '/tickets', show: true, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30', badge: newTicketsCount },
+    { name: 'Tickets', icon: Ticket, path: '/tickets', show: true, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30', badge: newTicketsCount + totalUnread },
     { name: 'Tareas', icon: ListTodo, path: '/tareas', show: canSeeTasks, gradient: 'from-teal-500 to-emerald-600', shadow: 'shadow-teal-500/30' },
     { name: 'Conocimiento', icon: BookOpen, path: '/knowledge', show: true, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30' },
     { name: 'Monitoreo', icon: Activity, path: '/monitoring', show: hasPermission('MONITORING_VIEW'), gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/30' },
