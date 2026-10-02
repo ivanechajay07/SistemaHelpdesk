@@ -53,6 +53,7 @@ import {
 import { useThemeStore } from '../store/themeStore';
 import { useNotificationsStore, type AppNotification } from '../store/notificationsStore';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
+import { playNotificationTone } from '../lib/notificationSound';
 import api from '../lib/axios';
 import { useProfileImage } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
@@ -264,27 +265,10 @@ export default function DashboardLayout() {
     return () => disconnect();
   }, [token, connect, disconnect]);
 
-  // Reproduce un tono breve si el usuario tiene activada la preferencia de sonido.
+  // Reproduce el tono de notificación (estilo Messenger) si la preferencia está activa.
   const playNotificationSound = () => {
-    try {
-      const prefs = user?.id ? JSON.parse(localStorage.getItem(`notif_prefs_${user.id}`) || '{}') : {};
-      if (prefs.sound === false) return;
-      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.26);
-      setTimeout(() => ctx.close().catch(() => {}), 400);
-    } catch { /* audio no disponible */ }
+    const prefs = user?.id ? JSON.parse(localStorage.getItem(`notif_prefs_${user.id}`) || '{}') : {};
+    playNotificationTone(prefs.sound !== false);
   };
 
   // Toast instantáneo cuando llega un mensaje nuevo de chat
