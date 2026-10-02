@@ -5,6 +5,7 @@ import type { User } from '../store/userStore';
 import { UserModal } from '../components/users/UserModal';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
+import UserAvatar from '../components/ui/UserAvatar';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
 
@@ -255,9 +256,7 @@ export default function Users() {
                 {/* Cabecera de tarjeta */}
                 <div className="flex items-center gap-3 mb-4 pr-8">
                   <div className="relative shrink-0">
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ${conn.ring} transition-all duration-300`}>
-                      {user.nombre?.charAt(0) || 'U'}{user.apellidos?.charAt(0) || ''}
-                    </div>
+                    <UserAvatar userId={user.id} name={`${user.nombre || ''} ${user.apellidos || ''}`} size={48} />
                     <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ${conn.dot}`}>
                       {user.estadoConexion === 'CONECTADO' && (
                         <span className={`absolute inset-0 rounded-full ${conn.dot} animate-ping opacity-60`} />

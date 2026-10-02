@@ -11,6 +11,7 @@ import { useToast } from '../components/ui/Toast';
 import { Send, ArrowLeft, Loader2, Paperclip, Bold, Italic, Underline, Strikethrough, Link as LinkIcon, Image as ImageIcon, MessageSquare, Smile, Code, List, AlignLeft, X, Lock, RotateCcw, Star, Check, CheckCheck, ClipboardCheck } from 'lucide-react';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
 import ActaModal from '../components/tickets/ActaModal';
+import UserAvatar from '../components/ui/UserAvatar';
 
 interface Message {
   id: number;
@@ -575,9 +576,11 @@ export default function TicketDetail() {
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                {(ticket?.usuarioId === user?.id ? (ticket?.tecnicoNombre || 'T') : (ticket?.solicitanteNombre || 'C')).charAt(0).toUpperCase()}
-              </div>
+              <UserAvatar
+                userId={ticket?.usuarioId === user?.id ? ticket?.tecnicoId : ticket?.usuarioId}
+                name={ticket?.usuarioId === user?.id ? ticket?.tecnicoNombre : ticket?.solicitanteNombre}
+                size={36}
+              />
               <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${otherOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
             </div>
             <div className="min-w-0">
@@ -615,9 +618,7 @@ export default function TicketDetail() {
             return (
               <div key={idx} className={`flex ${isMe ? 'flex-row-reverse' : 'flex-row'} items-start gap-3`}>
                 {/* Avatar */}
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 overflow-hidden shrink-0 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs border-2 border-white dark:border-slate-900 shadow-sm">
-                  {msg.remitenteNombre.charAt(0).toUpperCase()}
-                </div>
+                <UserAvatar userId={msg.remitenteId} name={msg.remitenteNombre} size={32} />
 
                 {/* Message Body */}
                 <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%] lg:max-w-[70%]`}>
