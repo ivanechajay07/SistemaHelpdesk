@@ -31,6 +31,9 @@ public class NotificationService {
 
     private static final int MAX_ITEMS = 15;
 
+    /** Los avisos con más de estos días se ocultan automáticamente del feed. */
+    private static final int MAX_AGE_DAYS = 7;
+
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
     private final TaskRepository taskRepository;
@@ -210,6 +213,13 @@ public class NotificationService {
         items.sort(Comparator.comparing(
                 NotificationDto::date,
                 Comparator.nullsLast(Comparator.reverseOrder())));
+
+        // Ocultar automáticamente los avisos con más de MAX_AGE_DAYS días.
+        // Los que no tienen fecha (p. ej. registros pendientes) se conservan.
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(MAX_AGE_DAYS);
+        items = items.stream()
+                .filter(n -> n.date() == null || n.date().isAfter(cutoff))
+                .toList();
 
         return items.size() > MAX_ITEMS ? items.subList(0, MAX_ITEMS) : items;
     }
