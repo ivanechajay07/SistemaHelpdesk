@@ -10,12 +10,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -42,6 +47,30 @@ public class UserController {
     @Operation(summary = "Actualizar el perfil del usuario autenticado")
     public ResponseEntity<UserResponse> updateMyProfile(@Valid @RequestBody ProfileUpdateRequest request) {
         return ResponseEntity.ok(userService.updateMyProfile(request));
+    }
+
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Subir foto de perfil del usuario autenticado")
+    public ResponseEntity<UserResponse> subirAvatar(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(userService.guardarAvatar(file));
+    }
+
+    @DeleteMapping("/me/avatar")
+    @Operation(summary = "Eliminar la foto de perfil del usuario autenticado")
+    public ResponseEntity<Void> eliminarAvatar() {
+        userService.eliminarAvatar();
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/avatar")
+    @Operation(summary = "Obtener la foto de perfil de un usuario")
+    public ResponseEntity<Resource> obtenerAvatar(@PathVariable Long id) {
+        return userService.obtenerAvatar(id)
+                .map(a -> ResponseEntity.ok()
+                        .contentType(a.mediaType())
+                        .cacheControl(CacheControl.noCache())
+                        .body((Resource) new FileSystemResource(a.path())))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/me/notifications")

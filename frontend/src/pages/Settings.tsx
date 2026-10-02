@@ -6,6 +6,7 @@ import api from '../lib/axios';
 import { QRCodeSVG } from 'qrcode.react';
 import { PROFILE_IMAGE_EVENT } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
+import UserAvatar from '../components/ui/UserAvatar';
 
 export default function Settings() {
   const { user, setAuth, isAdmin } = useAuthStore();
@@ -37,23 +38,33 @@ export default function Settings() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setProfileMessage({ type: 'error', text: 'La imagen no debe superar 5MB.' });
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setProfileImage(base64);
-        if (user?.id) {
-          try { localStorage.setItem(`profile_image_${user.id}`, base64); } catch {}
-          window.dispatchEvent(new Event(PROFILE_IMAGE_EVENT));
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileMessage({ type: 'error', text: 'La imagen no debe superar 2 MB.' });
+      return;
     }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      setProfileImage(base64);
+      if (user?.id) {
+        try { localStorage.setItem(`profile_image_${user.id}`, base64); } catch {}
+        window.dispatchEvent(new Event(PROFILE_IMAGE_EVENT));
+      }
+      // Subir al backend para que la foto sea visible en todos los dispositivos
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        await api.post('/users/me/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setProfileMessage({ type: 'success', text: 'Foto de perfil actualizada.' });
+        window.dispatchEvent(new Event(PROFILE_IMAGE_EVENT));
+      } catch (err: any) {
+        setProfileMessage({ type: 'error', text: err.response?.data?.message || 'No se pudo subir la foto de perfil.' });
+      }
+      setTimeout(() => setProfileMessage(null), 4000);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
@@ -64,6 +75,7 @@ export default function Settings() {
       window.dispatchEvent(new Event(PROFILE_IMAGE_EVENT));
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
+    api.delete('/users/me/avatar').catch(() => {});
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -359,7 +371,7 @@ export default function Settings() {
                       {profileImage ? (
                         <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
-                        <span>{profileData.nombre.charAt(0)}{profileData.apellidos.charAt(0)}</span>
+                        <UserAvatar userId={user?.id} name={`${profileData.nombre} ${profileData.apellidos}`} size={96} />
                       )}
                     </div>
                     <button
@@ -396,7 +408,7 @@ export default function Settings() {
                     >
                       <Upload className="w-3 h-3" /> Cambiar foto
                     </button>
-                    <p className="text-[11px] text-slate-400 mt-0.5">JPG, PNG o WebP. Máximo 5MB.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">JPG, PNG o WebP. Máximo 2 MB.</p>
                   </div>
                 </div>
 

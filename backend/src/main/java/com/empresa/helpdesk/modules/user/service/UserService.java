@@ -14,12 +14,24 @@ import com.empresa.helpdesk.modules.notification.service.EmailService;
 import com.empresa.helpdesk.modules.audit.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 
 import java.util.HashSet;
 import java.util.List;
@@ -38,6 +50,14 @@ public class UserService {
     private final EmailService emailService;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.file.upload-dir:./uploads}")
+    private String uploadDir;
+
+    private static final long MAX_AVATAR_BYTES = 2L * 1024 * 1024;
+    private static final List<String> AVATAR_EXT = List.of("png", "jpg", "jpeg", "webp");
+
+    public record AvatarResource(Path path, MediaType mediaType) {}
 
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(Pageable pageable) {
@@ -195,6 +215,82 @@ public class UserService {
         return prefs;
     }
 
+    /** Guarda la foto de perfil del usuario autenticado (PNG/JPG/WebP, máx. 2 MB). */
+    @Transactional
+    public UserResponse guardarAvatar(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("El archivo está vacío");
+        }
+        if (file.getSize() > MAX_AVATAR_BYTES) {
+            throw new RuntimeException("La imagen no debe superar 2 MB");
+        }
+        String ext = StringUtils.getFilenameExtension(file.getOriginalFilename());
+        ext = ext != null ? ext.toLowerCase() : "";
+        if (!AVATAR_EXT.contains(ext)) {
+            throw new RuntimeException("Formato no permitido. Usa PNG, JPG o WebP");
+        }
+
+        User user = getAuthenticatedUser();
+        try {
+            Path dir = Paths.get(uploadDir, "avatars").toAbsolutePath().normalize();
+            Files.createDirectories(dir);
+            for (String e : AVATAR_EXT) {
+                Files.deleteIfExists(dir.resolve(user.getId() + "." + e));
+            }
+            Path target = dir.resolve(user.getId() + "." + ext).normalize();
+            if (!target.startsWith(dir)) {
+                throw new RuntimeException("Ruta no válida");
+            }
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            user.setAvatarUrl(user.getId() + "." + ext);
+            userRepository.save(user);
+            auditService.registrar("EDITAR_AVATAR", "USUARIO", user.getId(), user.getUsername());
+            return mapToResponse(user);
+        } catch (IOException e) {
+            throw new RuntimeException("No se pudo guardar la foto de perfil");
+        }
+    }
+
+    /** Elimina la foto de perfil del usuario autenticado. */
+    @Transactional
+    public void eliminarAvatar() {
+        User user = getAuthenticatedUser();
+        try {
+            Path dir = Paths.get(uploadDir, "avatars").toAbsolutePath().normalize();
+            for (String e : AVATAR_EXT) {
+                Files.deleteIfExists(dir.resolve(user.getId() + "." + e));
+            }
+        } catch (IOException ignored) {
+            // si no se puede borrar el archivo, igual se limpia la referencia
+        }
+        user.setAvatarUrl(null);
+        userRepository.save(user);
+        auditService.registrar("ELIMINAR_AVATAR", "USUARIO", user.getId(), user.getUsername());
+    }
+
+    /** Devuelve el archivo de avatar de un usuario (si existe). */
+    @Transactional(readOnly = true)
+    public Optional<AvatarResource> obtenerAvatar(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getAvatarUrl() == null || user.getAvatarUrl().isBlank()) {
+            return Optional.empty();
+        }
+        Path dir = Paths.get(uploadDir, "avatars").toAbsolutePath().normalize();
+        Path file = dir.resolve(user.getAvatarUrl()).normalize();
+        if (!file.startsWith(dir) || !Files.exists(file) || !Files.isReadable(file)) {
+            return Optional.empty();
+        }
+        String ext = StringUtils.getFilenameExtension(user.getAvatarUrl());
+        MediaType type = switch (ext != null ? ext.toLowerCase() : "") {
+            case "png" -> MediaType.IMAGE_PNG;
+            case "webp" -> MediaType.parseMediaType("image/webp");
+            default -> MediaType.IMAGE_JPEG;
+        };
+        return Optional.of(new AvatarResource(file, type));
+    }
+
     private User getAuthenticatedUser() {
         String principal = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsernameOrEmail(principal, principal)
@@ -277,6 +373,7 @@ public class UserService {
                 .dispositivoSo(user.getDispositivoSo())
                 .navegador(user.getNavegador())
                 .ipUltima(user.getIpUltima())
+                .avatarUrl(user.getAvatarUrl() != null ? "/api/v1/users/" + user.getId() + "/avatar" : null)
                 .build();
     }
 

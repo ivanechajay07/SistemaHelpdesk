@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { User } from 'lucide-react';
 import { useProfileImage } from '../../lib/hooks';
 
@@ -10,6 +11,10 @@ const AVATAR_GRADIENTS = [
   'from-violet-500 to-purple-600',
 ];
 
+const API_BASE = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace('/api/v1', '')
+  : 'http://localhost:8081';
+
 interface UserAvatarProps {
   userId?: number | null;
   name?: string | null;
@@ -17,14 +22,18 @@ interface UserAvatarProps {
 }
 
 /**
- * Avatar de usuario: usa la foto de perfil guardada (localStorage) o iniciales
- * con un color derivado del nombre. Si no hay nombre, muestra un avatar vacío.
+ * Avatar de usuario: intenta la foto subida al backend, luego la guardada
+ * localmente, y si no hay ninguna muestra las iniciales con color.
  */
 export default function UserAvatar({ userId, name, size = 34 }: UserAvatarProps) {
-  const image = useProfileImage(userId ?? undefined);
+  const localImage = useProfileImage(userId ?? undefined);
+  const [serverFailed, setServerFailed] = useState(false);
   const clean = (name || '').trim();
 
-  if (!clean) {
+  const serverUrl = userId && !serverFailed ? `${API_BASE}/api/v1/users/${userId}/avatar` : null;
+  const src = serverUrl || localImage;
+
+  if (!clean && !src) {
     return (
       <div
         style={{ width: size, height: size }}
@@ -36,18 +45,23 @@ export default function UserAvatar({ userId, name, size = 34 }: UserAvatarProps)
     );
   }
 
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={clean || 'Usuario'}
+        style={{ width: size, height: size }}
+        className="rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow shrink-0"
+        title={clean}
+        onError={() => { if (serverUrl) setServerFailed(true); }}
+      />
+    );
+  }
+
   const initials = clean.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
   const idx = clean.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_GRADIENTS.length;
 
-  return image ? (
-    <img
-      src={image}
-      alt={clean}
-      style={{ width: size, height: size }}
-      className="rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow shrink-0"
-      title={clean}
-    />
-  ) : (
+  return (
     <div
       style={{ width: size, height: size }}
       className={`rounded-full bg-gradient-to-br ${AVATAR_GRADIENTS[idx]} flex items-center justify-center text-white font-bold ring-2 ring-white dark:ring-slate-900 shadow shrink-0`}

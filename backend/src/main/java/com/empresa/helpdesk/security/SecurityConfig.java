@@ -81,6 +81,8 @@ public class SecurityConfig {
                                 // Adjuntos del chat: enlaces firmados con expiración (HMAC),
                                 // no requieren cabecera Authorization en el navegador.
                                 "/api/v1/chat/attachments/**",
+                                // Fotos de perfil: se cargan con <img src> (sin cabecera Authorization)
+                                "/api/v1/users/*/avatar",
                                 "/ws/**",
                                 "/error"
                         ).permitAll()

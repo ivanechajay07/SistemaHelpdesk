@@ -31,4 +31,5 @@ public class UserResponse {
     private String dispositivoSo;
     private String navegador;
     private String ipUltima;
+    private String avatarUrl;
 }

@@ -72,6 +72,10 @@ public class User implements UserDetails {
     @Column(name = "notification_prefs", length = 500)
     private String notificationPrefs;
 
+    // Nombre del archivo de la foto de perfil (guardado en uploads/avatars)
+    @Column(name = "avatar_url", length = 300)
+    private String avatarUrl;
+
     @Column(name = "last_login")
     private java.time.LocalDateTime lastLogin;
 
