@@ -2,6 +2,8 @@ package com.empresa.helpdesk.modules.user.service;
 
 import com.empresa.helpdesk.modules.user.dto.ProfileUpdateRequest;
 import com.empresa.helpdesk.modules.user.dto.UserRequest;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.empresa.helpdesk.modules.user.dto.UserResponse;
 import com.empresa.helpdesk.modules.user.dto.UserSummaryResponse;
 import com.empresa.helpdesk.modules.user.entity.Role;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public Page<UserResponse> getAllUsers(Pageable pageable) {
@@ -161,6 +165,40 @@ public class UserService {
         User saved = userRepository.save(user);
         auditService.registrar("EDITAR_PERFIL", "USUARIO", saved.getId(), saved.getUsername());
         return mapToResponse(saved);
+    }
+
+    /** Preferencias de notificación del usuario autenticado. */
+    @Transactional(readOnly = true)
+    public Map<String, Boolean> getNotificationPreferences() {
+        User user = getAuthenticatedUser();
+        if (user.getNotificationPrefs() == null || user.getNotificationPrefs().isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(user.getNotificationPrefs(), new TypeReference<Map<String, Boolean>>() {});
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /** Guarda las preferencias de notificación del usuario autenticado. */
+    @Transactional
+    public Map<String, Boolean> updateNotificationPreferences(Map<String, Boolean> preferences) {
+        User user = getAuthenticatedUser();
+        Map<String, Boolean> prefs = preferences != null ? preferences : Map.of();
+        try {
+            user.setNotificationPrefs(objectMapper.writeValueAsString(prefs));
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudieron guardar las preferencias de notificación");
+        }
+        userRepository.save(user);
+        return prefs;
+    }
+
+    private User getAuthenticatedUser() {
+        String principal = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByUsernameOrEmail(principal, principal)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
 
     @Transactional

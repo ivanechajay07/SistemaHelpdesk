@@ -68,6 +68,10 @@ public class User implements UserDetails {
     @Column(name = "two_factor_secret", columnDefinition = "TEXT")
     private String twoFactorSecret;
 
+    // Preferencias de notificación del usuario (JSON serializado)
+    @Column(name = "notification_prefs", length = 500)
+    private String notificationPrefs;
+
     @Column(name = "last_login")
     private java.time.LocalDateTime lastLogin;
 

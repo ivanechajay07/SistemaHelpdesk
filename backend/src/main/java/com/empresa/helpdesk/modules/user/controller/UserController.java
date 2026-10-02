@@ -1,5 +1,6 @@
 package com.empresa.helpdesk.modules.user.controller;
 
+import com.empresa.helpdesk.modules.user.dto.NotificationPreferencesRequest;
 import com.empresa.helpdesk.modules.user.dto.ProfileUpdateRequest;
 import com.empresa.helpdesk.modules.user.dto.UserRequest;
 import com.empresa.helpdesk.modules.user.dto.UserResponse;
@@ -41,6 +42,19 @@ public class UserController {
     @Operation(summary = "Actualizar el perfil del usuario autenticado")
     public ResponseEntity<UserResponse> updateMyProfile(@Valid @RequestBody ProfileUpdateRequest request) {
         return ResponseEntity.ok(userService.updateMyProfile(request));
+    }
+
+    @GetMapping("/me/notifications")
+    @Operation(summary = "Obtener preferencias de notificación del usuario autenticado")
+    public ResponseEntity<java.util.Map<String, Boolean>> getNotificationPreferences() {
+        return ResponseEntity.ok(userService.getNotificationPreferences());
+    }
+
+    @PutMapping("/me/notifications")
+    @Operation(summary = "Actualizar preferencias de notificación del usuario autenticado")
+    public ResponseEntity<java.util.Map<String, Boolean>> updateNotificationPreferences(
+            @RequestBody NotificationPreferencesRequest request) {
+        return ResponseEntity.ok(userService.updateNotificationPreferences(request.getPreferences()));
     }
 
     @GetMapping("/{id}")

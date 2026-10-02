@@ -114,6 +114,18 @@ export default function Settings() {
     } catch { /* ignore */ }
     return defaultNotifications;
   });
+
+  // Cargar las preferencias guardadas en el backend
+  useEffect(() => {
+    api.get('/users/me/notifications')
+      .then((r) => {
+        const saved = r.data || {};
+        if (Object.keys(saved).length > 0) {
+          setNotifications((prev) => prev.map((d) => ({ ...d, active: saved[d.id] ?? d.active })));
+        }
+      })
+      .catch(() => { /* sin preferencias guardadas */ });
+  }, []);
   const [isSavingNotifs, setIsSavingNotifs] = useState(false);
   const [notifMessage, setNotifMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
@@ -129,7 +141,7 @@ export default function Settings() {
     const prefs = notifications.reduce((acc, n) => ({ ...acc, [n.id]: n.active }), {} as Record<string, boolean>);
     try {
       if (user?.id) localStorage.setItem(`notif_prefs_${user.id}`, JSON.stringify(prefs));
-      await api.put('/users/notifications', { preferences: prefs });
+      await api.put('/users/me/notifications', { preferences: prefs });
       setNotifMessage({ type: 'success', text: 'Preferencias guardadas.' });
     } catch {
       setNotifMessage({ type: 'success', text: 'Preferencias guardadas localmente.' });
