@@ -1,7 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Sparkles, Award, CalendarDays } from 'lucide-react';
 import UserAvatar from '../components/ui/UserAvatar';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
+import MiniCalendar from '../components/ui/MiniCalendar';
+import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LineChart, Line, Legend } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTicketStore } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
@@ -71,6 +73,16 @@ export default function Dashboard() {
   }, [technicianStats]);
 
   const recentTickets = tickets.slice(0, 5);
+
+  // Eventos para el calendario: cantidad de tickets creados por día
+  const ticketEvents = useMemo(() => {
+    const map: Record<string, number> = {};
+    tickets.forEach((t) => {
+      const day = t.fechaCreacion?.slice(0, 10);
+      if (day) map[day] = (map[day] || 0) + 1;
+    });
+    return map;
+  }, [tickets]);
 
   const statusData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -191,7 +203,9 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
+        {!dbStats && tickets.length === 0
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)
+          : stats.map((stat, index) => (
           <div
             key={index}
             className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden anim-fade-in-up"
@@ -281,24 +295,30 @@ export default function Dashboard() {
           <div className="lg:col-span-2 h-[260px] w-full">
             {technicianStats.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={technicianChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={technicianChartData} margin={{ top: 5, right: 12, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                   <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={8} />
                   <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-6} />
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px' }}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }}
+                    cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
                   />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
                   {technicianStats.slice(0, 6).map((t, i) => (
-                    <Bar
+                    <Line
                       key={t.tecnicoId}
+                      type="monotone"
                       dataKey={t.tecnicoNombre}
-                      stackId="resueltos"
-                      fill={TECNICO_COLORS[i % TECNICO_COLORS.length]}
-                      maxBarSize={42}
+                      stroke={TECNICO_COLORS[i % TECNICO_COLORS.length]}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, strokeWidth: 0, fill: TECNICO_COLORS[i % TECNICO_COLORS.length] }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                      isAnimationActive
+                      animationDuration={900}
+                      animationBegin={i * 120}
                     />
                   ))}
-                </BarChart>
+                </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center">
@@ -477,8 +497,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Tickets */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+      {/* Recent Tickets + Calendario */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold flex items-center gap-2">
             <Ticket className="w-5 h-5 text-indigo-500" />
@@ -493,10 +514,14 @@ export default function Dashboard() {
         </div>
 
         {recentTickets.length === 0 ? (
-          <div className="py-10 text-center text-slate-500 text-sm">
-            <Ticket className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
-            No hay tickets recientes
-          </div>
+          tickets.length === 0 ? (
+            <SkeletonList rows={5} />
+          ) : (
+            <div className="py-10 text-center text-slate-500 text-sm">
+              <Ticket className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+              No hay tickets recientes
+            </div>
+          )
         ) : (
           <div className="space-y-2.5">
             {recentTickets.map((ticket, i) => (
@@ -555,6 +580,9 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+      </div>
+
+      <MiniCalendar events={ticketEvents} />
       </div>
 
       <NewTicketModal 

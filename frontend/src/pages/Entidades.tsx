@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, AlignLeft } from 'lucide-react';
+import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, AlignLeft, Map } from 'lucide-react';
 import { useCatalogStore, type Entidad } from '../store/catalogStore';
 import SearchableSelect from '../components/ui/SearchableSelect';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
@@ -334,6 +334,18 @@ export default function Entidades() {
                         <p className="text-red-500 text-xs mt-1">{fieldErrors[`sede_desc_${i}`]}</p>
                       )}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const q = [row.descripcion, nombre].filter((x) => x && x.trim()).join(', ');
+                        if (q) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank', 'noopener');
+                      }}
+                      disabled={!row.descripcion.trim()}
+                      className="p-2.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Ver ubicación en el mapa"
+                    >
+                      <Map className="w-4 h-4" />
+                    </button>
                     {sedes.length > 1 && (
                       <button
                         type="button"

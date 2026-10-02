@@ -12,6 +12,7 @@ import { useClickOutside, usePagedList } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import UserAvatar from '../components/ui/UserAvatar';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useToast } from '../components/ui/Toast';
 import SlaBadge from '../components/ui/SlaBadge';
 import CsatModal from '../components/tickets/CsatModal';
@@ -471,7 +472,13 @@ export default function Tickets() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {filteredTickets.length === 0 && !loading ? (
+                {loading && tickets.length === 0 ? (
+                  Array.from({ length: 7 }).map((_, i) => (
+                    <tr key={`sk-${i}`}>
+                      <td colSpan={9} className="px-6 py-3"><Skeleton className="h-9 w-full" /></td>
+                    </tr>
+                  ))
+                ) : filteredTickets.length === 0 && !loading ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
                       <div className="flex flex-col items-center gap-2">

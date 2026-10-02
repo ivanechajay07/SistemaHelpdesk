@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, Loader2, Edit2, Trash2, Mail, Clock, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { Search, Plus, MoreVertical, Edit2, Trash2, Mail, Clock, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { useUserStore } from '../store/userStore';
 import type { User } from '../store/userStore';
 import { UserModal } from '../components/users/UserModal';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import UserAvatar from '../components/ui/UserAvatar';
+import { Skeleton } from '../components/ui/Skeleton';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
 
@@ -200,8 +201,21 @@ export default function Users() {
 
       {/* Grid de tarjetas */}
       {loading && users.length === 0 ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <Skeleton className="w-12 h-12 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+              <Skeleton className="h-3 w-full mb-2" />
+              <Skeleton className="h-3 w-3/4 mb-4" />
+              <Skeleton className="h-8 w-full rounded-xl" />
+            </div>
+          ))}
         </div>
       ) : filteredUsers.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-16 text-center">
