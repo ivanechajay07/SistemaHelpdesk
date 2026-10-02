@@ -11,6 +11,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useClickOutside, usePagedList } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
+import UserAvatar from '../components/ui/UserAvatar';
 import { useToast } from '../components/ui/Toast';
 import SlaBadge from '../components/ui/SlaBadge';
 import CsatModal from '../components/tickets/CsatModal';
@@ -514,9 +515,7 @@ export default function Tickets() {
                           </span>
                           {ticket.tecnicoNombre ? (
                             <div className="flex items-center gap-1.5" title={`Asignado a: ${ticket.tecnicoNombre}`}>
-                              <div className="w-4 h-4 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-[9px] font-bold text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shrink-0">
-                                {ticket.tecnicoNombre.charAt(0).toUpperCase()}
-                              </div>
+                              <UserAvatar userId={ticket.tecnicoId} name={ticket.tecnicoNombre} size={18} />
                               <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
                                 {ticket.tecnicoNombre}
                               </span>
@@ -668,10 +667,17 @@ export default function Tickets() {
                   </div>
                   
                   <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1 leading-snug">{ticket.titulo}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-                    {ticket.subcategoriaNombre || 'Sin categoría'}
-                    {ticket.tecnicoNombre && ` · ${ticket.tecnicoNombre}`}
-                  </p>
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {ticket.subcategoriaNombre || 'Sin categoría'}
+                    </p>
+                    {ticket.tecnicoNombre && (
+                      <span className="inline-flex items-center gap-1 shrink-0">
+                        <UserAvatar userId={ticket.tecnicoId} name={ticket.tecnicoNombre} size={16} />
+                        <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[110px]">{ticket.tecnicoNombre}</span>
+                      </span>
+                    )}
+                  </div>
                   {isTicketLocked(ticket) && (
                     <span className="inline-flex items-center gap-1 mb-2 text-[10px] font-bold text-amber-600 dark:text-amber-400">
                       <Lock className="w-3 h-3" /> Pendiente de asignación

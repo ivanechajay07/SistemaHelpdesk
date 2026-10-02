@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Sparkles, Award, CalendarDays, User } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Sparkles, Award, CalendarDays } from 'lucide-react';
+import UserAvatar from '../components/ui/UserAvatar';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTicketStore } from '../store/ticketStore';
@@ -34,50 +35,7 @@ const PRIORITY_DOT: Record<string, string> = {
   BAJA: 'text-emerald-500',
 };
 
-const AVATAR_GRADIENTS = [
-  'from-blue-500 to-indigo-600',
-  'from-emerald-500 to-teal-600',
-  'from-fuchsia-500 to-pink-600',
-  'from-amber-500 to-orange-600',
-  'from-cyan-500 to-sky-600',
-  'from-violet-500 to-purple-600',
-];
 
-/** Avatar de usuario: usa la foto de perfil guardada o iniciales con color. */
-function UserAvatar({ userId, name, size = 34 }: { userId?: number | null; name?: string | null; size?: number }) {
-  const image = useProfileImage(userId ?? undefined);
-  const clean = (name || '').trim();
-  if (!clean) {
-    return (
-      <div
-        style={{ width: size, height: size }}
-        className="rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 shrink-0"
-        title="Sin asignar"
-      >
-        <User className="w-4 h-4" />
-      </div>
-    );
-  }
-  const initials = clean.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
-  const idx = clean.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_GRADIENTS.length;
-  return image ? (
-    <img
-      src={image}
-      alt={clean}
-      style={{ width: size, height: size }}
-      className="rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow shrink-0"
-      title={clean}
-    />
-  ) : (
-    <div
-      style={{ width: size, height: size }}
-      className={`rounded-full bg-gradient-to-br ${AVATAR_GRADIENTS[idx]} flex items-center justify-center text-white font-bold text-[11px] ring-2 ring-white dark:ring-slate-900 shadow shrink-0`}
-      title={clean}
-    >
-      {initials}
-    </div>
-  );
-}
 
 export default function Dashboard() {
   const { stats: dbStats, volume, technicianStats, technicianYear, fetchDashboardData, fetchTechnicianStats } = useDashboardStore();
@@ -360,11 +318,14 @@ export default function Dashboard() {
               const max = Math.max(...technicianStats.map((x) => x.total), 1);
               return (
                 <div key={t.tecnicoId} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
-                  <span className={`w-6 h-6 shrink-0 rounded-lg flex items-center justify-center text-[10px] font-black ${
-                    i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                  }`}>
-                    {i + 1}
-                  </span>
+                  <div className="relative shrink-0">
+                    <UserAvatar userId={t.tecnicoId} name={t.tecnicoNombre} size={34} />
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ring-2 ring-white dark:ring-slate-900 ${
+                      i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      {i + 1}
+                    </span>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{t.tecnicoNombre}</p>
