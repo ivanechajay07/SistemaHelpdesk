@@ -70,8 +70,8 @@ export default function Login() {
         !roles.includes('ADMIN') && !roles.includes('ROLE_ADMIN') &&
         !roles.includes('TECNICO') && !roles.includes('ROLE_TECNICO') &&
         !roles.includes('SUPERVISOR') && !roles.includes('ROLE_SUPERVISOR');
-      navigate(isClientOnly ? '/tickets' : '/dashboard');
-    }, 1200);
+        navigate(isClientOnly ? '/tickets' : '/dashboard');
+      }, 1600);
   };
 
   const handleVerifyMfa = async (e: React.FormEvent) => {
@@ -270,29 +270,32 @@ export default function Login() {
       {/* ===== Overlay de bienvenida al iniciar sesión ===== */}
       {welcomeName && (
         <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-xl anim-overlay-in">
-          <div className="relative mb-6">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-violet-600 p-[2px] shadow-2xl shadow-blue-500/40">
-              <div className="w-full h-full rounded-3xl bg-slate-950 flex items-center justify-center">
-                <span className="text-white font-black text-3xl">H</span>
-              </div>
+          <div className="relative mb-6 anim-check-pop">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center shadow-2xl shadow-emerald-500/40">
+              <svg viewBox="0 0 52 52" className="w-14 h-14">
+                <path
+                  className="anim-check"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M14 27l8 8 16-16"
+                />
+              </svg>
             </div>
-            <span className="absolute -inset-2 rounded-[28px] border-2 border-blue-500/40 anim-spin-ring" />
+            <span className="absolute -inset-2 rounded-full border-2 border-emerald-400/40 anim-spin-ring" />
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight anim-fade-in-up">
-            ¡Bienvenido{welcomeName ? `, ${welcomeName}` : ''}!
+            ¡Acceso exitoso!
           </h2>
           <p className="mt-2 text-sm text-slate-400 anim-fade-in-up" style={{ animationDelay: '120ms' }}>
-            Cargando tu espacio de trabajo...
+            Bienvenido, {welcomeName}
           </p>
-          <div className="flex items-center gap-1.5 mt-5">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 animate-bounce"
-                style={{ animationDelay: `${i * 150}ms` }}
-              />
-            ))}
+          <div className="mt-6 h-1.5 w-56 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 anim-progress" />
           </div>
+          <p className="mt-2 text-xs text-slate-400">Redirigiendo al panel...</p>
         </div>
       )}
 

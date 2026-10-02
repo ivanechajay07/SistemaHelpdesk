@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, AlignLeft, Map } from 'lucide-react';
+import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, AlignLeft, Map, ChevronDown, ExternalLink } from 'lucide-react';
 import { useCatalogStore, type Entidad } from '../store/catalogStore';
 import SearchableSelect from '../components/ui/SearchableSelect';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
@@ -23,6 +23,7 @@ export default function Entidades() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [formOpen, setFormOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editing, setEditing] = useState<Entidad | null>(null);
   const [pickValue, setPickValue] = useState('');
   const [nombre, setNombre] = useState('');
@@ -398,67 +399,109 @@ export default function Entidades() {
                 <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
               </div>
             )}
-            <div className="flex flex-col gap-4 p-5">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 p-5">
               {!loading && filteredEntidades.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 font-medium">
+                <div className="col-span-full py-12 text-center text-slate-500 font-medium">
                   <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
                   {entidades.length === 0 ? 'No hay entidades registradas todavía.' : 'No se encontraron coincidencias.'}
                 </div>
               ) : (
-                pagedEntidades.map((entidad) => (
-                  <div
-                    key={entidad.id}
-                    className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm group"
-                  >
-                    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-violet-50 to-transparent dark:from-violet-500/10 border-b border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-500/15 flex items-center justify-center shrink-0">
-                          <Building2 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                        </span>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-slate-900 dark:text-white truncate">{entidad.nombre}</h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {entidad.sedes.length} sede{entidad.sedes.length !== 1 ? 's' : ''}
-                          </p>
+                pagedEntidades.map((entidad) => {
+                  const expanded = expandedId === entidad.id;
+                  const firstAddr = entidad.sedes.find((s) => s.descripcion && s.descripcion.trim())?.descripcion;
+                  const mapQuery = [firstAddr, entidad.nombre].filter(Boolean).join(', ');
+                  return (
+                    <div
+                      key={entidad.id}
+                      className={`border rounded-2xl overflow-hidden shadow-sm transition-all anim-fade-in-up ${
+                        expanded
+                          ? 'border-orange-300 dark:border-orange-500/40 shadow-md'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 px-4 py-3 bg-gradient-to-r from-orange-50 to-transparent dark:from-orange-500/10 border-b border-slate-100 dark:border-slate-800">
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : entidad.id)}
+                          className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
+                        >
+                          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shrink-0 text-white shadow-sm">
+                            <Building2 className="w-4 h-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white truncate">{entidad.nombre}</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {entidad.sedes.length} sede{entidad.sedes.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          <ChevronDown className={`w-4 h-4 text-slate-400 ml-auto shrink-0 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
+                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => startEdit(entidad)}
+                            className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-lg transition-colors"
+                            title="Editar entidad"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(entidad)}
+                            className="p-2 text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition-colors"
+                            title="Eliminar entidad"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => startEdit(entidad)}
-                          className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-lg transition-colors"
-                          title="Editar entidad"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(entidad)}
-                          className="p-2 text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition-colors"
-                          title="Eliminar entidad"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+
+                      <div className={`grid transition-all duration-300 ease-out ${expanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                        <div className="overflow-hidden">
+                          <div className="p-4 space-y-3">
+                            {entidad.sedes.length === 0 ? (
+                              <p className="text-sm italic text-slate-400">Sin sedes registradas.</p>
+                            ) : (
+                              <ul className="space-y-2">
+                                {entidad.sedes.map((sede) => (
+                                  <li key={sede.id} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40">
+                                    <MapPin className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">{sede.nombre}</p>
+                                      {sede.descripcion && (
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{sede.descripcion}</p>
+                                      )}
+                                    </div>
+                                    {sede.descripcion && (
+                                      <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sede.descripcion + ', ' + entidad.nombre)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors shrink-0"
+                                        title="Abrir en Google Maps"
+                                      >
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                      </a>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+
+                            {mapQuery && (
+                              <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                                <iframe
+                                  title={`Mapa de ${entidad.nombre}`}
+                                  src={`https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`}
+                                  className="w-full h-48 border-0"
+                                  loading="lazy"
+                                  referrerPolicy="no-referrer-when-downgrade"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    {entidad.sedes.length === 0 ? (
-                      <p className="px-4 py-3 text-sm italic text-slate-400">Sin sedes registradas.</p>
-                    ) : (
-                      <ul className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                        {entidad.sedes.map((sede) => (
-                          <li key={sede.id} className="flex items-start gap-3 px-4 py-2.5">
-                            <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                              <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">{sede.nombre}</p>
-                              {sede.descripcion && (
-                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{sede.descripcion}</p>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

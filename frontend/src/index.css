@@ -172,6 +172,18 @@
 }
 .anim-spin-ring { animation: spinRing 1.4s linear infinite; }
 
+/* ===== Check de éxito (login) ===== */
+@keyframes checkDraw { to { stroke-dashoffset: 0; } }
+.anim-check { stroke-dasharray: 48; stroke-dashoffset: 48; animation: checkDraw .55s ease-out .2s forwards; }
+@keyframes checkPop {
+  0%   { transform: scale(.6); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.anim-check-pop { animation: checkPop .5s cubic-bezier(.21, 1.02, .73, 1) both; }
+@keyframes progressFill { from { width: 0; } to { width: 100%; } }
+.anim-progress { animation: progressFill 1.35s ease-out forwards; }
+
 /* ===== Skeleton loading (shimmer) ===== */
 @keyframes skeletonShimmer {
   0%   { background-position: 200% 0; }
