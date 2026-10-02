@@ -276,12 +276,12 @@ export default function Login() {
   ];
 
   const floatCards = [
-    { icon: Star, color: 'text-amber-300', value: '4.9', label: 'Valoración', pos: 'top-24 -right-8', anim: 'anim-float-slow', delay: '0s' },
-    { icon: Zap, color: 'text-cyan-200', value: '< 5 min', label: 'Respuesta SLA', pos: 'bottom-44 -left-8', anim: 'anim-float-slower', delay: '-3s' },
+    { icon: Star, color: 'text-amber-400', value: '4.9', label: 'Valoración', pos: 'top-24 right-8', anim: 'anim-float-slow', delay: '0s' },
+    { icon: Zap, color: 'text-sky-500', value: '< 5 min', label: 'Respuesta SLA', pos: 'bottom-36 left-8', anim: 'anim-float-slower', delay: '-3s' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-700 via-sky-600 to-cyan-500 dark:from-blue-950 dark:via-slate-950 dark:to-blue-950 relative overflow-hidden flex items-center transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-cyan-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
       <button
         onClick={toggleTheme}
@@ -324,16 +324,16 @@ export default function Login() {
         </div>
       )}
 
-      {/* ===== Fondo animado azul/celeste ===== */}
+      {/* ===== Fondo animado suave azul/celeste ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-cyan-300/40 dark:bg-cyan-500/20 rounded-full blur-[140px] anim-blob" />
-        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-sky-400/40 dark:bg-sky-600/20 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
-        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-blue-500/30 dark:bg-blue-700/20 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
+        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-sky-300/40 dark:bg-cyan-500/10 rounded-full blur-[140px] anim-blob" />
+        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-cyan-200/50 dark:bg-sky-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
+        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-blue-200/50 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
         <div
-          className="absolute inset-0 opacity-[0.06] dark:opacity-[0.05]"
+          className="absolute inset-0 opacity-[0.5] dark:opacity-[0.2]"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
+              'linear-gradient(rgba(59,130,246,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.14) 1px, transparent 1px)',
             backgroundSize: '56px 56px',
           }}
         />
@@ -341,12 +341,12 @@ export default function Login() {
 
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16">
 
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-2xl shadow-blue-900/20 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-cyan-300" />
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-2xl shadow-sky-900/10 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-400" />
 
           {/* ===== Panel de marca (azul/celeste degradado interactivo) ===== */}
           <section
-            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 dark:from-blue-700 dark:via-sky-600 dark:to-cyan-500 p-10 xl:p-14 text-white select-none anim-gradient-bg"
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-sky-500 via-blue-600 to-cyan-500 dark:from-sky-600 dark:via-blue-700 dark:to-cyan-600 p-10 xl:p-14 text-white select-none anim-gradient-bg"
             onMouseMove={handleBrandMouseMove}
           >
             <div
@@ -414,10 +414,12 @@ export default function Login() {
             {floatCards.map((c, i) => (
               <div
                 key={i}
-                className={`absolute ${c.pos} ${c.anim} hidden xl:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-md shadow-xl shadow-blue-900/20`}
+                className={`absolute ${c.pos} ${c.anim} z-10 hidden lg:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/25 border border-white/40 backdrop-blur-md shadow-xl shadow-blue-900/20`}
                 style={{ animationDelay: c.delay }}
               >
-                <c.icon className={`w-5 h-5 ${c.color}`} />
+                <span className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow">
+                  <c.icon className={`w-4 h-4 ${c.color}`} />
+                </span>
                 <div className="leading-tight">
                   <p className="font-black text-sm tabular-nums text-white">{c.value}</p>
                   <p className="text-[10px] font-medium text-white/80">{c.label}</p>
@@ -516,7 +518,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || !username || !password}
-                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-sky-500/30 hover:shadow-sky-500/50 hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       {loading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Ingresando...</>
@@ -580,7 +582,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={mfaLoading || mfaCode.length !== 6}
-                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20"
+                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-sky-500/20"
                     >
                       {mfaLoading ? 'Verificando...' : 'Verificar e ingresar'}
                     </button>
@@ -668,7 +670,7 @@ export default function Login() {
                   </p>
                   <button
                     onClick={() => { resetForms(); setView('login'); }}
-                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-cyan-500 transition-all duration-300 shadow-lg shadow-sky-500/30 hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     <ArrowLeft className="w-4 h-4" /> Volver al Inicio de Sesión
                   </button>
@@ -826,7 +828,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={regLoading || Object.keys(regErrors).length > 0}
-                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
+                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 via-blue-500 to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-sky-500/30 hover:shadow-sky-500/50 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
                     >
                       {regLoading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Creando cuenta...</>
@@ -850,7 +852,7 @@ export default function Login() {
                   </p>
                   <button
                     onClick={() => { resetForms(); setView('login'); }}
-                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300 shadow-lg shadow-blue-500/25 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-cyan-500 transition-all duration-300 shadow-lg shadow-sky-500/30 hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     <ArrowLeft className="w-4 h-4" /> Volver al Inicio de Sesión
                   </button>
