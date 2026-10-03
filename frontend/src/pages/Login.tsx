@@ -281,7 +281,7 @@ export default function Login() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-cyan-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden flex items-center transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
       <button
         onClick={toggleTheme}
@@ -293,12 +293,12 @@ export default function Login() {
 
       {/* ===== Overlay de bienvenida al iniciar sesión (suave y animado) ===== */}
       {welcomeName && (
-        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-sky-100 via-blue-50 to-cyan-100 dark:from-blue-950 dark:via-slate-950 dark:to-slate-950 backdrop-blur-xl anim-overlay-in overflow-hidden">
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-blue-950 dark:via-slate-950 dark:to-slate-950 backdrop-blur-xl anim-overlay-in overflow-hidden">
           {/* Blobs suaves animados */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-24 -right-20 w-80 h-80 bg-sky-300/40 dark:bg-cyan-500/10 rounded-full blur-3xl anim-blob" />
-            <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-cyan-200/50 dark:bg-sky-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
-            <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-blue-200/50 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
+            <div className="absolute -top-24 -right-20 w-80 h-80 bg-sky-200/50 dark:bg-cyan-500/10 rounded-full blur-3xl anim-blob" />
+            <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-cyan-100/60 dark:bg-sky-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
+            <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-blue-100/60 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
           </div>
 
           <div className="relative anim-float-slow">
@@ -336,16 +336,16 @@ export default function Login() {
         </div>
       )}
 
-      {/* ===== Fondo animado suave azul/celeste ===== */}
+      {/* ===== Fondo animado blanco degradado ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-sky-300/40 dark:bg-cyan-500/10 rounded-full blur-[140px] anim-blob" />
-        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-cyan-200/50 dark:bg-sky-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
-        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-blue-200/50 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
+        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-sky-200/40 dark:bg-cyan-500/10 rounded-full blur-[140px] anim-blob" />
+        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-cyan-100/60 dark:bg-sky-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
+        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-blue-100/60 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
         <div
-          className="absolute inset-0 opacity-[0.5] dark:opacity-[0.2]"
+          className="absolute inset-0 opacity-[0.35] dark:opacity-[0.2]"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(59,130,246,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.14) 1px, transparent 1px)',
+              'linear-gradient(rgba(59,130,246,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.10) 1px, transparent 1px)',
             backgroundSize: '56px 56px',
           }}
         />
