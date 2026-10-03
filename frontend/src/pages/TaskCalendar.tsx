@@ -4,6 +4,7 @@ import { useTaskStore, type Task } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
 import { TaskModal, getPrioridadCls } from '../components/tasks/TaskModal';
 import TaskStatusDialog from '../components/tasks/TaskStatusDialog';
+import PageHeader from '../components/ui/PageHeader';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -77,30 +78,24 @@ export default function TaskCalendar() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md shadow-teal-500/30">
-              <CalendarRange className="w-5 h-5 text-white" />
-            </span>
-            Calendario de Tareas
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-            {canManage
-              ? 'Tareas asignadas por fecha. Haz clic en una tarea para editarla.'
-              : 'Tus tareas por fecha. Haz clic en una tarea para actualizar su avance.'}
-          </p>
-        </div>
+      <PageHeader
+        icon={CalendarRange}
+        eyebrow="Gestión de actividades"
+        title="Calendario de Tareas"
+        subtitle={canManage
+          ? 'Tareas asignadas por fecha. Haz clic en una tarea para editarla.'
+          : 'Tus tareas por fecha. Haz clic en una tarea para actualizar su avance.'}
+        gradient="from-teal-600 via-emerald-600 to-slate-800"
+      >
         {canManage && (
           <button
             onClick={() => openNewTask(new Date())}
-            className="btn-shine flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-teal-500/25 active:scale-95 w-full md:w-auto"
+            className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"
           >
-            <Plus className="w-4 h-4" />
-            Nueva Tarea
+            <Plus className="w-4 h-4" /> Nueva Tarea
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Navegación de mes */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm">

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
 import Pagination from '../components/ui/Pagination';
+import PageHeader from '../components/ui/PageHeader';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
 
@@ -168,25 +169,22 @@ export default function Knowledge() {
   return (
     <div className="space-y-5 anim-fade-in-up">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/25">
-              <BookOpen className="w-5 h-5" />
-            </span>
-            Base de Conocimiento
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Guías, soluciones frecuentes y documentación de soporte.</p>
-        </div>
+      <PageHeader
+        icon={BookOpen}
+        eyebrow="Conocimiento"
+        title="Base de Conocimiento"
+        subtitle="Guías, soluciones frecuentes y documentación de soporte."
+        gradient="from-blue-600 via-blue-700 to-slate-800"
+      >
         {isStaff && (
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-violet-500/25 active:scale-95"
+            className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
           >
             <Plus className="w-4 h-4" /> Nuevo artículo
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Búsqueda */}
       {!selected && (
@@ -197,11 +195,11 @@ export default function Knowledge() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar guías y soluciones... (ej. impresora, correo, VPN)"
-            className="w-full pl-11 pr-24 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition-all"
+            className="w-full pl-11 pr-24 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all"
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors"
           >
             Buscar
           </button>
@@ -213,7 +211,7 @@ export default function Knowledge() {
         <div className="anim-fade-in-up">
           <button
             onClick={() => setSelected(null)}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-400 mb-4 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Volver a los artículos
           </button>
@@ -221,7 +219,7 @@ export default function Knowledge() {
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 {selected.categoria && (
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400 mb-2">
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 mb-2">
                     {selected.categoria}
                   </span>
                 )}
@@ -271,11 +269,11 @@ export default function Knowledge() {
                   key={article.id}
                   onClick={() => setSelected(article)}
                   style={{ animationDelay: `${Math.min(idx * 60, 360)}ms` }}
-                  className="anim-fade-in-up text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-violet-300 dark:hover:border-violet-500/40 transition-all duration-300 group"
+                  className="anim-fade-in-up text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-300 dark:hover:border-blue-500/40 transition-all duration-300 group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     {article.categoria ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
                         {article.categoria}
                       </span>
                     ) : <span />}
@@ -283,7 +281,7 @@ export default function Knowledge() {
                       <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400 text-[9px] font-black uppercase">Borrador</span>
                     )}
                   </div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-sm leading-snug group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors line-clamp-2">
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-sm leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
                     {article.titulo}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed line-clamp-3">
@@ -334,7 +332,7 @@ export default function Knowledge() {
                   value={form.titulo}
                   onChange={(e) => setForm({ ...form, titulo: e.target.value })}
                   placeholder="Ej. Cómo configurar el correo corporativo en Outlook"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all"
                 />
               </div>
               <div>
@@ -345,7 +343,7 @@ export default function Knowledge() {
                   value={form.categoria}
                   onChange={(e) => setForm({ ...form, categoria: e.target.value })}
                   placeholder="Ej. Correo, Hardware, Red, Software"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all"
                 />
               </div>
               <div>
@@ -358,7 +356,7 @@ export default function Knowledge() {
                   value={form.contenido}
                   onChange={(e) => setForm({ ...form, contenido: e.target.value })}
                   placeholder={'# Título\n\nPasos:\n- Primer paso\n- Segundo paso\n\n**Nota:** texto importante'}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/50 transition-all resize-y min-h-[180px]"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/50 transition-all resize-y min-h-[180px]"
                 />
               </div>
               <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -366,7 +364,7 @@ export default function Knowledge() {
                   type="checkbox"
                   checked={form.publicado}
                   onChange={(e) => setForm({ ...form, publicado: e.target.checked })}
-                  className="w-4 h-4 accent-violet-600"
+                  className="w-4 h-4 accent-blue-600"
                 />
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Publicado (visible para todos los usuarios)</span>
               </label>

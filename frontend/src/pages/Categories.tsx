@@ -7,6 +7,7 @@ import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialo
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
+import PageHeader from '../components/ui/PageHeader';
 
 export default function Categories() {
   const { categories, loading, error, fetchCategories, createCategory, updateCategory, deleteCategory } = useCategoryStore();
@@ -77,19 +78,20 @@ export default function Categories() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight">Gestión de Categorías</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Configura los tipos de incidencias y subcategorías.</p>
-        </div>
-        <button 
+      <PageHeader
+        icon={Tag}
+        eyebrow="Configuración"
+        title="Gestión de Categorías"
+        subtitle="Configura los tipos de incidencias y subcategorías."
+        gradient="from-blue-600 via-blue-700 to-slate-800"
+      >
+        <button
           onClick={() => { setSelectedCategory(null); setIsModalOpen(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+          className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
         >
-          <Plus className="w-4 h-4" />
-          Nueva Categoría
+          <Plus className="w-4 h-4" /> Nueva Categoría
         </button>
-      </div>
+      </PageHeader>
 
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg text-sm">

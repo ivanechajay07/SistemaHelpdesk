@@ -4,12 +4,13 @@ import { useTaskStore, type Task } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
 import { TaskModal } from '../components/tasks/TaskModal';
 import TaskStatusDialog from '../components/tasks/TaskStatusDialog';
+import PageHeader from '../components/ui/PageHeader';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ESTADO_BAR: Record<string, string> = {
   PENDIENTE: 'bg-gradient-to-r from-slate-400 to-slate-500',
-  EN_PROCESO: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+  EN_PROCESO: 'bg-gradient-to-r from-blue-500 to-sky-500',
   COMPLETADA: 'bg-gradient-to-r from-emerald-500 to-teal-500',
 };
 
@@ -91,58 +92,50 @@ export default function TaskGantt() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md shadow-teal-500/30">
-              <ChartGantt className="w-5 h-5 text-white" />
-            </span>
-            Diagrama de Gantt
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-            {canManage
-              ? 'Línea de tiempo de las tareas por técnico. Haz clic en una barra para editarla.'
-              : 'Línea de tiempo de tus tareas. Haz clic en una barra para actualizar su avance.'}
-          </p>
+      <PageHeader
+        icon={ChartGantt}
+        eyebrow="Gestión de actividades"
+        title="Diagrama de Gantt"
+        subtitle={canManage
+          ? 'Línea de tiempo de las tareas por técnico. Haz clic en una barra para editarla.'
+          : 'Línea de tiempo de tus tareas. Haz clic en una barra para actualizar su avance.'}
+        gradient="from-teal-600 via-emerald-600 to-slate-800"
+      >
+        <div className="inline-flex bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl p-1">
+          <button
+            onClick={() => setOffsetWeeks((w) => Math.max(0, w - 1))}
+            disabled={!view || offsetWeeks === 0}
+            className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 disabled:opacity-40 transition-colors"
+            title="Retroceder"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setOffsetWeeks(0)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              offsetWeeks === 0 ? 'bg-white text-teal-700 shadow-sm' : 'text-white/80 hover:bg-white/10'
+            }`}
+          >
+            Inicio
+          </button>
+          <button
+            onClick={() => setOffsetWeeks((w) => w + 1)}
+            disabled={!view}
+            className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 disabled:opacity-40 transition-colors"
+            title="Avanzar"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="inline-flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm">
-            <button
-              onClick={() => setOffsetWeeks((w) => Math.max(0, w - 1))}
-              disabled={!view || offsetWeeks === 0}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-500/10 disabled:opacity-40 transition-colors"
-              title="Retroceder"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setOffsetWeeks(0)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                offsetWeeks === 0 ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white' : 'text-slate-500 hover:text-teal-600'
-              }`}
-            >
-              Inicio
-            </button>
-            <button
-              onClick={() => setOffsetWeeks((w) => w + 1)}
-              disabled={!view}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-500/10 disabled:opacity-40 transition-colors"
-              title="Avanzar"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          {canManage && (
-            <button
-              onClick={() => { setEditingTask(null); setModalOpen(true); }}
-              className="btn-shine flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-teal-500/25 active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              Registrar Tarea
-            </button>
-          )}
-        </div>
-      </div>
+        {canManage && (
+          <button
+            onClick={() => { setEditingTask(null); setModalOpen(true); }}
+            className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"
+          >
+            <Plus className="w-4 h-4" /> Registrar Tarea
+          </button>
+        )}
+      </PageHeader>
 
       {/* Diagrama */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden anim-fade-in-up">
@@ -233,7 +226,7 @@ export default function TaskGantt() {
       <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
         <span>Estado:</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-4 h-3 rounded bg-gradient-to-r from-slate-400 to-slate-500" /> Pendiente</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-4 h-3 rounded bg-gradient-to-r from-blue-500 to-indigo-500" /> En Proceso</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-4 h-3 rounded bg-gradient-to-r from-blue-500 to-sky-500" /> En Proceso</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-4 h-3 rounded bg-gradient-to-r from-emerald-500 to-teal-500" /> Completada</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-[2px] h-3.5 bg-red-500/70 rounded-full" /> Hoy</span>
       </div>

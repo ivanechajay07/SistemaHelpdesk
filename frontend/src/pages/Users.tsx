@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, Edit2, Trash2, Mail, Clock, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { Search, Plus, MoreVertical, Edit2, Trash2, Mail, Clock, Smartphone, Tablet, Monitor, Users as UsersIcon } from 'lucide-react';
 import { useUserStore } from '../store/userStore';
+import PageHeader from '../components/ui/PageHeader';
 import type { User } from '../store/userStore';
 import { UserModal } from '../components/users/UserModal';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
@@ -146,19 +147,20 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight">Gestión de Usuarios</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Administra los usuarios y técnicos del sistema.</p>
-        </div>
+      <PageHeader
+        icon={UsersIcon}
+        eyebrow="Administración"
+        title="Gestión de Usuarios"
+        subtitle="Administra los usuarios y técnicos del sistema."
+        gradient="from-blue-600 via-blue-700 to-slate-800"
+      >
         <button
           onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+          className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
         >
-          <Plus className="w-4 h-4" />
-          Nuevo Usuario
+          <Plus className="w-4 h-4" /> Nuevo Usuario
         </button>
-      </div>
+      </PageHeader>
 
       {/* Resumen de presencia */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4 anim-fade-in-up">
@@ -304,7 +306,7 @@ export default function Users() {
 
                 {/* Dispositivo conectado */}
                 <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  <DevIcon className="w-3.5 h-3.5 shrink-0 mt-0.5 text-indigo-500 dark:text-indigo-400" />
+                  <DevIcon className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
                   <span className="min-w-0">
                     <strong className="font-semibold text-slate-600 dark:text-slate-300">{deviceLabel(user.dispositivoTipo)}</strong>
                     {user.dispositivoModelo ? ` · ${user.dispositivoModelo}` : ''}

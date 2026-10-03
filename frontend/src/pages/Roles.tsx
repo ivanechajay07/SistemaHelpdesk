@@ -2,6 +2,7 @@ import { useEffect, useState, type ElementType } from 'react';
 import { useRoleStore, type Role } from '../store/roleStore';
 import { useToast } from '../components/ui/Toast';
 import { Shield, ShieldAlert, Check, Ticket, ListTodo, Boxes, Users, Settings2, Building2, Layers, FileText, Puzzle, Activity } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 
 // Agrupación de permisos por módulo del sistema (lo que cada rol podrá visualizar).
 // El orden de los grupos sigue el orden del menú lateral.
@@ -21,7 +22,7 @@ const MENU_GROUPS: { label: string; description: string; icon: ElementType; colo
   { label: 'Entidades y Sedes', description: 'Menú Entidad: registro de entidades y sedes', icon: Building2, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-500/15', names: ['ENTITY_MANAGE'] },
   { label: 'Categorías', description: 'Categorías, subcategorías y plantillas', icon: Layers, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-500/15', names: ['CATEGORY_MANAGE'] },
   { label: 'Reportes', description: 'Reportes e informes exportables', icon: FileText, color: 'text-lime-600 dark:text-lime-400', bg: 'bg-lime-100 dark:bg-lime-500/15', names: ['REPORT_VIEW'] },
-  { label: 'Roles', description: 'Gestión de roles y permisos del sistema', icon: Settings2, color: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-100 dark:bg-fuchsia-500/15', names: ['ROLE_MANAGE'] },
+    { label: 'Roles', description: 'Gestión de roles y permisos del sistema', icon: Settings2, color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-100 dark:bg-cyan-500/15', names: ['ROLE_MANAGE'] },
 ];
 
 export default function Roles() {
@@ -82,12 +83,13 @@ export default function Roles() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight">Roles y Permisos</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Gestiona los niveles de acceso y permisos de cada rol en el sistema.
-        </p>
-      </div>
+      <PageHeader
+        icon={Shield}
+        eyebrow="Seguridad"
+        title="Roles y Permisos"
+        subtitle="Gestiona los niveles de acceso y permisos de cada rol en el sistema."
+        gradient="from-slate-800 via-blue-800 to-blue-900"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Roles List */}
@@ -151,7 +153,7 @@ export default function Roles() {
                             <p className="text-[11px] text-slate-400 font-medium truncate">{group.description}</p>
                           </div>
                           <span className={`min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center text-[10px] font-black rounded-full ${
-                            activeCount > 0 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                            activeCount > 0 ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
                           }`}>
                             {activeCount}/{groupPerms.length}
                           </span>
