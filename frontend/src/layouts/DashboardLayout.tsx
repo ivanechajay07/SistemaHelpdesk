@@ -67,6 +67,7 @@ const pageTitles: Record<string, string> = {
   '/knowledge': 'Base de Conocimiento',
   '/knowledge/correos': 'Directorio de Correo Corporativo',
   '/monitoring': 'Monitoreo de Red',
+  '/monitoring/dashboard': 'Dashboard de Monitoreo',
   '/users': 'Gestión de Usuarios',
   '/roles': 'Roles y Permisos',
   '/categories': 'Gestión de Categorías',
@@ -166,6 +167,7 @@ export default function DashboardLayout() {
   const [tasksSubOpen, setTasksSubOpen] = useState(false);
   const [invSubOpen, setInvSubOpen] = useState(false);
   const [knowledgeSubOpen, setKnowledgeSubOpen] = useState(false);
+  const [monitoringSubOpen, setMonitoringSubOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState<'todos' | 'tickets' | 'tareas' | 'seguridad' | 'usuarios'>('todos');
   const notifRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -247,6 +249,11 @@ export default function DashboardLayout() {
       subItems = [
         { key: 'knowledge', label: 'Base de Conocimiento', icon: BookOpen, path: '/knowledge' },
         ...(canSeeCorreoDirectory ? [{ key: 'correos', label: 'Directorio de Correo', icon: Mail, path: '/knowledge/correos' }] : [])
+      ];
+    } else if (item.name === 'Monitoreo') {
+      subItems = [
+        { key: 'estado', label: 'Estado de la Red', icon: Activity, path: '/monitoring' },
+        { key: 'dashboard', label: 'Dashboard de Incidencias', icon: BarChart3, path: '/monitoring/dashboard' },
       ];
     }
 
@@ -330,6 +337,7 @@ export default function DashboardLayout() {
     setTasksSubOpen(location.pathname.startsWith('/tareas'));
     setInvSubOpen(location.pathname.startsWith('/inventario'));
     setKnowledgeSubOpen(location.pathname.startsWith('/knowledge'));
+    setMonitoringSubOpen(location.pathname.startsWith('/monitoring'));
   }, [location.pathname]);
 
   useEffect(() => {
@@ -684,6 +692,11 @@ export default function DashboardLayout() {
                         setKnowledgeSubOpen((o) => !o);
                         if (!location.pathname.startsWith('/knowledge')) navigate('/knowledge');
                       }
+                      if (item.name === 'Monitoreo' && !collapsed) {
+                        e.preventDefault();
+                        setMonitoringSubOpen((o) => !o);
+                        if (!location.pathname.startsWith('/monitoring')) navigate('/monitoring');
+                      }
                     }}
                     className={({ isActive }) =>
                       `group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
@@ -704,11 +717,12 @@ export default function DashboardLayout() {
                             {item.badge > 99 ? '99+' : item.badge}
                           </span>
                         )}
-                        {(item.name === 'Tickets' && canSeeTicketSubmenu) || (item.name === 'Tareas' && canSeeTasks) || (item.name === 'Inventario' && canSeeInventario) || item.name === 'Conocimiento' ? (
+                        {(item.name === 'Tickets' && canSeeTicketSubmenu) || (item.name === 'Tareas' && canSeeTasks) || (item.name === 'Inventario' && canSeeInventario) || item.name === 'Conocimiento' || item.name === 'Monitoreo' ? (
                           !collapsed && <ChevronDown className={`ml-auto h-4 w-4 transition-transform duration-300 ${
                             item.name === 'Tickets' ? (ticketsSubOpen ? 'rotate-180' : '') :
                             item.name === 'Tareas' ? (tasksSubOpen ? 'rotate-180' : '') :
                             item.name === 'Inventario' ? (invSubOpen ? 'rotate-180' : '') :
+                            item.name === 'Monitoreo' ? (monitoringSubOpen ? 'rotate-180' : '') :
                             (knowledgeSubOpen ? 'rotate-180' : '')
                           }`} />
                         ) : null}
@@ -838,6 +852,33 @@ export default function DashboardLayout() {
                         </button>
                       </li>
                     )}
+                  </ul>
+                )}
+
+                {/* Submenú de Monitoreo: Estado de la red y Dashboard de incidencias */}
+                {item.name === 'Monitoreo' && !collapsed && monitoringSubOpen && (
+                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-emerald-200 dark:border-emerald-700/40 space-y-0.5 anim-fade-in">
+                    {[
+                      { key: 'estado', label: 'Estado de la Red', icon: Activity, path: '/monitoring' },
+                      { key: 'dashboard', label: 'Dashboard de Incidencias', icon: BarChart3, path: '/monitoring/dashboard' },
+                    ].map((sub) => {
+                      const isActive = location.pathname === sub.path;
+                      return (
+                        <li key={sub.key}>
+                          <button
+                            onClick={() => navigate(sub.path)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
+                              isActive
+                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                          >
+                            <sub.icon className="h-3.5 w-3.5 shrink-0" />
+                            <span className="whitespace-nowrap">{sub.label}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </li>

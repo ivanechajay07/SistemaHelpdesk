@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck } from 'lucide-react';
+import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck, Clock } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../lib/axios';
@@ -10,7 +10,7 @@ import UserAvatar from '../components/ui/UserAvatar';
 
 export default function Settings() {
   const { user, setAuth, isAdmin } = useAuthStore();
-  const { isDark, toggleTheme } = useThemeStore();
+  const { isDark, toggleTheme, autoSchedule, setAutoSchedule } = useThemeStore();
   const [activeTab, setActiveTab] = useState('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dialog, setDialog] = useState<{
@@ -734,7 +734,8 @@ export default function Settings() {
                   <div className="flex gap-4">
                     <button 
                       onClick={() => { if(isDark) toggleTheme(); }}
-                      className={`flex-1 flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all ${!isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md shadow-blue-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
+                      disabled={autoSchedule}
+                      className={`flex-1 flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${!isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md shadow-blue-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
                     >
                       <div className="w-full h-20 bg-slate-100 rounded-lg border border-slate-200 p-2 shadow-inner flex flex-col gap-2">
                         <div className="w-1/3 h-2 bg-slate-300 rounded"></div>
@@ -748,7 +749,8 @@ export default function Settings() {
 
                     <button 
                       onClick={() => { if(!isDark) toggleTheme(); }}
-                      className={`flex-1 flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all ${isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md shadow-blue-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-slate-600'}`}
+                      disabled={autoSchedule}
+                      className={`flex-1 flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md shadow-blue-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-slate-600'}`}
                     >
                       <div className="w-full h-20 bg-slate-800 rounded-lg border border-slate-700 p-2 shadow-inner flex flex-col gap-2">
                         <div className="w-1/3 h-2 bg-slate-600 rounded"></div>
@@ -759,6 +761,38 @@ export default function Settings() {
                          {isDark && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
                       </div>
                     </button>
+                  </div>
+
+                  {/* Cambio automático por horario */}
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
+                          <Clock className="w-[18px] h-[18px] text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-slate-800 dark:text-slate-100">Cambio automático por horario</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                            Tema <b>oscuro</b> de 7:00 pm a 6:59 am y tema <b>claro</b> de 7:00 am a 6:59 pm.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAutoSchedule(!autoSchedule)}
+                        role="switch"
+                        aria-checked={autoSchedule}
+                        title={autoSchedule ? 'Desactivar cambio automático' : 'Activar cambio automático'}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${autoSchedule ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${autoSchedule ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                    {autoSchedule && (
+                      <p className="mt-3 text-[11px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Activo · el tema se ajusta automáticamente según la hora actual.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

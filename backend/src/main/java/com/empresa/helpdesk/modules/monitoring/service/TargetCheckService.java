@@ -1,9 +1,12 @@
 package com.empresa.helpdesk.modules.monitoring.service;
 
 import com.empresa.helpdesk.modules.monitoring.entity.MonitoredTarget;
+import com.empresa.helpdesk.modules.monitoring.entity.MonitoringIncident;
+import com.empresa.helpdesk.modules.monitoring.enums.IncidentEstado;
 import com.empresa.helpdesk.modules.monitoring.enums.TargetStatus;
 import com.empresa.helpdesk.modules.monitoring.enums.TargetType;
 import com.empresa.helpdesk.modules.monitoring.repository.MonitoredTargetRepository;
+import com.empresa.helpdesk.modules.monitoring.repository.MonitoringIncidentRepository;
 import com.empresa.helpdesk.modules.notification.service.EmailService;
 import com.empresa.helpdesk.modules.ticket.entity.Category;
 import com.empresa.helpdesk.modules.ticket.entity.Subcategory;
@@ -55,6 +58,7 @@ public class TargetCheckService {
     private static final String SUBCATEGORIA_MONITOREO = "Monitoreo de Red";
 
     private final MonitoredTargetRepository monitoredTargetRepository;
+    private final MonitoringIncidentRepository monitoringIncidentRepository;
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
     private final CategoryRepository categoryRepository;
@@ -124,25 +128,34 @@ public class TargetCheckService {
             return;
         }
 
+        TargetStatus anterior = target.getUltimoEstado();
         target.setUltimoChequeo(LocalDateTime.now());
         target.setUltimaLatenciaMs(ok ? latencia : null);
 
         if (ok) {
-            boolean estabaCaido = target.getUltimoEstado() == TargetStatus.DOWN;
+            boolean estabaCaido = anterior == TargetStatus.DOWN;
             target.setFallosConsecutivos(0);
             target.setUltimoEstado(TargetStatus.UP);
             if (estabaCaido || target.getTicketAbiertoId() != null) {
+                cerrarIncidente(target);
                 registrarRecuperacion(target);
             }
         } else {
+            boolean primeraCaida = anterior != TargetStatus.DOWN;
             target.setFallosConsecutivos((target.getFallosConsecutivos() != null ? target.getFallosConsecutivos() : 0) + 1);
             target.setUltimoEstado(TargetStatus.DOWN);
+            // Se abre una incidencia en la transición a caído (una por caída).
+            if (primeraCaida) {
+                abrirIncidente(target);
+            }
             if (target.getTicketAbiertoId() == null
                     && target.getFallosConsecutivos() >= (target.getUmbralFallos() != null ? target.getUmbralFallos() : 3)) {
                 try {
                     // Transacción independiente: un fallo al crear el ticket no
                     // marca rollback-only la transacción del resultado.
-                    target.setTicketAbiertoId(self.crearTicketAutomatico(target));
+                    Long ticketId = self.crearTicketAutomatico(target);
+                    target.setTicketAbiertoId(ticketId);
+                    vincularTicketIncidente(target.getId(), ticketId);
                 } catch (Exception ex) {
                     log.error("No se pudo generar el ticket automático para el objetivo {}: {}",
                             target.getNombre(), ex.getMessage());
@@ -151,6 +164,45 @@ public class TargetCheckService {
         }
 
         monitoredTargetRepository.save(target);
+    }
+
+    /** Abre una incidencia cuando el objetivo pasa a caído. */
+    private void abrirIncidente(MonitoredTarget target) {
+        try {
+            monitoringIncidentRepository.save(MonitoringIncident.builder()
+                    .targetId(target.getId())
+                    .targetNombre(target.getNombre())
+                    .tipo(target.getTipo())
+                    .host(destinoLegible(target))
+                    .inicio(LocalDateTime.now())
+                    .estado(IncidentEstado.ABIERTA)
+                    .build());
+        } catch (Exception ex) {
+            log.error("No se pudo abrir la incidencia para {}: {}", target.getNombre(), ex.getMessage());
+        }
+    }
+
+    /** Asocia el ticket automático a la incidencia abierta del objetivo. */
+    private void vincularTicketIncidente(Long targetId, Long ticketId) {
+        if (targetId == null || ticketId == null) return;
+        monitoringIncidentRepository.findFirstByTargetIdAndEstadoOrderByInicioDesc(targetId, IncidentEstado.ABIERTA)
+                .ifPresent(inc -> {
+                    inc.setTicketId(ticketId);
+                    monitoringIncidentRepository.save(inc);
+                });
+    }
+
+    /** Cierra la incidencia abierta al recuperarse el objetivo, calculando la duración. */
+    private void cerrarIncidente(MonitoredTarget target) {
+        if (target.getId() == null) return;
+        monitoringIncidentRepository.findFirstByTargetIdAndEstadoOrderByInicioDesc(target.getId(), IncidentEstado.ABIERTA)
+                .ifPresent(inc -> {
+                    LocalDateTime fin = LocalDateTime.now();
+                    inc.setFin(fin);
+                    inc.setDuracionSegundos(inc.getInicio() != null ? Duration.between(inc.getInicio(), fin).getSeconds() : null);
+                    inc.setEstado(IncidentEstado.RESUELTA);
+                    monitoringIncidentRepository.save(inc);
+                });
     }
 
     private boolean probe(MonitoredTarget target) {

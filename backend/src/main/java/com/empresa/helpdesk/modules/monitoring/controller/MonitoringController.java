@@ -2,6 +2,7 @@ package com.empresa.helpdesk.modules.monitoring.controller;
 
 import com.empresa.helpdesk.modules.monitoring.dto.MonitoredTargetRequest;
 import com.empresa.helpdesk.modules.monitoring.dto.MonitoredTargetResponse;
+import com.empresa.helpdesk.modules.monitoring.dto.MonitoringDashboardResponse;
 import com.empresa.helpdesk.modules.monitoring.service.MonitoringService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,5 +55,11 @@ public class MonitoringController {
     @Operation(summary = "Forzar una verificación inmediata del objetivo")
     public ResponseEntity<MonitoredTargetResponse> checkNow(@PathVariable Long id) {
         return ResponseEntity.ok(monitoringService.checkNow(id));
+    }
+
+    @GetMapping("/dashboard")
+    @Operation(summary = "Dashboard de incidencias de monitoreo (por día, mes y año)")
+    public ResponseEntity<MonitoringDashboardResponse> dashboard() {
+        return ResponseEntity.ok(monitoringService.dashboard());
     }
 }

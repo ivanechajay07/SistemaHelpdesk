@@ -25,6 +25,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Knowledge = lazy(() => import('./pages/Knowledge'));
 const CorreoCorporativo = lazy(() => import('./pages/CorreoCorporativo'));
 const Monitoring = lazy(() => import('./pages/Monitoring'));
+const MonitoringDashboard = lazy(() => import('./pages/MonitoringDashboard'));
 const Templates = lazy(() => import('./pages/Templates'));
 const Audit = lazy(() => import('./pages/Audit'));
 const DashboardInventario = lazy(() => import('./pages/inventory/DashboardInventario'));
@@ -77,6 +78,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const isDark = useThemeStore((state) => state.isDark);
+  const applyScheduledTheme = useThemeStore((state) => state.applyScheduledTheme);
   const refreshMe = useAuthStore((state) => state.refreshMe);
   const token = useAuthStore((state) => state.token);
 
@@ -87,6 +89,13 @@ function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
+
+  // Tema automático por horario: revisa cada minuto si debe cambiar.
+  useEffect(() => {
+    applyScheduledTheme();
+    const t = setInterval(applyScheduledTheme, 60000);
+    return () => clearInterval(t);
+  }, [applyScheduledTheme]);
 
   // Refresca roles/permisos al cargar y al volver a la ventana, para que los
   // cambios hechos en "Roles y Permisos" se reflejen sin cerrar sesión.
@@ -122,6 +131,11 @@ function App() {
               <Route path="monitoring" element={
                 <ProtectedRouteWithPermission permission="MONITORING_VIEW">
                   <Monitoring />
+                </ProtectedRouteWithPermission>
+              } />
+              <Route path="monitoring/dashboard" element={
+                <ProtectedRouteWithPermission permission="MONITORING_VIEW">
+                  <MonitoringDashboard />
                 </ProtectedRouteWithPermission>
               } />
               <Route path="users" element={

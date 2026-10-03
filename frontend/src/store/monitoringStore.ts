@@ -30,11 +30,25 @@ export interface MonitoredTargetRequest {
   activo?: boolean;
 }
 
+export interface MonitoringDashboard {
+  totalIncidencias: number;
+  abiertas: number;
+  resueltas: number;
+  duracionPromedioMin: number | null;
+  porDia: { name: string; value: number }[];
+  porMes: { name: string; value: number }[];
+  porAnio: { name: string; value: number }[];
+  porObjetivo: { name: string; value: number }[];
+}
+
 interface MonitoringState {
   targets: MonitoredTarget[];
   loading: boolean;
   error: string | null;
+  dashboard: MonitoringDashboard | null;
+  dashboardLoading: boolean;
   fetchTargets: () => Promise<void>;
+  fetchDashboard: () => Promise<void>;
   createTarget: (data: MonitoredTargetRequest) => Promise<void>;
   updateTarget: (id: number, data: MonitoredTargetRequest) => Promise<void>;
   deleteTarget: (id: number) => Promise<void>;
@@ -45,6 +59,8 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
   targets: [],
   loading: false,
   error: null,
+  dashboard: null,
+  dashboardLoading: false,
 
   fetchTargets: async () => {
     set({ loading: true, error: null });
@@ -54,6 +70,17 @@ export const useMonitoringStore = create<MonitoringState>((set) => ({
     } catch (err) {
       console.error(err);
       set({ error: 'Error al cargar los objetivos', loading: false });
+    }
+  },
+
+  fetchDashboard: async () => {
+    set({ dashboardLoading: true });
+    try {
+      const response = await api.get('/monitoring/dashboard');
+      set({ dashboard: response.data, dashboardLoading: false });
+    } catch (err) {
+      console.error(err);
+      set({ dashboardLoading: false });
     }
   },
 
