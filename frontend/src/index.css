@@ -174,9 +174,9 @@
 
 /* ===== Burbuja del tab bar móvil ===== */
 @keyframes bubblePop {
-  0% { transform: translateX(-50%) translateY(8px) scale(.55); opacity: 0; }
-  60% { transform: translateX(-50%) translateY(-3px) scale(1.08); opacity: 1; }
-  100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+  0% { transform: translateY(6px) scale(.55); opacity: 0; }
+  60% { transform: translateY(-2px) scale(1.08); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 .anim-bubble-pop { animation: bubblePop .34s cubic-bezier(.34,1.56,.64,1) both; }
 

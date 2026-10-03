@@ -48,7 +48,8 @@ import {
   History,
   BarChart3,
   LayoutDashboard as InvDashboard,
-  ClipboardList
+  ClipboardList,
+  RefreshCw
 } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { useNotificationsStore, type AppNotification } from '../store/notificationsStore';
@@ -141,7 +142,7 @@ interface InvSubItem {
 export default function DashboardLayout() {
   const { user, logout, hasPermission, isAdmin, hasRole, token } = useAuthStore();
   const { tickets, fetchTickets } = useTicketStore();
-  const { items: notifications, fetchNotifications } = useNotificationsStore();
+  const { items: notifications, fetchNotifications, loading: notifLoading } = useNotificationsStore();
   const {
     totalUnread,
     unreadByTicket,
@@ -1061,12 +1062,11 @@ export default function DashboardLayout() {
                     </div>
                     <button
                       onClick={fetchNotifications}
+                      disabled={notifLoading}
                       title="Actualizar"
-                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors disabled:opacity-60"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
+                      <RefreshCw className={`w-4 h-4 ${notifLoading ? 'animate-spin' : ''}`} />
                     </button>
                   </div>
                   {/* Filtros por categoría */}
@@ -1326,32 +1326,20 @@ export default function DashboardLayout() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className="relative flex-1 flex flex-col items-center justify-end pt-4 pb-2.5 active:scale-95 transition-transform"
+                className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:scale-95 transition-transform"
               >
-                {/* Burbuja flotante al seleccionar */}
-                {active && (
-                  <span
-                    className={`absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-gradient-to-br ${item.gradient} text-white shadow-lg ${item.shadow} ring-4 ring-white dark:ring-slate-900 flex items-center justify-center anim-bubble-pop`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {!!item.badge && item.badge > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white dark:border-slate-900">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </span>
-                )}
-
-                <span className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-300 ${active ? 'opacity-0' : 'text-slate-500 dark:text-slate-400'}`}>
-                  <item.icon className="w-[18px] h-[18px]" />
+                <span className="relative flex items-center justify-center w-11 h-11">
+                  {active && (
+                    <span className={`absolute inset-0 rounded-full bg-gradient-to-br ${item.gradient} shadow-lg ${item.shadow} ring-4 ring-white dark:ring-slate-900 anim-bubble-pop`} />
+                  )}
+                  <item.icon className={`relative w-5 h-5 transition-colors duration-300 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   {!!item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border border-white dark:border-slate-900">
+                    <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white dark:border-slate-900">
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
                 </span>
-
-                <span className={`mt-0.5 text-[10px] font-bold truncate max-w-full px-0.5 transition-colors ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                <span className={`text-[10px] font-bold truncate max-w-full px-0.5 transition-colors ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
                   {item.name}
                 </span>
               </NavLink>
@@ -1361,17 +1349,17 @@ export default function DashboardLayout() {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="relative flex-1 flex flex-col items-center justify-end pt-4 pb-2.5 active:scale-95 transition-transform"
+            className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:scale-95 transition-transform"
           >
-            <span className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-300 ${sidebarOpen ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
-              <Menu className="w-[18px] h-[18px]" />
+            <span className="relative flex items-center justify-center w-11 h-11">
+              <Menu className={`w-5 h-5 transition-colors ${sidebarOpen ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} />
               {totalUnread + notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border border-white dark:border-slate-900">
+                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white dark:border-slate-900">
                   {totalUnread + notifications.length > 99 ? '99+' : totalUnread + notifications.length}
                 </span>
               )}
             </span>
-            <span className="mt-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">Más</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Más</span>
           </button>
         </div>
       </nav>
