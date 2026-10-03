@@ -504,6 +504,13 @@ export default function DashboardLayout() {
     { title: 'Sistema', items: navItems.filter((i) => ['Configuración'].includes(i.name)) },
   ].filter((s) => s.items.length > 0);
 
+  // Pestañas principales del tab bar móvil (ordenadas por relevancia).
+  const mobileTabPriority = ['Dashboard', 'Tickets', 'Tareas', 'Inventario', 'Conocimiento', 'Monitoreo', 'Usuarios', 'Reportes', 'Configuración'];
+  const mobileTabItems = mobileTabPriority
+    .map((name) => navItems.find((i) => i.name === name))
+    .filter((i): i is NavItem => Boolean(i))
+    .slice(0, 4);
+
   const ticketSubItems: TicketSubItem[] = [
     {
       key: 'recientes',
@@ -1190,7 +1197,7 @@ export default function DashboardLayout() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-auto p-4 sm:p-6 pb-24 lg:pb-6">
           <div key={location.pathname} className="max-w-7xl mx-auto anim-fade-in-up">
             <Outlet />
           </div>
@@ -1314,6 +1321,57 @@ export default function DashboardLayout() {
           )}
         </div>
       )}
+
+      {/* ===== Tab bar móvil (estilo app) ===== */}
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-stretch">
+          {mobileTabItems.map((item) => {
+            const active = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 active:scale-95 transition-transform"
+              >
+                <span
+                  className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-300 ${
+                    active
+                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-md ${item.shadow}`
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <item.icon className="w-[18px] h-[18px]" />
+                  {!!item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border border-white dark:border-slate-900">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </span>
+                <span className={`text-[10px] font-bold truncate max-w-full px-0.5 ${active ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+                  {item.name}
+                </span>
+              </NavLink>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 active:scale-95 transition-transform"
+          >
+            <span className="relative flex items-center justify-center w-11 h-7 rounded-xl text-slate-500 dark:text-slate-400">
+              <Menu className="w-[18px] h-[18px]" />
+              {totalUnread + notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-red-500 to-pink-500 border border-white dark:border-slate-900" />
+              )}
+            </span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Más</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
