@@ -920,15 +920,7 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 grid grid-cols-[1fr_auto_1fr] items-center px-4 lg:px-6 z-10 shrink-0">
-          <div className="flex items-center gap-3 justify-self-start">
-            {/* Mobile hamburger */}
-            <button 
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
+          <div className="flex items-center gap-3 justify-self-start" />
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 text-center truncate max-w-[38vw] lg:max-w-lg justify-self-center px-2">
             {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
           </h2>
@@ -1334,15 +1326,23 @@ export default function DashboardLayout() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 active:scale-95 transition-transform"
+                className="relative flex-1 flex flex-col items-center justify-end pt-4 pb-2.5 active:scale-95 transition-transform"
               >
-                <span
-                  className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-300 ${
-                    active
-                      ? `bg-gradient-to-r ${item.gradient} text-white shadow-md ${item.shadow}`
-                      : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
+                {/* Burbuja flotante al seleccionar */}
+                {active && (
+                  <span
+                    className={`absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-gradient-to-br ${item.gradient} text-white shadow-lg ${item.shadow} ring-4 ring-white dark:ring-slate-900 flex items-center justify-center anim-bubble-pop`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {!!item.badge && item.badge > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white dark:border-slate-900">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+
+                <span className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-300 ${active ? 'opacity-0' : 'text-slate-500 dark:text-slate-400'}`}>
                   <item.icon className="w-[18px] h-[18px]" />
                   {!!item.badge && item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border border-white dark:border-slate-900">
@@ -1350,7 +1350,8 @@ export default function DashboardLayout() {
                     </span>
                   )}
                 </span>
-                <span className={`text-[10px] font-bold truncate max-w-full px-0.5 ${active ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+
+                <span className={`mt-0.5 text-[10px] font-bold truncate max-w-full px-0.5 transition-colors ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
                   {item.name}
                 </span>
               </NavLink>
@@ -1360,15 +1361,17 @@ export default function DashboardLayout() {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 active:scale-95 transition-transform"
+            className="relative flex-1 flex flex-col items-center justify-end pt-4 pb-2.5 active:scale-95 transition-transform"
           >
-            <span className="relative flex items-center justify-center w-11 h-7 rounded-xl text-slate-500 dark:text-slate-400">
+            <span className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-300 ${sidebarOpen ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
               <Menu className="w-[18px] h-[18px]" />
               {totalUnread + notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-gradient-to-r from-red-500 to-pink-500 border border-white dark:border-slate-900" />
+                <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border border-white dark:border-slate-900">
+                  {totalUnread + notifications.length > 99 ? '99+' : totalUnread + notifications.length}
+                </span>
               )}
             </span>
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Más</span>
+            <span className="mt-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">Más</span>
           </button>
         </div>
       </nav>

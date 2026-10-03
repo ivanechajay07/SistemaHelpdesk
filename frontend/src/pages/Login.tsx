@@ -12,12 +12,12 @@ import {
 type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
 
 const inputCls =
-  'block w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400/40 hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300';
+  'block w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400/40 hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300';
 
 const inputRegCls = (hasError: boolean) =>
   `w-full px-3 py-2.5 rounded-xl bg-white dark:bg-white/5 border ${
-    hasError ? 'border-red-500/60 focus:border-red-400' : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-indigo-400/40'
-  } text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300`;
+    hasError ? 'border-red-500/60 focus:border-red-400' : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-blue-400/40'
+  } text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all duration-300`;
 
 export default function Login() {
   const [view, setView] = useState<View>('login');
@@ -277,7 +277,7 @@ export default function Login() {
 
   const floatCards = [
     { icon: Star, color: 'text-amber-400', value: '4.9', label: 'Valoración', pos: 'top-24 right-8', anim: 'anim-float-slow', delay: '0s' },
-    { icon: Zap, color: 'text-indigo-500', value: '< 5 min', label: 'Respuesta SLA', pos: 'bottom-36 left-8', anim: 'anim-float-slower', delay: '-3s' },
+    { icon: Zap, color: 'text-blue-500', value: '< 5 min', label: 'Respuesta SLA', pos: 'bottom-36 left-8', anim: 'anim-float-slower', delay: '-3s' },
   ];
 
   return (
@@ -293,10 +293,10 @@ export default function Login() {
 
       {/* ===== Overlay de bienvenida al iniciar sesión (suave y animado) ===== */}
       {welcomeName && (
-        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-white via-slate-50 to-indigo-50 dark:from-indigo-950 dark:via-slate-950 dark:to-slate-950 backdrop-blur-xl anim-overlay-in overflow-hidden">
+        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-blue-950 dark:via-slate-950 dark:to-slate-950 backdrop-blur-xl anim-overlay-in overflow-hidden">
           {/* Blobs suaves animados */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-24 -right-20 w-80 h-80 bg-blue-200/50 dark:bg-indigo-500/10 rounded-full blur-3xl anim-blob" />
+            <div className="absolute -top-24 -right-20 w-80 h-80 bg-blue-200/50 dark:bg-blue-500/10 rounded-full blur-3xl anim-blob" />
             <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-blue-100/60 dark:bg-blue-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
             <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-sky-100/50 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
           </div>
@@ -306,15 +306,15 @@ export default function Login() {
               <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
                 <defs>
                   <linearGradient id="loginRing" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" />
-                    <stop offset="100%" stopColor="#4f46e5" />
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#2563eb" />
                   </linearGradient>
                 </defs>
                 <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(100,116,139,0.25)" strokeWidth="6" />
                 <circle cx="50" cy="50" r="44" fill="none" stroke="url(#loginRing)" strokeWidth="6" strokeLinecap="round" className="anim-ring-fill" />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-lg shadow-indigo-500/25 flex items-center justify-center text-slate-900 dark:text-white font-black text-2xl">
+                <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-lg shadow-blue-500/25 flex items-center justify-center text-slate-900 dark:text-white font-black text-2xl">
                   {welcomeName.charAt(0).toUpperCase()}
                 </div>
               </div>
@@ -322,23 +322,23 @@ export default function Login() {
           </div>
 
           <h2 className="relative mt-6 text-2xl font-black text-slate-900 dark:text-white tracking-tight anim-fade-in-up">
-            ¡Todo listo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{welcomeName}</span>!
+            ¡Todo listo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">{welcomeName}</span>!
           </h2>
           <p className="relative mt-2 text-sm text-slate-500 dark:text-slate-400 anim-fade-in-up" style={{ animationDelay: '120ms' }}>
             Preparando tu espacio de trabajo...
           </p>
           <div className="relative flex items-center gap-1.5 mt-6">
             {[0, 1, 2].map((i) => (
-              <span key={i} className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+              <span key={i} className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-500 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
             ))}
           </div>
-          <p className="relative mt-3 text-xs text-indigo-600/70 dark:text-indigo-400/60">Redirigiendo al panel...</p>
+          <p className="relative mt-3 text-xs text-blue-600/70 dark:text-blue-400/60">Redirigiendo al panel...</p>
         </div>
       )}
 
       {/* ===== Fondo animado corporativo ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-blue-200/50 dark:bg-indigo-500/10 rounded-full blur-[140px] anim-blob" />
+        <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-blue-200/50 dark:bg-blue-500/10 rounded-full blur-[140px] anim-blob" />
         <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-blue-100/60 dark:bg-blue-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
         <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-sky-100/50 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
         <div
@@ -353,12 +353,12 @@ export default function Login() {
 
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16">
 
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-2xl shadow-indigo-900/15 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-500" />
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-2xl shadow-blue-900/15 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500" />
 
           {/* ===== Panel de marca (degradado corporativo interactivo) ===== */}
           <section
-            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-500 via-blue-700 to-indigo-700 dark:from-blue-700 dark:via-blue-800 dark:to-indigo-800 p-10 xl:p-14 text-white select-none anim-gradient-bg"
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-500 via-blue-700 to-blue-700 dark:from-blue-700 dark:via-blue-800 dark:to-blue-800 p-10 xl:p-14 text-white select-none anim-gradient-bg"
             onMouseMove={handleBrandMouseMove}
           >
             <div
@@ -376,7 +376,7 @@ export default function Login() {
             <div className="relative flex items-center gap-3 anim-fade-in-up">
               <div className="p-[2px] rounded-2xl bg-white/90 shadow-lg shadow-blue-900/20">
                 <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center">
-                  <span className="font-black text-lg text-indigo-600">H</span>
+                  <span className="font-black text-lg text-blue-600">H</span>
                 </div>
               </div>
               <div>
@@ -443,13 +443,13 @@ export default function Login() {
           {/* ===== Columna de formulario ===== */}
           <section className="w-full p-6 sm:p-10 lg:p-12">
             <div className="lg:hidden text-center mb-7 anim-fade-in-up">
-              <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 anim-gradient-text shadow-lg shadow-indigo-500/30 mb-3">
+              <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-500 anim-gradient-text shadow-lg shadow-blue-500/30 mb-3">
                 <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
                   <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
                 </div>
               </div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                HelpDesk <span className="text-indigo-500 dark:text-indigo-400">PRO</span>
+                HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
               </h1>
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Tu mesa de ayuda, simple y potente</p>
             </div>
@@ -461,7 +461,7 @@ export default function Login() {
                 <>
                   <div className="mb-7 text-center lg:text-left">
                     <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center justify-center lg:justify-start gap-2">
-                      <GreetingIcon className="w-6 h-6 text-indigo-500" /> {greeting}
+                      <GreetingIcon className="w-6 h-6 text-blue-500" /> {greeting}
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">Ingresa a tu cuenta para continuar</p>
                   </div>
@@ -478,7 +478,7 @@ export default function Login() {
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Usuario o Correo</label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Mail className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                          <Mail className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="text"
@@ -496,7 +496,7 @@ export default function Login() {
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Contraseña</label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                          <Lock className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type={showPassword ? 'text' : 'password'}
@@ -521,7 +521,7 @@ export default function Login() {
                       <button
                         type="button"
                         onClick={() => { resetForms(); setView('forgot'); }}
-                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors font-semibold"
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors font-semibold"
                       >
                         ¿Olvidaste tu contraseña?
                       </button>
@@ -530,7 +530,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || !username || !password}
-                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98]"
+                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       {loading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Ingresando...</>
@@ -545,7 +545,7 @@ export default function Login() {
                       ¿No tienes una cuenta?{' '}
                       <button
                         onClick={() => { resetForms(); setView('register'); }}
-                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold transition-colors"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 font-bold transition-colors"
                       >
                         Registrarse
                       </button>
@@ -575,7 +575,7 @@ export default function Login() {
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Código de verificación</label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <ShieldCheck className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                          <ShieldCheck className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="text"
@@ -594,7 +594,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={mfaLoading || mfaCode.length !== 6}
-                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/30"
+                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30"
                     >
                       {mfaLoading ? 'Verificando...' : 'Verificar e ingresar'}
                     </button>
@@ -682,7 +682,7 @@ export default function Login() {
                   </p>
                   <button
                     onClick={() => { resetForms(); setView('login'); }}
-                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300 shadow-lg shadow-indigo-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-600 transition-all duration-300 shadow-lg shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     <ArrowLeft className="w-4 h-4" /> Volver al Inicio de Sesión
                   </button>
@@ -701,7 +701,7 @@ export default function Login() {
 
                   <div className="text-center mb-5">
                     <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl mb-3 anim-scale-in">
-                      <UserPlus className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+                      <UserPlus className="w-7 h-7 text-blue-500 dark:text-blue-400" />
                     </div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white">Crear Nueva Cuenta</h2>
                     <p className="text-slate-500 dark:text-slate-400 text-sm mt-1.5">
@@ -748,7 +748,7 @@ export default function Login() {
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Correo Electrónico *</label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Mail className="h-4 w-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                          <Mail className="h-4 w-4 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="email"
@@ -766,7 +766,7 @@ export default function Login() {
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Nombre de Usuario *</label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-4 w-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                          <User className="h-4 w-4 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="text"
@@ -840,7 +840,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={regLoading || Object.keys(regErrors).length > 0}
-                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
+                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
                     >
                       {regLoading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Creando cuenta...</>
@@ -864,7 +864,7 @@ export default function Login() {
                   </p>
                   <button
                     onClick={() => { resetForms(); setView('login'); }}
-                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-300 shadow-lg shadow-indigo-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-600 transition-all duration-300 shadow-lg shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     <ArrowLeft className="w-4 h-4" /> Volver al Inicio de Sesión
                   </button>
