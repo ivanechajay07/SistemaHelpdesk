@@ -454,10 +454,18 @@ export default function Tasks() {
               </div>
 
               <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {group.tareas.map((task) => (
-                  <div key={task.id} className="px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
+                {group.tareas.map((task) => {
+                  const accent =
+                    task.estado === 'COMPLETADA' ? 'bg-emerald-500'
+                      : task.estado === 'EN_PROCESO' ? 'bg-blue-500'
+                        : 'bg-slate-300 dark:bg-slate-600';
+                  return (
+                  <div key={task.id} className="relative pl-4 pr-4 sm:pl-5 sm:pr-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
+                    {/* Barra de estado */}
+                    <span className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${accent}`} />
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
+                        {/* Título + etiquetas */}
                         <div className="flex flex-wrap items-center gap-2 mb-1.5">
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-100">{task.titulo}</p>
                           <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-black uppercase ring-1 ${getPrioridadCls(task.prioridad)}`}>
@@ -467,23 +475,30 @@ export default function Tasks() {
                             {getEstadoLabel(task.estado)}
                           </span>
                         </div>
+
                         {task.descripcion && (
                           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{task.descripcion}</p>
                         )}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[11px] font-semibold text-slate-400">
-                          <span className="inline-flex items-center gap-1">
+
+                        {/* Metadatos en chips */}
+                        <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                             <CalendarDays className="w-3 h-3" />
                             {fmtDate(task.fechaInicio)} → {fmtDate(task.fechaFin)}
                           </span>
-                          {task.creadorNombre && <span>Creada por: {task.creadorNombre}</span>}
+                          {task.creadorNombre && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              <UserCheck className="w-3 h-3" /> {task.creadorNombre}
+                            </span>
+                          )}
                         </div>
 
                         {/* Línea de tiempo del proceso */}
                         <TaskTimeline task={task} />
 
-                        {/* Avance, evidencia e informe: técnico asignado y gestores */}
+                        {/* Acciones */}
                         {(user?.id === task.tecnicoId || canManage) && (
-                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                             {user?.id === task.tecnicoId && task.estado !== 'COMPLETADA' ? (
                               <button
                                 onClick={() => setStatusTask(task)}
@@ -512,6 +527,7 @@ export default function Tasks() {
                           </div>
                         )}
                       </div>
+
                       {canManage && (
                         <div className="flex items-center gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                           <button
@@ -532,7 +548,8 @@ export default function Tasks() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
