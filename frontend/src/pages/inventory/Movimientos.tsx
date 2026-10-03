@@ -14,11 +14,11 @@ const TIPO_ICONS: Record<string, { icon: React.ElementType; cls: string }> = {
   SALIDA: { icon: ArrowUpRight, cls: 'bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400' },
   CAMBIO_SEDE: { icon: MapPin, cls: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400' },
   CAMBIO_ENTIDAD: { icon: Building2, cls: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400' },
-  CAMBIO_RESPONSABLE: { icon: UserIcon, cls: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400' },
+  CAMBIO_RESPONSABLE: { icon: UserIcon, cls: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400' },
   CAMBIO_UBICACION: { icon: MapPin, cls: 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400' },
-  TRASLADO: { icon: Repeat, cls: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400' },
+  TRASLADO: { icon: Repeat, cls: 'bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400' },
   DEVOLUCION: { icon: ArrowDownLeft, cls: 'bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400' },
-  REEMPLAZO: { icon: Repeat, cls: 'bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/15 dark:text-fuchsia-400' },
+  REEMPLAZO: { icon: Repeat, cls: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400' },
 };
 
 export default function Movimientos() {

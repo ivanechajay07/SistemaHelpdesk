@@ -10,15 +10,15 @@ const THEMES: Record<FormTheme, {
   submitShadow: string;
 }> = {
   users: {
-    header: 'from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10',
-    iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-500/25',
-    submit: 'from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700',
+    header: 'from-blue-50 to-sky-50 dark:from-blue-500/10 dark:to-sky-500/10',
+    iconBg: 'bg-gradient-to-br from-blue-600 to-sky-600 shadow-blue-500/25',
+    submit: 'from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700',
     submitShadow: 'shadow-blue-500/25',
   },
   tickets: {
     header: 'from-blue-50 to-sky-50 dark:from-blue-500/10 dark:to-sky-500/10',
-    iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-500/25',
-    submit: 'from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700',
+    iconBg: 'bg-gradient-to-br from-blue-600 to-sky-600 shadow-blue-500/25',
+    submit: 'from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700',
     submitShadow: 'shadow-blue-500/25',
   },
   tasks: {
@@ -46,16 +46,16 @@ const THEMES: Record<FormTheme, {
     submitShadow: 'shadow-amber-500/25',
   },
   templates: {
-    header: 'from-violet-50 to-fuchsia-50 dark:from-violet-500/10 dark:to-fuchsia-500/10',
-    iconBg: 'bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-violet-500/25',
-    submit: 'from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700',
-    submitShadow: 'shadow-violet-500/25',
+    header: 'from-blue-50 to-cyan-50 dark:from-blue-500/10 dark:to-cyan-500/10',
+    iconBg: 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-blue-500/25',
+    submit: 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700',
+    submitShadow: 'shadow-blue-500/25',
   },
   knowledge: {
-    header: 'from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10',
-    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/25',
-    submit: 'from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700',
-    submitShadow: 'shadow-violet-500/25',
+    header: 'from-blue-50 to-sky-50 dark:from-blue-500/10 dark:to-sky-500/10',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-sky-600 shadow-blue-500/25',
+    submit: 'from-blue-500 to-sky-600 hover:from-blue-600 hover:to-sky-700',
+    submitShadow: 'shadow-blue-500/25',
   },
 };
 

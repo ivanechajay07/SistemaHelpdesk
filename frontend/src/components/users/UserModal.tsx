@@ -172,9 +172,9 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
       <div className="my-auto bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] border border-slate-200 dark:border-slate-800">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-500/10 dark:to-sky-500/10">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl text-white shadow-md shadow-blue-500/25">
+            <div className="p-2.5 bg-gradient-to-br from-blue-600 to-sky-600 rounded-xl text-white shadow-md shadow-blue-500/25">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
@@ -300,7 +300,7 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
             <button type="button" onClick={onClose} className="px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-medium transition-colors active:scale-95">
               Cancelar
             </button>
-            <button type="submit" disabled={loading} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold transition-all shadow-md shadow-blue-500/25 disabled:opacity-50 flex items-center gap-2 active:scale-95">
+            <button type="submit" disabled={loading} className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 text-white rounded-xl font-bold transition-all shadow-md shadow-blue-500/25 disabled:opacity-50 flex items-center gap-2 active:scale-95">
               <Save className="w-4 h-4" />
               {loading ? 'Guardando...' : (user ? 'Guardar cambios' : 'Crear usuario')}
             </button>

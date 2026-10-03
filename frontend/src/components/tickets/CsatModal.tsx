@@ -39,7 +39,7 @@ export default function CsatModal({
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm anim-overlay-in">
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden anim-scale-in">
         {/* Encabezado degradado */}
-        <div className="relative px-6 pt-7 pb-5 text-center bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-600">
+        <div className="relative px-6 pt-7 pb-5 text-center bg-gradient-to-br from-blue-600 via-cyan-600 to-pink-600">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
@@ -50,7 +50,7 @@ export default function CsatModal({
             <PartyPopper className="w-7 h-7 text-white" />
           </div>
           <h2 className="text-xl font-black text-white">¡Ticket resuelto!</h2>
-          <p className="text-sm text-violet-100 font-medium mt-1">
+          <p className="text-sm text-blue-100 font-medium mt-1">
             ¿Cómo fue tu experiencia con <span className="font-bold">{ticket.codigo}</span>?
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function CsatModal({
             rows={3}
             maxLength={500}
             placeholder="Cuéntanos más sobre tu experiencia (opcional)"
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-400 resize-none transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 resize-none transition-all"
           />
 
           {error && (
@@ -106,7 +106,7 @@ export default function CsatModal({
             <button
               onClick={submit}
               disabled={sending || puntaje === 0}
-              className="btn-shine flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm font-black shadow-lg shadow-violet-500/30 hover:-translate-y-px active:scale-95 transition-all disabled:opacity-50 disabled:translate-y-0"
+              className="btn-shine flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-black shadow-lg shadow-blue-500/30 hover:-translate-y-px active:scale-95 transition-all disabled:opacity-50 disabled:translate-y-0"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4 fill-white" />}
               Enviar calificación

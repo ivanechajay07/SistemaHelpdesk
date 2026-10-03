@@ -167,7 +167,7 @@ export default function GlobalSearch() {
                         highlight === i ? 'bg-blue-50 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
                       }`}
                     >
-                      <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+                      <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center shrink-0">
                         <Ticket className="w-3.5 h-3.5 text-white" />
                       </span>
                       <span className="min-w-0">

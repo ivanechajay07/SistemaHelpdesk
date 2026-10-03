@@ -390,7 +390,7 @@ export default function TicketDetail() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'NUEVO': return 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400';
-      case 'ASIGNADO': return 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400';
+      case 'ASIGNADO': return 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-400';
       case 'EN_PROCESO': return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400';
       case 'EN_REVISION': return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-400';
       case 'RESUELTO': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400';
@@ -560,12 +560,12 @@ export default function TicketDetail() {
 
       {/* Calificación del cliente (CSAT) */}
       {ticket?.calificacion != null && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-fuchsia-50 to-violet-50 dark:from-fuchsia-500/10 dark:to-violet-500/10 border border-fuchsia-200/60 dark:border-fuchsia-500/20">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-violet-600 flex items-center justify-center shadow-lg shadow-fuchsia-500/25 shrink-0">
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/60 dark:border-cyan-500/20">
+          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 shrink-0">
             <Star className="w-5 h-5 text-white fill-white" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wider text-fuchsia-600 dark:text-fuchsia-400">Calificación del cliente</p>
+            <p className="text-xs font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Calificación del cliente</p>
             <div className="flex items-center gap-0.5 mt-1">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Star key={i} className={`w-4 h-4 ${i <= (ticket.calificacion || 0) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />

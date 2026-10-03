@@ -325,7 +325,7 @@ export default function Settings() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-800 to-indigo-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-900/20 anim-fade-in-up">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-800 to-sky-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-900/20 anim-fade-in-up">
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
         <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
         <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
@@ -385,7 +385,7 @@ export default function Settings() {
                 {/* Profile Image */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-4">
                   <div className="relative group">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-blue-500/20 border-4 border-white dark:border-slate-800 shrink-0">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-tr from-blue-500 to-sky-500 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-blue-500/20 border-4 border-white dark:border-slate-800 shrink-0">
                       {profileImage ? (
                         <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                       ) : (

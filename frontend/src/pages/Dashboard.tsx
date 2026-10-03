@@ -264,7 +264,7 @@ export default function Dashboard() {
       {/* ===== HERO: Bienvenida dinamica segun la hora ===== */}
       <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${heroGradient} px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-500/25 anim-fade-in-up transition-colors duration-700`}>
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-fuchsia-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
+        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
         <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
         <div className="absolute top-14 right-1/4 w-16 h-16 border border-white/10 rounded-full pointer-events-none hidden sm:block" />
 

@@ -38,7 +38,7 @@ const variantConfig: Record<ToastVariant, {
   info: {
     icon: Info,
     iconClasses: 'text-blue-500',
-    barClasses: 'bg-gradient-to-r from-blue-400 to-indigo-500',
+    barClasses: 'bg-gradient-to-r from-blue-400 to-sky-500',
   },
   warning: {
     icon: AlertTriangle,

@@ -71,7 +71,7 @@ export default function ConfirmDialog({
           variant === 'warning' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
           variant === 'danger' || variant === 'error' ? 'bg-gradient-to-r from-red-500 to-rose-600' :
           variant === 'success' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' :
-          'bg-gradient-to-r from-blue-500 to-indigo-600'
+          'bg-gradient-to-r from-blue-500 to-sky-600'
         }`} />
 
         <button

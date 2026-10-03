@@ -167,8 +167,8 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
     >
       <SectionTitle>Detalle del ticket</SectionTitle>
       {templates.length > 0 && (
-            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-500/10 dark:to-fuchsia-500/10 border border-violet-200/60 dark:border-violet-500/20">
-              <FileStack className="w-4 h-4 text-violet-500 shrink-0" />
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-500/10 dark:to-cyan-500/10 border border-blue-200/60 dark:border-blue-500/20">
+              <FileStack className="w-4 h-4 text-blue-500 shrink-0" />
               <select
                 onChange={(e) => applyTemplate(e.target.value)}
                 defaultValue=""

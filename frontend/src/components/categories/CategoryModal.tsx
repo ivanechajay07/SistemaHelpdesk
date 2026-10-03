@@ -137,7 +137,7 @@ export function CategoryModal({ isOpen, onClose, onSubmit, category }: CategoryM
               required
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
-              className={`w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+              className={`w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border rounded-lg focus:ring-2 focus:ring-sky-500 ${
                 errors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
               }`}
             />
@@ -149,7 +149,7 @@ export function CategoryModal({ isOpen, onClose, onSubmit, category }: CategoryM
               value={formData.description}
               onChange={(e) => handleFieldChange('description', e.target.value)}
               rows={2}
-              className={`w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+              className={`w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border rounded-lg focus:ring-2 focus:ring-sky-500 ${
                 errors.description ? 'border-red-500' : 'border-slate-200 dark:border-slate-800'
               }`}
             />
@@ -161,7 +161,7 @@ export function CategoryModal({ isOpen, onClose, onSubmit, category }: CategoryM
               id="catActive" 
               checked={formData.active}
               onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+              className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
             />
             <label htmlFor="catActive" className="text-sm font-medium">Categoría Activa</label>
           </div>
@@ -174,7 +174,7 @@ export function CategoryModal({ isOpen, onClose, onSubmit, category }: CategoryM
                 value={newSub}
                 onChange={(e) => setNewSub(e.target.value)}
                 placeholder="Ej. Problema con Impresora"
-                className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-2 focus:ring-sky-500"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
