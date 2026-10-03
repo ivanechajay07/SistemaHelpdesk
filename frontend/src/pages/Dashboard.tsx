@@ -3,7 +3,7 @@ import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users,
 import UserAvatar from '../components/ui/UserAvatar';
 import MiniCalendar from '../components/ui/MiniCalendar';
 import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LineChart, Line, Legend, LabelList } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LineChart, Line, Legend, LabelList, ReferenceLine } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTicketStore, type Ticket as TicketModel } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
@@ -231,6 +231,11 @@ export default function Dashboard() {
 
   // Resumen de prioridades
   const priorityTotal = priorityData.reduce((s, d) => s + d.value, 0);
+
+  // Resumen de volumen (últimos 7 días)
+  const volumeTotal = volume.reduce((s, d) => s + d.tickets, 0);
+  const volumeAvg = volume.length ? Math.round(volumeTotal / volume.length) : 0;
+  const volumePeak = volume.reduce((a, b) => (b.tickets > a.tickets ? b : a), volume[0] ?? { name: '-', tickets: 0 });
 
   // ==== Tickets vencidos (SLA) pendientes ====
   const overdueTickets = useMemo(() => {
@@ -595,35 +600,42 @@ export default function Dashboard() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Volume Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-500" />
-              Volumen de Tickets
-            </h2>
-            <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-slate-600 dark:text-slate-300">Últimos 7 días</span>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
+                <Activity className="w-[18px] h-[18px] text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Volumen de Tickets</h2>
+                <p className="text-xs text-slate-400 font-medium">Tickets creados en los últimos 7 días</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">{volumeTotal} en 7 días</span>
           </div>
-          <div className="h-[280px] w-full mt-auto">
+          <div className="h-[250px] w-full mt-auto">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={volume} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/>
                     <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="strokeTickets" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#60a5fa" />
+                    <stop offset="0%" stopColor="#38bdf8" />
                     <stop offset="100%" stopColor="#2563eb" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.12} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} />
-                <Tooltip 
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} />
+                <Tooltip
                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                   itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
-                  cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '5 5' }}
+                  formatter={(value: any) => [`${value} tickets`, 'Creados']}
+                  cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '5 5' }}
                 />
+                <ReferenceLine y={volumeAvg} stroke="#94a3b8" strokeDasharray="4 4" strokeWidth={1} />
                 <Area
                   type="monotone"
                   dataKey="tickets"
@@ -633,10 +645,15 @@ export default function Dashboard() {
                   fill="url(#colorTickets)"
                   isAnimationActive
                   animationDuration={1200}
-                  activeDot={{ r: 7, strokeWidth: 3, stroke: '#fff', fill: '#3b82f6' }}
+                  dot={{ r: 3, strokeWidth: 0, fill: '#2563eb' }}
+                  activeDot={{ r: 7, strokeWidth: 3, stroke: '#fff', fill: '#2563eb' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Promedio <b className="text-slate-800 dark:text-white tabular-nums">{volumeAvg}/día</b></span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Día pico <b className="text-slate-800 dark:text-white">{volumePeak.name} · {volumePeak.tickets}</b></span>
           </div>
         </div>
 

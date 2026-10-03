@@ -421,6 +421,16 @@ export default function TicketDetail() {
     ticket?.estado === 'RESUELTO' ? 'El chat está deshabilitado porque el ticket está resuelto.' :
     ticket?.estado === 'CANCELADO' ? 'El chat está deshabilitado porque el ticket fue cancelado.' :
     'El chat está deshabilitado porque el ticket está cerrado.';
+
+  const chatDateLabel = (iso: string) => {
+    const d = new Date(iso);
+    const today = new Date();
+    const yest = new Date();
+    yest.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Hoy';
+    if (d.toDateString() === yest.toDateString()) return 'Ayer';
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
   const canReactivate = ticket?.estado === 'CERRADO' && !!user && (
     isAdmin() || ticket.usuarioId === user.id || ticket.tecnicoId === user.id
   );
@@ -573,33 +583,55 @@ export default function TicketDetail() {
       <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-0">
 
         {/* Encabezado del chat: participante + presencia / escribiendo */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-50 via-white to-white dark:from-blue-500/10 dark:via-slate-900 dark:to-slate-900 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <UserAvatar
                 userId={ticket?.usuarioId === user?.id ? ticket?.tecnicoId : ticket?.usuarioId}
                 name={ticket?.usuarioId === user?.id ? ticket?.tecnicoNombre : ticket?.solicitanteNombre}
-                size={36}
+                size={40}
               />
-              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${otherOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ${otherOnline ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                 {ticket?.usuarioId === user?.id ? (ticket?.tecnicoNombre || 'Sin asignar') : (ticket?.solicitanteNombre || 'Cliente')}
               </p>
-              <p className={`text-[11px] font-semibold ${typingName ? 'text-blue-600 dark:text-blue-400' : otherOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                {typingName ? `${typingName} está escribiendo…` : otherOnline ? 'En línea' : 'Desconectado'}
+              <p className={`text-[11px] font-semibold flex items-center gap-1.5 ${typingName ? 'text-blue-600 dark:text-blue-400' : otherOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                {typingName ? (
+                  <>
+                    <span className="flex items-center gap-0.5">
+                      <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '120ms' }} />
+                      <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '240ms' }} />
+                    </span>
+                    escribiendo…
+                  </>
+                ) : otherOnline ? (
+                  <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> En línea</>
+                ) : (
+                  <><span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" /> Desconectado</>
+                )}
               </p>
             </div>
           </div>
+
+          {ticket && (
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-mono">{ticket.codigo}</span>
+              <span className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                {ticket.estado.replace('_', ' ')}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50/30 dark:bg-slate-900/30">
-          
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4 bg-slate-50/50 dark:bg-slate-950/30">
+
           {/* System Message */}
           <div className="flex justify-center">
-            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full text-[11px] font-bold flex items-center gap-1.5">
+            <span className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-sm">
               <MessageSquare className="w-3 h-3" />
               Chat iniciado · {new Date(ticket?.fechaCreacion || Date.now()).toLocaleDateString()}
             </span>
@@ -607,83 +639,96 @@ export default function TicketDetail() {
 
           {messages.length === 0 && (
             <div className="text-center text-slate-400 dark:text-slate-500 mt-12">
-              <MessageSquare className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium text-sm">No hay mensajes aún</p>
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <MessageSquare className="w-7 h-7 opacity-40" />
+              </div>
+              <p className="font-semibold text-sm text-slate-500 dark:text-slate-400">No hay mensajes aún</p>
               <p className="text-xs mt-1">Escribe algo para comenzar la conversación</p>
             </div>
           )}
-          
+
           {messages.map((msg, idx) => {
             const isMe = msg.remitenteId === user?.id;
+            const prev = messages[idx - 1];
+            const showDate = !prev || new Date(prev.fechaEnvio).toDateString() !== new Date(msg.fechaEnvio).toDateString();
             return (
-              <div key={idx} className={`flex ${isMe ? 'flex-row-reverse' : 'flex-row'} items-start gap-3`}>
-                {/* Avatar */}
-                <UserAvatar userId={msg.remitenteId} name={msg.remitenteNombre} size={32} />
-
-                {/* Message Body */}
-                <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%] lg:max-w-[70%]`}>
-                  <div className={`flex items-baseline gap-2 mb-1 ${isMe ? 'flex-row-reverse' : 'flex-row'} px-1`}>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      {msg.remitenteNombre}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                      {new Date(msg.fechaEnvio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              <div key={idx} className="space-y-3">
+                {showDate && (
+                  <div className="flex justify-center">
+                    <span className="px-3 py-1 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider">
+                      {chatDateLabel(msg.fechaEnvio)}
                     </span>
                   </div>
+                )}
+                <div className={`flex ${isMe ? 'flex-row-reverse' : 'flex-row'} items-end gap-2.5`}>
+                  {/* Avatar */}
+                  {!isMe && <UserAvatar userId={msg.remitenteId} name={msg.remitenteNombre} size={30} />}
 
-                  <div className={`px-4 py-2.5 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                    isMe
-                      ? 'bg-blue-600 text-white rounded-tr-md'
-                      : 'bg-white border border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 rounded-tl-md'
-                  }`}>
-                    <div className="whitespace-pre-wrap break-words">{renderMessageContent(msg.contenido, isMe)}</div>
+                  {/* Message Body */}
+                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[82%] lg:max-w-[70%]`}>
+                    <div className={`flex items-baseline gap-2 mb-1 ${isMe ? 'flex-row-reverse' : 'flex-row'} px-1`}>
+                      <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                        {isMe ? 'Tú' : msg.remitenteNombre}
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                        {new Date(msg.fechaEnvio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                    </div>
 
-                    {/* Attachment */}
-                    {msg.adjuntoUrl && (
-                      <div className={`mt-2 ${msg.contenido.trim() && !msg.contenido.includes('Archivo adjunto') ? 'pt-2 border-t border-white/20 dark:border-slate-700/60' : ''}`}>
-                         <a href={getAttachmentUrl(msg.adjuntoUrl)} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2.5 p-2.5 rounded-xl transition-colors shadow-sm group ${
-                           isMe 
-                             ? 'bg-white/10 hover:bg-white/20 border border-white/20' 
-                             : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-400'
-                         }`}>
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                              isMe ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-blue-500'
-                            } transition-colors`}>
-                               {msg.adjuntoUrl.split('?')[0].match(/\.(jpeg|jpg|gif|png|webp)$/i) ? <ImageIcon className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
-                            </div>
-                            <div>
-                               <p className={`text-xs font-bold max-w-[160px] truncate ${isMe ? 'text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                                 {msg.adjuntoUrl.split('/').pop()?.split('?')[0].split('_').pop() || 'Archivo adjunto'}
-                               </p>
-                               <p className={`text-[10px] font-semibold mt-0.5 ${isMe ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>Click para abrir</p>
-                            </div>
-                         </a>
-                      </div>
+                    <div className={`px-4 py-2.5 shadow-sm text-sm leading-relaxed ${
+                      isMe
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-blue-500/20'
+                        : 'bg-white border border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 rounded-2xl rounded-bl-md'
+                    }`}>
+                      <div className="whitespace-pre-wrap break-words">{renderMessageContent(msg.contenido, isMe)}</div>
+
+                      {/* Attachment */}
+                      {msg.adjuntoUrl && (
+                        <div className={`mt-2 ${msg.contenido.trim() && !msg.contenido.includes('Archivo adjunto') ? 'pt-2 border-t border-white/20 dark:border-slate-700/60' : ''}`}>
+                           <a href={getAttachmentUrl(msg.adjuntoUrl)} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-2.5 p-2.5 rounded-xl transition-colors shadow-sm group ${
+                             isMe
+                               ? 'bg-white/10 hover:bg-white/20 border border-white/20'
+                               : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                           }`}>
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                isMe ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-blue-500'
+                              } transition-colors`}>
+                                 {msg.adjuntoUrl.split('?')[0].match(/\.(jpeg|jpg|gif|png|webp)$/i) ? <ImageIcon className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
+                              </div>
+                              <div>
+                                 <p className={`text-xs font-bold max-w-[160px] truncate ${isMe ? 'text-white' : 'text-slate-700 dark:text-slate-300'}`}>
+                                   {msg.adjuntoUrl.split('/').pop()?.split('?')[0].split('_').pop() || 'Archivo adjunto'}
+                                 </p>
+                                 <p className={`text-[10px] font-semibold mt-0.5 ${isMe ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>Click para abrir</p>
+                              </div>
+                           </a>
+                        </div>
+                       )}
+                     </div>
+
+                     {/* Recibo de lectura del último mensaje propio */}
+                     {isMe && idx === lastOwnMsgIndex && (
+                       <span className={`mt-1 px-1 inline-flex items-center gap-1 text-[10px] font-bold transition-colors ${
+                         msg.leido ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
+                       }`}>
+                         {msg.leido ? (
+                           <><CheckCheck className="w-3.5 h-3.5" />Visto</>
+                         ) : (
+                           <><Check className="w-3.5 h-3.5" />Enviado</>
+                         )}
+                       </span>
                      )}
                    </div>
-
-                   {/* Recibo de lectura del último mensaje propio */}
-                   {isMe && idx === lastOwnMsgIndex && (
-                     <span className={`mt-1 px-1 inline-flex items-center gap-1 text-[10px] font-bold transition-colors ${
-                       msg.leido ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
-                     }`}>
-                       {msg.leido ? (
-                         <><CheckCheck className="w-3.5 h-3.5" />Visto</>
-                       ) : (
-                         <><Check className="w-3.5 h-3.5" />Enviado</>
-                       )}
-                     </span>
-                   )}
                  </div>
                </div>
              );
            })}
           {typingName && (
-            <div className="flex items-start gap-3 anim-fade-in">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs shrink-0">
+            <div className="flex items-end gap-2.5 anim-fade-in">
+              <div className="w-[30px] h-[30px] rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xs shrink-0">
                 {typingName.charAt(0).toUpperCase()}
               </div>
-              <div className="px-4 py-3 rounded-2xl rounded-tl-md bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm">
+              <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 shadow-sm">
                 <div className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -779,8 +824,16 @@ export default function TicketDetail() {
              )}
              
              {/* Input Area */}
-             <div className="flex items-end gap-3">
-               <textarea 
+             <div className="flex items-end gap-2">
+               <button
+                 type="button"
+                 onClick={() => fileInputRef.current?.click()}
+                 className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all shrink-0"
+                 title="Adjuntar archivo"
+               >
+                 <Paperclip className="w-5 h-5" />
+               </button>
+               <textarea
                  id="chat-textarea"
                  value={newMessage}
                  onChange={(e) => handleMessageChange(e.target.value)}
@@ -793,12 +846,12 @@ export default function TicketDetail() {
                     if (e.ctrlKey && e.key === 'i') { e.preventDefault(); insertFormatting('*', '*'); }
                  }}
                  placeholder="Escribe tu respuesta... (Enter para enviar, Shift+Enter para nueva línea)"
-                 className="flex-1 resize-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 min-h-[44px] max-h-[120px] focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                 className="flex-1 resize-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 min-h-[44px] max-h-[120px] focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
                />
-               <button 
+               <button
                  type="submit"
                  disabled={(!newMessage.trim() && !uploading) || uploading}
-                 className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-all shadow-md shadow-blue-500/20 shrink-0 active:scale-95"
+                 className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full transition-all shadow-lg shadow-blue-500/30 shrink-0 active:scale-95"
                >
                  {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                </button>
