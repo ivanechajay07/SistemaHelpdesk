@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon, Boxes, ListTodo, FileText, Plus } from 'lucide-react';
 import UserAvatar from '../components/ui/UserAvatar';
 import MiniCalendar from '../components/ui/MiniCalendar';
 import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LineChart, Line, Legend } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
-import { useTicketStore } from '../store/ticketStore';
+import { useTicketStore, type Ticket as TicketModel } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
 import { useProfileImage } from '../lib/hooks';
 import NewTicketModal from '../components/tickets/NewTicketModal';
@@ -42,7 +42,7 @@ const PRIORITY_DOT: Record<string, string> = {
 export default function Dashboard() {
   const { stats: dbStats, volume, technicianStats, technicianYear, fetchDashboardData, fetchTechnicianStats } = useDashboardStore();
   const { tickets, fetchTickets } = useTicketStore();
-  const { user } = useAuthStore();
+  const { user, hasPermission, isAdmin } = useAuthStore();
   const profileImage = useProfileImage(user?.id);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState<number | null>(null);
@@ -168,6 +168,83 @@ export default function Dashboard() {
     },
   ];
 
+  // ==== Comparativa mensual: creados vs resueltos (últimos 6 meses) ====
+  const monthlyComparison = useMemo(() => {
+    const months: { key: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: MESES_CORTOS[d.getMonth()] });
+    }
+    const created = new Map<string, number>();
+    const resolved = new Map<string, number>();
+    tickets.forEach((t) => {
+      const ck = t.fechaCreacion ? t.fechaCreacion.slice(0, 7) : null;
+      if (ck) created.set(ck, (created.get(ck) || 0) + 1);
+      const rk = t.fechaResolucion ? t.fechaResolucion.slice(0, 7) : null;
+      if (rk) resolved.set(rk, (resolved.get(rk) || 0) + 1);
+    });
+    return months.map((m) => ({
+      name: m.label,
+      Creados: created.get(m.key) || 0,
+      Resueltos: resolved.get(m.key) || 0,
+    }));
+  }, [tickets]);
+
+  // ==== Actividad por día de la semana (lun–dom) ====
+  const weekdayData = useMemo(() => {
+    const counts = Array(7).fill(0);
+    tickets.forEach((t) => {
+      if (!t.fechaCreacion) return;
+      counts[new Date(t.fechaCreacion).getDay()]++;
+    });
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    return order.map((dow, i) => ({
+      name: labels[i],
+      tickets: counts[dow],
+      fill: i >= 5 ? '#94a3b8' : '#3b82f6',
+    }));
+  }, [tickets]);
+
+  // ==== Top áreas / solicitantes ====
+  const areaData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tickets.forEach((t) => {
+      const area = t.entidad || t.sede || 'Sin área';
+      counts[area] = (counts[area] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, value]) => ({
+        name: name.length > 18 ? name.slice(0, 16) + '...' : name,
+        fullName: name,
+        value,
+      }));
+  }, [tickets]);
+
+  // ==== Tickets vencidos (SLA) pendientes ====
+  const overdueTickets = useMemo(() => {
+    return tickets
+      .filter((t) => t.estado !== 'RESUELTO' && t.estado !== 'CERRADO' &&
+        (t.slaEstado === 'VENCIDO' || (t.fechaVencimientoSla && new Date(t.fechaVencimientoSla).getTime() < Date.now())))
+      .sort((a, b) => (a.fechaVencimientoSla || '').localeCompare(b.fechaVencimientoSla || ''))
+      .slice(0, 5);
+  }, [tickets]);
+
+  const daysOverdue = (t: TicketModel) =>
+    t.fechaVencimientoSla ? Math.max(0, Math.floor((Date.now() - new Date(t.fechaVencimientoSla).getTime()) / 86400000)) : 0;
+
+  // ==== Atajos rápidos ====
+  const quickActions = [
+    { label: 'Nuevo Ticket', desc: 'Registrar incidente', icon: Plus, path: '', action: 'new' as const, gradient: 'from-sky-500 to-blue-600', shadow: 'shadow-sky-500/30' },
+    { label: 'Tickets', desc: 'Gestión de soporte', icon: Ticket, path: '/tickets', action: 'nav' as const, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30' },
+    { label: 'Inventario', desc: 'Activos y traslados', icon: Boxes, path: '/inventario', action: 'nav' as const, gradient: 'from-cyan-500 to-teal-600', shadow: 'shadow-cyan-500/30', show: isAdmin() || hasPermission('INV_VIEW') },
+    { label: 'Tareas', desc: 'Gestor de actividades', icon: ListTodo, path: '/tareas', action: 'nav' as const, gradient: 'from-teal-500 to-emerald-600', shadow: 'shadow-teal-500/30', show: hasPermission('TASK_MANAGE') },
+    { label: 'Reportes', desc: 'Informes y métricas', icon: FileText, path: '/reports', action: 'nav' as const, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30', show: hasPermission('REPORT_VIEW') },
+  ].filter((a) => a.show !== false);
+
   return (
     <div className="space-y-6">
       {/* ===== HERO: Bienvenida dinamica segun la hora ===== */}
@@ -237,6 +314,29 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Atajos rápidos */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {quickActions.map((a, i) => (
+          <button
+            key={a.label}
+            onClick={() => (a.action === 'new' ? setIsNewTicketModalOpen(true) : navigate(a.path))}
+            className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${a.gradient} p-4 text-left text-white shadow-lg ${a.shadow} hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 anim-fade-in-up`}
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-xl transition-transform group-hover:scale-150" />
+            <div className="relative flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <a.icon className="w-5 h-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-black leading-tight">{a.label}</p>
+                <p className="text-[10px] font-semibold text-white/70 truncate mt-0.5">{a.desc}</p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {!dbStats && tickets.length === 0
@@ -293,6 +393,71 @@ export default function Dashboard() {
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Técnicos Activos</p>
             <p className="text-2xl font-black text-slate-800 dark:text-white">{new Set(tickets.filter(t => t.tecnicoId).map(t => t.tecnicoId)).size}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Comparativa mensual + Actividad por día de la semana ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-base font-bold flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-sky-500" />
+              Creados vs Resueltos
+            </h2>
+            <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-slate-600 dark:text-slate-300">Últimos 6 meses</span>
+          </div>
+          <div className="h-[260px] w-full mt-auto">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={monthlyComparison} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gradCreados" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradResueltos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={8} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-8} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                  cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
+                <Area type="monotone" dataKey="Creados" stroke="#3b82f6" strokeWidth={2.5} fill="url(#gradCreados)" isAnimationActive animationDuration={1000} />
+                <Area type="monotone" dataKey="Resueltos" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResueltos)" isAnimationActive animationDuration={1000} animationBegin={200} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+          <h2 className="text-base font-bold flex items-center gap-2 mb-4">
+            <CalendarDays className="w-5 h-5 text-blue-500" />
+            Actividad por Día
+          </h2>
+          <div className="h-[260px] w-full mt-auto">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weekdayData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={8} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dx={-8} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                  formatter={(value: any) => [`${value} tickets`, 'Creados']}
+                  cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                />
+                <Bar dataKey="tickets" radius={[8, 8, 0, 0]} maxBarSize={32} isAnimationActive animationDuration={900}>
+                  {weekdayData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
@@ -586,6 +751,95 @@ export default function Dashboard() {
               <p className="text-slate-400 text-sm text-center mt-10">Sin datos</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ===== Top áreas + Tickets vencidos ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+          <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-indigo-500" />
+            Top Áreas
+          </h2>
+          <div className="h-[220px] w-full">
+            {areaData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={areaData} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="areaGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#0ea5e9" />
+                      <stop offset="100%" stopColor="#6366f1" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.15} />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={120} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                    formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                  />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} fill="url(#areaGrad)" isAnimationActive animationDuration={900} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-slate-400 text-sm text-center mt-10">Sin datos</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-bold flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-rose-500" />
+              Tickets Vencidos (SLA)
+            </h2>
+            {overdueTickets.length > 0 && (
+              <button
+                onClick={() => navigate('/tickets')}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+              >
+                Ver todos <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {overdueTickets.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10 mb-3">
+                <CheckCircle className="w-6 h-6 text-emerald-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">¡Sin tickets vencidos!</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Todos los tickets abiertos están dentro del SLA.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {overdueTickets.map((t, i) => (
+                <button
+                  key={t.id}
+                  onClick={() => navigate(`/tickets/${t.id}`)}
+                  className="group w-full text-left flex items-center gap-3 p-3 rounded-2xl border border-rose-100 dark:border-rose-500/20 bg-rose-50/40 dark:bg-rose-500/5 hover:bg-white dark:hover:bg-rose-500/10 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold shrink-0 ${PRIORITY_DOT[t.prioridad] || 'text-slate-400'}`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current shadow-[0_0_6px_currentColor]" />
+                    {t.prioridad}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                      {t.titulo}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {t.codigo} · {t.solicitanteNombre || 'Sin solicitante'}
+                    </p>
+                  </div>
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black">
+                    <Clock className="w-3 h-3" /> {daysOverdue(t)}d
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
