@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive, Lock, MessageSquare } from 'lucide-react';
+import { Search, Plus, Loader2, CheckCircle, Edit2, Trash2, UserCheck, Filter, X, ThumbsUp, RotateCcw, Building2, MapPin, Clock, Sparkles, Archive, Lock, MessageSquare, Ticket as TicketIcon } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import { useTicketStore, type Ticket } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
@@ -38,7 +39,7 @@ const priorityOptions = [
 type Vista = '' | 'recientes' | 'resueltos' | 'reactivados' | 'cerrados';
 
 const vistaConfig: Record<string, { label: string; icon: React.ElementType; gradient: string }> = {
-  recientes: { label: 'Recientes', icon: Clock, gradient: 'from-blue-500 to-indigo-600' },
+  recientes: { label: 'Recientes', icon: Clock, gradient: 'from-blue-500 to-sky-600' },
   resueltos: { label: 'Resueltos', icon: CheckCircle, gradient: 'from-emerald-500 to-teal-600' },
   reactivados: { label: 'Reactivados', icon: RotateCcw, gradient: 'from-cyan-500 to-sky-600' },
   cerrados: { label: 'Cerrados', icon: Archive, gradient: 'from-slate-500 to-slate-700' },
@@ -221,7 +222,7 @@ export default function Tickets() {
       case 'NUEVO': return 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/30';
       case 'EN_PROCESO': return 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/30';
       case 'EN_REVISION': return 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-600/20 dark:bg-cyan-500/10 dark:text-cyan-400 dark:ring-cyan-500/30';
-      case 'ASIGNADO': return 'bg-purple-50 text-purple-700 ring-1 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-400 dark:ring-purple-500/30';
+      case 'ASIGNADO': return 'bg-sky-50 text-sky-700 ring-1 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-500/30';
       case 'RESUELTO': return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/30';
       case 'CERRADO': return 'bg-slate-100 text-slate-600 ring-1 ring-slate-600/20 dark:bg-slate-500/10 dark:text-slate-400 dark:ring-slate-500/30';
       default: return 'bg-slate-100 text-slate-600 ring-1 ring-slate-600/20 dark:bg-slate-500/10 dark:text-slate-400 dark:ring-slate-500/30';
@@ -272,21 +273,20 @@ export default function Tickets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Gestión de Tickets
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Administra y resuelve las incidencias reportadas.</p>
-        </div>
-        <button 
+      <PageHeader
+        icon={TicketIcon}
+        eyebrow="Mesa de ayuda"
+        title="Gestión de Tickets"
+        subtitle="Administra y resuelve las incidencias reportadas."
+        gradient="from-blue-600 via-blue-700 to-slate-800"
+      >
+        <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95 w-full md:w-auto"
+          className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
         >
-          <Plus className="w-4 h-4" />
-          Nuevo Ticket
+          <Plus className="w-4 h-4" /> Nuevo Ticket
         </button>
-      </div>
+      </PageHeader>
 
       {error && (
         <div className="p-4 bg-red-50/80 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium">
@@ -535,7 +535,7 @@ export default function Tickets() {
                       <td className="px-6 py-3 hidden xl:table-cell">
                         {ticket.entidad ? (
                           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            <Building2 className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                            <Building2 className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
                             <span className="truncate max-w-[130px]" title={ticket.entidad}>{ticket.entidad}</span>
                           </span>
                         ) : (
@@ -607,7 +607,7 @@ export default function Tickets() {
                             <ActionButton
                               label="Asignar técnico"
                               onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsAssignModalOpen(true); }}
-                              className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                              className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 dark:bg-sky-500/10 dark:hover:bg-sky-500/20 rounded-lg transition-colors"
                             >
                               <UserCheck className="w-3.5 h-3.5" />
                             </ActionButton>
@@ -693,7 +693,7 @@ export default function Tickets() {
                   {(ticket.entidad || ticket.sede) && (
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       {ticket.entidad && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
                           <Building2 className="w-3 h-3" /> {ticket.entidad}
                         </span>
                       )}
@@ -722,7 +722,7 @@ export default function Tickets() {
                     className={`w-full flex items-center justify-center gap-1.5 mt-3 p-2.5 rounded-xl text-xs font-bold transition-colors ${
                       isTicketLocked(ticket)
                         ? 'text-slate-400 bg-slate-100 dark:bg-slate-800 cursor-not-allowed'
-                        : 'text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 active:scale-[0.99]'
+                        : 'text-white bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-700 hover:to-sky-700 shadow-md shadow-blue-500/20 active:scale-[0.99]'
                     }`}
                   >
                     {isTicketLocked(ticket)
@@ -762,7 +762,7 @@ export default function Tickets() {
                       {ticket.estado !== 'CERRADO' && ticket.estado !== 'RESUELTO' && canAssign && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setIsAssignModalOpen(true); }}
-                          className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-xs font-semibold transition-colors"
+                          className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 p-2 text-sky-600 bg-sky-50 dark:bg-sky-500/10 rounded-xl text-xs font-semibold transition-colors"
                         >
                           <UserCheck className="w-3.5 h-3.5" /> Asignar
                         </button>

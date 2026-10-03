@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileStack, Plus, Loader2, Edit2, Trash2, Search } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import api from '../lib/axios';
 import { useCategoryStore } from '../store/categoryStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
@@ -111,24 +112,19 @@ export default function Templates() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
       {/* Encabezado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-              <FileStack className="w-5 h-5 text-white" />
-            </span>
-            Plantillas de Tickets
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Casos recurrentes listos para reutilizar al crear tickets
-          </p>
-        </div>
+      <PageHeader
+        icon={FileStack}
+        eyebrow="Mesa de ayuda"
+        title="Plantillas de Tickets"
+        subtitle="Casos recurrentes listos para reutilizar al crear tickets."
+        gradient="from-blue-600 via-blue-700 to-slate-800"
+      >
         {canManage && (
-          <button onClick={openCreate} className="btn-shine inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm font-bold shadow-lg shadow-violet-500/30 hover:-translate-y-0.5 active:scale-95 transition-all">
+          <button onClick={openCreate} className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5">
             <Plus className="w-4 h-4" /> Nueva plantilla
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Búsqueda */}
       <div className="relative max-w-md">
@@ -137,13 +133,13 @@ export default function Templates() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar plantilla..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all"
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
         />
       </div>
 
       {/* Grid de plantillas */}
       {loading ? (
-        <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-violet-500" /></div>
+        <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-blue-500" /></div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <FileStack className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
@@ -159,7 +155,7 @@ export default function Templates() {
                 </span>
                 {canManage && (
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEdit(t)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">
+                    <button onClick={() => openEdit(t)} title="Editar" className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => remove(t)} title="Eliminar" className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
@@ -210,32 +206,32 @@ export default function Templates() {
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">Nombre *</label>
                 <input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required maxLength={100}
                   placeholder="Ej. Impresora no responde"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all" />
+                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">Título del ticket *</label>
                 <input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required maxLength={150}
                   placeholder="Título prellenado al usar la plantilla"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all" />
+                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">Descripción *</label>
                 <textarea value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required rows={4}
                   placeholder="Descripción prellenada al usar la plantilla"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none transition-all" />
+                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none transition-all" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">Prioridad</label>
                   <select value={form.prioridad} onChange={(e) => setForm({ ...form, prioridad: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all">
+                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
                     {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">Subcategoría</label>
                   <select value={form.subcategoriaId} onChange={(e) => setForm({ ...form, subcategoriaId: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all">
+                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
                     <option value="">Sin categoría</option>
                     {subcategorias.map((s: any) => (
                       <option key={s.id} value={s.id}>{s.categoryName} / {s.name}</option>

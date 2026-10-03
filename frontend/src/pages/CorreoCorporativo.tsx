@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Mail, Plus, Search, Loader2, Eye, EyeOff, Edit2, Trash2, Copy, Building2, Briefcase, Lock, AtSign, AlertCircle, FileText,
 } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import { useAuthStore } from '../store/authStore';
 import { useCorreoStore, type CorreoCorporativo } from '../store/correoStore';
 import { useToast } from '../components/ui/Toast';
@@ -270,44 +271,39 @@ export default function CorreoCorporativo() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <Mail className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-            Directorio de Correo Corporativo
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Registro de correos corporativos con contraseñas cifradas. Solo los administradores pueden verlas.
-          </p>
+      <PageHeader
+        icon={Mail}
+        eyebrow="Conocimiento"
+        title="Directorio de Correo Corporativo"
+        subtitle="Registro de correos corporativos con contraseñas cifradas. Solo los administradores pueden verlas."
+        gradient="from-blue-600 via-blue-700 to-slate-800"
+      >
+        <div className="relative w-full sm:w-[260px]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, cargo, empresa, correo..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white/90 border border-white/30 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-white/50 placeholder:text-slate-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-[260px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, cargo, empresa, correo..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all placeholder:text-slate-400"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <button
+          onClick={exportPdf}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-sm font-bold transition-colors disabled:opacity-50"
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Exportar PDF
+        </button>
+        {isAdmin && (
           <button
-            onClick={exportPdf}
-            disabled={exporting}
-            className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 text-sm font-bold transition-colors disabled:opacity-50"
+            onClick={openCreate}
+            className="btn-shine inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 text-sm font-black shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5 transition-all"
           >
-            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Exportar PDF
+            <Plus className="w-4 h-4" /> Nuevo Correo
           </button>
-          {isAdmin && (
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl transition-all active:scale-95"
-            >
-              <Plus className="w-4 h-4" /> Nuevo Correo
-            </button>
-          )}
-        </div>
-      </div>
+        )}
+      </PageHeader>
 
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl text-sm">{error}</div>
@@ -334,7 +330,7 @@ export default function CorreoCorporativo() {
                   <div className="p-5 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-base shadow-lg shadow-blue-500/25 shrink-0">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-500 flex items-center justify-center text-white font-black text-base shadow-lg shadow-blue-500/25 shrink-0">
                           {initials}
                         </div>
                         <div className="min-w-0">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, MapPin, Plus, Search, Loader2, Edit2, Trash2, AlignLeft, Map, ChevronDown, ExternalLink } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import { useCatalogStore, type Entidad } from '../store/catalogStore';
 import SearchableSelect from '../components/ui/SearchableSelect';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
@@ -224,20 +225,20 @@ export default function Entidades() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight">Entidades y Sedes</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Registra cada entidad con una o varias sedes donde se reportan los inconvenientes.
-          </p>
-        </div>
+      <PageHeader
+        icon={Building2}
+        eyebrow="Catálogo"
+        title="Entidades y Sedes"
+        subtitle="Registra cada entidad con una o varias sedes donde se reportan los inconvenientes."
+        gradient="from-orange-500 via-amber-600 to-slate-800"
+      >
         <button
           onClick={openCreate}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-orange-500/25 active:scale-95 self-start sm:self-auto"
+          className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-orange-700 hover:bg-orange-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-orange-900/30 active:scale-95 hover:-translate-y-0.5"
         >
           <Plus className="w-4 h-4" /> Registrar Entidad
         </button>
-      </div>
+      </PageHeader>
 
       <FormModal
         isOpen={formOpen}

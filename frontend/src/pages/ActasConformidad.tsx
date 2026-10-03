@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Eye, Search, Loader2, ClipboardCheck, Calendar, User, Wrench } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import api from '../lib/axios';
 import { useToast } from '../components/ui/Toast';
 import ActaModal from '../components/tickets/ActaModal';
@@ -95,27 +96,24 @@ export default function ActasConformidad() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <ClipboardCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
-            Actas de Conformidad
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Tickets con acta firmada por el solicitante y el técnico responsable.
-          </p>
-        </div>
+      <PageHeader
+        icon={ClipboardCheck}
+        eyebrow="Tickets"
+        title="Actas de Conformidad"
+        subtitle="Tickets con acta firmada por el solicitante y el técnico responsable."
+        gradient="from-emerald-600 via-teal-600 to-slate-800"
+      >
         <div className="relative w-full sm:w-[300px]">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Buscar por código, título, técnico..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all placeholder:text-slate-400"
+            className="w-full pl-10 pr-4 py-2.5 bg-white/90 border border-white/30 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-white/50 placeholder:text-slate-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-      </div>
+      </PageHeader>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden anim-fade-in-up">
         {error && (

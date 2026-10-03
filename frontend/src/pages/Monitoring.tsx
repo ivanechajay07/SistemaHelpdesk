@@ -3,6 +3,7 @@ import {
   Activity, Plus, Loader2, Pencil, Trash2, Zap, Globe, Network,
   AlertTriangle, CheckCircle2, Clock, Link2
 } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
 import { useMonitoringStore, type MonitoredTarget, type MonitoredTargetRequest, type TargetType } from '../store/monitoringStore';
@@ -161,25 +162,20 @@ export default function Monitoring() {
   return (
     <div className="space-y-5 anim-fade-in-up">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
-              <Activity className="w-5 h-5" />
-            </span>
-            Monitoreo de Red
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Vigila servicios y equipos; los tickets se generan automáticamente ante caídas.
-          </p>
-        </div>
+      <PageHeader
+        icon={Activity}
+        eyebrow="Monitoreo de Red"
+        title="Estado de la Red"
+        subtitle="Vigila servicios y equipos; los tickets se generan automáticamente ante caídas."
+        gradient="from-emerald-600 via-teal-600 to-slate-800"
+      >
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-emerald-500/25 active:scale-95"
+          className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"
         >
           <Plus className="w-4 h-4" /> Nuevo objetivo
         </button>
-      </div>
+      </PageHeader>
 
       {/* Lista */}
       {loading && targets.length === 0 ? (
