@@ -9,6 +9,7 @@ import { useTicketStore, type Ticket as TicketModel } from '../store/ticketStore
 import { useAuthStore } from '../store/authStore';
 import { useProfileImage } from '../lib/hooks';
 import NewTicketModal from '../components/tickets/NewTicketModal';
+import WeatherWidget from '../components/ui/WeatherWidget';
 import { useNavigate } from 'react-router-dom';
 
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -303,13 +304,7 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <button
-              onClick={() => setIsNewTicketModalOpen(true)}
-              className="btn-shine inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
-            >
-              <Ticket className="w-4 h-4" />
-              Nuevo Ticket
-            </button>
+            <WeatherWidget />
           </div>
         </div>
       </div>
