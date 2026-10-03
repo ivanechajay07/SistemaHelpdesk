@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon, Boxes, ListTodo, FileText, Plus } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon, Boxes, ListTodo, FileText, Plus, PieChart as PieIcon } from 'lucide-react';
 import UserAvatar from '../components/ui/UserAvatar';
 import MiniCalendar from '../components/ui/MiniCalendar';
 import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
@@ -14,11 +14,11 @@ import { useNavigate } from 'react-router-dom';
 
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-const TECNICO_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6'];
+const TECNICO_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#0ea5e9'];
 
 const STATUS_COLORS: Record<string, string> = {
   NUEVO: '#3b82f6',
-  ASIGNADO: '#a855f7',
+  ASIGNADO: '#06b6d4',
   EN_PROCESO: '#f59e0b',
   RESUELTO: '#10b981',
   CERRADO: '#64748b',
@@ -47,7 +47,6 @@ export default function Dashboard() {
   const profileImage = useProfileImage(user?.id);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState<number | null>(null);
-  const [activePriority, setActivePriority] = useState<number | null>(null);
   const navigate = useNavigate();
 
   // Saludo dinamico segun la hora del dia + reloj en vivo
@@ -60,10 +59,10 @@ export default function Dashboard() {
   const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
   const GreetingIcon = hour < 12 ? Sunrise : hour < 19 ? Sun : Moon;
   const heroGradient = hour < 12
-    ? 'from-sky-500 via-blue-600 to-indigo-700'
+    ? 'from-sky-500 via-blue-600 to-blue-800'
     : hour < 19
-      ? 'from-indigo-600 via-violet-600 to-purple-700'
-      : 'from-slate-800 via-indigo-900 to-violet-950';
+      ? 'from-blue-500 via-blue-700 to-blue-900'
+      : 'from-slate-800 via-slate-900 to-blue-950';
 
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(
@@ -145,7 +144,7 @@ export default function Dashboard() {
     {
       title: 'Total Tickets', value: totalCount, icon: Ticket,
       color: 'text-blue-500', bg: 'bg-blue-500/10', gradient: 'from-blue-500/20 to-blue-600/5',
-      bar: 'from-blue-500 to-indigo-500', pct: 100, subtitle: `${openCount} abiertos`,
+      bar: 'from-blue-500 to-sky-500', pct: 100, subtitle: `${openCount} abiertos`,
     },
     {
       title: 'En Proceso', value: dbStats?.inProgressTickets || 0, icon: Clock,
@@ -248,16 +247,16 @@ export default function Dashboard() {
   // ==== Atajos rápidos ====
   const quickActions = [
     { label: 'Nuevo Ticket', desc: 'Registrar incidente', icon: Plus, path: '', action: 'new' as const, gradient: 'from-sky-500 to-blue-600', shadow: 'shadow-sky-500/30' },
-    { label: 'Tickets', desc: 'Gestión de soporte', icon: Ticket, path: '/tickets', action: 'nav' as const, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30' },
+    { label: 'Tickets', desc: 'Gestión de soporte', icon: Ticket, path: '/tickets', action: 'nav' as const, gradient: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/30' },
     { label: 'Inventario', desc: 'Activos y traslados', icon: Boxes, path: '/inventario', action: 'nav' as const, gradient: 'from-cyan-500 to-teal-600', shadow: 'shadow-cyan-500/30', show: isAdmin() || hasPermission('INV_VIEW') },
     { label: 'Tareas', desc: 'Gestor de actividades', icon: ListTodo, path: '/tareas', action: 'nav' as const, gradient: 'from-teal-500 to-emerald-600', shadow: 'shadow-teal-500/30', show: hasPermission('TASK_MANAGE') },
-    { label: 'Reportes', desc: 'Informes y métricas', icon: FileText, path: '/reports', action: 'nav' as const, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30', show: hasPermission('REPORT_VIEW') },
+    { label: 'Reportes', desc: 'Informes y métricas', icon: FileText, path: '/reports', action: 'nav' as const, gradient: 'from-cyan-500 to-blue-600', shadow: 'shadow-cyan-500/30', show: hasPermission('REPORT_VIEW') },
   ].filter((a) => a.show !== false);
 
   return (
     <div className="space-y-6">
       {/* ===== HERO: Bienvenida dinamica segun la hora ===== */}
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${heroGradient} px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-indigo-500/25 anim-fade-in-up transition-colors duration-700`}>
+      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${heroGradient} px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-500/25 anim-fade-in-up transition-colors duration-700`}>
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
         <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-fuchsia-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
         <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
@@ -372,8 +371,8 @@ export default function Dashboard() {
       {/* Secondary Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-2xl bg-indigo-500/10">
-            <TrendingUp className="w-6 h-6 text-indigo-500" />
+          <div className="p-3 rounded-2xl bg-blue-500/10">
+            <TrendingUp className="w-6 h-6 text-blue-500" />
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tasa de Resolución</p>
@@ -390,8 +389,8 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-2xl bg-violet-500/10">
-            <Users className="w-6 h-6 text-violet-500" />
+          <div className="p-3 rounded-2xl bg-cyan-500/10">
+            <Users className="w-6 h-6 text-cyan-500" />
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Técnicos Activos</p>
@@ -472,7 +471,7 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
                   formatter={(value: any) => [`${value} tickets`, 'Creados']}
-                  cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                  cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
                 />
                 <Bar dataKey="tickets" radius={[8, 8, 0, 0]} maxBarSize={34} isAnimationActive animationDuration={900}>
                   {weekdayData.map((entry, index) => (
@@ -610,11 +609,11 @@ export default function Dashboard() {
                 <defs>
                   <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="strokeTickets" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#a78bfa" />
+                    <stop offset="100%" stopColor="#2563eb" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
@@ -642,19 +641,27 @@ export default function Dashboard() {
         </div>
 
         {/* Status Distribution (Pie) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
-          <h2 className="text-base font-bold mb-4">Distribución por Estado</h2>
-          <div className="relative flex-1 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-9 h-9 rounded-xl bg-cyan-100 dark:bg-cyan-500/15 flex items-center justify-center">
+              <PieIcon className="w-[18px] h-[18px] text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Distribución por Estado</h2>
+              <p className="text-xs text-slate-400 font-medium">Tickets según su estado</p>
+            </div>
+          </div>
+          <div className="relative flex items-center justify-center py-2">
             {statusData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={210}>
+                <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
                     <Pie
                       data={statusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={58}
-                      outerRadius={88}
+                      innerRadius={56}
+                      outerRadius={86}
                       paddingAngle={3}
                       cornerRadius={6}
                       dataKey="value"
@@ -668,7 +675,7 @@ export default function Dashboard() {
                         <Cell
                           key={`cell-${index}`}
                           fill={entry.color}
-                          opacity={activeStatus === null || activeStatus === index ? 1 : 0.4}
+                          opacity={activeStatus === null || activeStatus === index ? 1 : 0.45}
                         />
                       ))}
                     </Pie>
@@ -688,22 +695,26 @@ export default function Dashboard() {
                 </div>
               </>
             ) : (
-              <p className="text-slate-400 text-sm">Sin datos</p>
+              <p className="text-slate-400 text-sm py-10">Sin datos</p>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {statusData.map((d, i) => (
-              <button
-                key={d.name}
-                onMouseEnter={() => setActiveStatus(i)}
-                onMouseLeave={() => setActiveStatus(null)}
-                className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 transition-colors ${activeStatus === i ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
-              >
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                <span className="text-slate-600 dark:text-slate-400 truncate">{d.name}</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200 ml-auto">{d.value}</span>
-              </button>
-            ))}
+          <div className="mt-3 space-y-1">
+            {statusData.map((d, i) => {
+              const pct = totalCount ? Math.round((d.value / totalCount) * 100) : 0;
+              return (
+                <button
+                  key={d.name}
+                  onMouseEnter={() => setActiveStatus(i)}
+                  onMouseLeave={() => setActiveStatus(null)}
+                  className={`w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors ${activeStatus === i ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate flex-1 text-left">{d.name}</span>
+                  <span className="text-xs font-black text-slate-800 dark:text-white tabular-nums">{d.value}</span>
+                  <span className="text-[10px] font-bold text-slate-400 tabular-nums w-8 text-right">{pct}%</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -734,23 +745,11 @@ export default function Dashboard() {
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
                     formatter={(value: any) => [`${value} tickets (${priorityTotal ? Math.round((value / priorityTotal) * 100) : 0}%)`, 'Cantidad']}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }}
+                    cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
                   />
-                  <Bar
-                    dataKey="value"
-                    radius={[0, 8, 8, 0]}
-                    maxBarSize={26}
-                    isAnimationActive
-                    animationDuration={900}
-                    onMouseEnter={(_, index) => setActivePriority(index)}
-                    onMouseLeave={() => setActivePriority(null)}
-                  >
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} isAnimationActive animationDuration={900}>
                     {priorityData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.color}
-                        opacity={activePriority === null || activePriority === index ? 1 : 0.35}
-                      />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                     <LabelList dataKey="value" position="right" fill="#64748b" fontSize={11} fontWeight={700} />
                   </Bar>
@@ -763,27 +762,44 @@ export default function Dashboard() {
         </div>
 
         {/* Category Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <h2 className="text-base font-bold mb-4">Top Categorías</h2>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+                <BarChart3 className="w-[18px] h-[18px] text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Top Categorías</h2>
+                <p className="text-xs text-slate-400 font-medium">Subcategorías con más tickets</p>
+              </div>
+            </div>
+            {categoryData.length > 0 && (
+              <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                Líder: {categoryData[0].name}
+              </span>
+            )}
+          </div>
           <div className="h-[220px] w-full">
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}>
+                <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 34, left: 5, bottom: 0 }}>
                   <defs>
                     <linearGradient id="catGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#818cf8" />
-                      <stop offset="100%" stopColor="#6366f1" />
+                      <stop offset="0%" stopColor="#fbbf24" />
+                      <stop offset="100%" stopColor="#f59e0b" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.15} />
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.12} />
+                  <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={110} />
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
                     formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                    cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
                   />
-                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={28} fill="url(#catGrad)" isAnimationActive animationDuration={900} />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} fill="url(#catGrad)" isAnimationActive animationDuration={900}>
+                    <LabelList dataKey="value" position="right" fill="#64748b" fontSize={11} fontWeight={700} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -901,7 +917,7 @@ export default function Dashboard() {
       <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-indigo-500" />
+            <Ticket className="w-5 h-5 text-blue-500" />
             Tickets Recientes
           </h2>
           <button
