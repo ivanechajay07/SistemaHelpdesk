@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Activity, Plus, Loader2, Pencil, Trash2, Zap, Globe, Network,
-  AlertTriangle, CheckCircle2, Clock, Link2
+  AlertTriangle, Clock, Link2, Wifi, WifiOff, Server, Search,
+  RefreshCw, Gauge
 } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import { useNavigate } from 'react-router-dom';
@@ -36,7 +37,9 @@ export default function Monitoring() {
   const [form, setForm] = useState<TargetForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [checkingId, setCheckingId] = useState<number | null>(null);
-  const { page, setPage, pageSize, setPageSize, paged: pagedTargets, total: totalTargets } = usePagedList(targets, 10);
+  const [refreshing, setRefreshing] = useState(false);
+  const [q, setQ] = useState('');
+  const [filtro, setFiltro] = useState('');
   const [dialog, setDialog] = useState<{
     variant: DialogVariant;
     title: string;
@@ -45,6 +48,19 @@ export default function Monitoring() {
     action?: () => Promise<void>;
     successTitle?: string;
   } | null>(null);
+
+  const filtered = targets.filter((t) => {
+    const matchesQ = !q || `${t.nombre} ${t.host}`.toLowerCase().includes(q.toLowerCase());
+    const matchesF = !filtro || (filtro === 'PAUSADO' ? !t.activo : t.activo && t.ultimoEstado === filtro);
+    return matchesQ && matchesF;
+  });
+  const counts = {
+    total: targets.length,
+    up: targets.filter((t) => t.activo && t.ultimoEstado === 'UP').length,
+    down: targets.filter((t) => t.activo && t.ultimoEstado === 'DOWN').length,
+    pending: targets.filter((t) => t.activo && t.ultimoEstado === 'PENDING').length,
+  };
+  const { page, setPage, pageSize, setPageSize, paged: pagedTargets, total: totalTargets } = usePagedList(filtered, 10);
 
   useEffect(() => {
     fetchTargets();
@@ -136,6 +152,11 @@ export default function Monitoring() {
     }
   };
 
+  const handleRefreshAll = async () => {
+    setRefreshing(true);
+    try { await fetchTargets(); } finally { setRefreshing(false); }
+  };
+
   const runDialogAction = async () => {
     const action = dialog?.action;
     const successTitle = dialog?.successTitle;
@@ -177,6 +198,68 @@ export default function Monitoring() {
         </button>
       </PageHeader>
 
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Objetivos', value: counts.total, icon: Server, cls: 'from-slate-500 to-slate-700', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-300' },
+          { label: 'En línea', value: counts.up, icon: Wifi, cls: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-100 dark:bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400' },
+          { label: 'Caídos', value: counts.down, icon: WifiOff, cls: 'from-red-500 to-rose-600', bg: 'bg-red-100 dark:bg-red-500/15', text: 'text-red-600 dark:text-red-400', alert: counts.down > 0 },
+          { label: 'Pendientes', value: counts.pending, icon: Clock, cls: 'from-amber-500 to-orange-600', bg: 'bg-amber-100 dark:bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' },
+        ].map((k, i) => (
+          <div key={k.label} className="group relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${k.cls}`} />
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{k.label}</p>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${k.bg} transition-transform group-hover:scale-110 ${k.alert ? 'animate-pulse' : ''}`}>
+                <k.icon className={`w-[18px] h-[18px] ${k.text}`} />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-slate-800 dark:text-white tabular-nums leading-none">{k.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Toolbar: búsqueda + filtro + actualizar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-3 anim-fade-in-up">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+          <input
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            placeholder="Buscar objetivo o host..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/40 transition-all"
+          />
+        </div>
+        <div className="inline-flex bg-slate-100 dark:bg-slate-800/70 rounded-xl p-1 gap-1 overflow-x-auto">
+          {[
+            { value: '', label: 'Todos' },
+            { value: 'UP', label: 'En línea' },
+            { value: 'DOWN', label: 'Caídos' },
+            { value: 'PENDING', label: 'Pendientes' },
+            { value: 'PAUSADO', label: 'Pausados' },
+          ].map((f) => (
+            <button
+              key={f.value}
+              onClick={() => { setFiltro(f.value); setPage(1); }}
+              className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-300 active:scale-95 ${
+                filtro === f.value
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/30'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleRefreshAll}
+          disabled={refreshing}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-sm font-bold shadow-md shadow-teal-500/25 hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60 shrink-0"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} /> Actualizar
+        </button>
+      </div>
+
       {/* Lista */}
       {loading && targets.length === 0 ? (
         <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
@@ -188,24 +271,38 @@ export default function Monitoring() {
           <p className="font-bold text-slate-500 dark:text-slate-400">No hay objetivos en monitoreo</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Agrega un servidor, sitio web o equipo para comenzar la vigilancia.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+          <Search className="w-9 h-9 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+          <p className="font-bold text-slate-500 dark:text-slate-400">Sin resultados</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Ajusta la búsqueda o el filtro de estado.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {pagedTargets.map((target, idx) => {
             const status = statusConfig(target);
+            const latPct = target.ultimaLatenciaMs != null ? Math.min(100, Math.round((target.ultimaLatenciaMs / 500) * 100)) : 0;
+            const failPct = target.umbralFallos ? Math.min(100, Math.round((target.fallosConsecutivos / target.umbralFallos) * 100)) : 0;
+            const isDown = target.activo && target.ultimoEstado === 'DOWN';
+            const accent = isDown ? 'bg-red-500' : target.activo && target.ultimoEstado === 'UP' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600';
             return (
               <div
                 key={target.id}
                 style={{ animationDelay: `${Math.min(idx * 60, 300)}ms` }}
-                className="anim-fade-in-up bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all"
+                className={`anim-fade-in-up group relative overflow-hidden bg-white dark:bg-slate-900 border rounded-2xl p-5 pl-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${isDown ? 'border-red-300/70 dark:border-red-500/30' : 'border-slate-200 dark:border-slate-800'}`}
               >
+                <span className={`absolute left-0 top-0 bottom-0 w-1.5 ${accent}`} />
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${status.bg} ${status.text}`}>
+                    <div className={`relative w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${status.bg} ${status.text} transition-transform group-hover:scale-110`}>
                       {target.tipo === 'HTTP' ? <Globe className="w-5 h-5" /> : <Network className="w-5 h-5" />}
+                      {target.activo && (target.ultimoEstado === 'UP' || target.ultimoEstado === 'DOWN') && (
+                        <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${target.ultimoEstado === 'UP' ? 'bg-emerald-500' : 'bg-red-500'} ${isDown ? 'animate-ping' : ''}`} />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-extrabold text-slate-900 dark:text-white text-sm truncate">{target.nombre}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-mono">
                         {target.tipo === 'TCP' ? `${target.host}:${target.puerto}` : target.host}
                       </p>
                     </div>
@@ -216,20 +313,29 @@ export default function Monitoring() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Latencia</p>
-                    <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mt-0.5">
-                      {target.ultimaLatenciaMs != null ? `${target.ultimaLatenciaMs} ms` : '—'}
-                    </p>
+                <div className="space-y-2.5 mb-3">
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                      <span className="inline-flex items-center gap-1"><Gauge className="w-3 h-3" /> Latencia</span>
+                      <span className="tabular-nums text-slate-600 dark:text-slate-300">{target.ultimaLatenciaMs != null ? `${target.ultimaLatenciaMs} ms` : '—'}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-[width] duration-700 ${
+                          target.ultimaLatenciaMs == null ? '' : target.ultimaLatenciaMs < 200 ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : target.ultimaLatenciaMs < 500 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-red-400 to-rose-500'
+                        }`}
+                        style={{ width: `${latPct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Intervalo</p>
-                    <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mt-0.5">{target.intervaloSegundos}s</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Umbral</p>
-                    <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mt-0.5">{target.fallosConsecutivos}/{target.umbralFallos}</p>
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                      <span className="inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Fallos</span>
+                      <span className="tabular-nums text-slate-600 dark:text-slate-300">{target.fallosConsecutivos}/{target.umbralFallos}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-[width] duration-700 ${failPct >= 100 ? 'bg-gradient-to-r from-red-500 to-rose-600' : 'bg-gradient-to-r from-amber-400 to-orange-500'}`} style={{ width: `${failPct}%` }} />
+                    </div>
                   </div>
                 </div>
 
@@ -254,41 +360,26 @@ export default function Monitoring() {
                     <button
                       onClick={() => handleCheckNow(target)}
                       disabled={checkingId === target.id}
-                      className="p-2 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 disabled:opacity-50 rounded-lg transition-colors"
+                      className="p-2 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/20 disabled:opacity-50 rounded-lg transition-colors active:scale-90"
                       title="Verificar ahora"
                     >
                       {checkingId === target.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => openEdit(target)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-lg transition-colors" title="Editar">
+                    <button onClick={() => openEdit(target)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-lg transition-colors active:scale-90" title="Editar">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(target)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition-colors" title="Eliminar">
+                    <button onClick={() => handleDelete(target)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-lg transition-colors active:scale-90" title="Eliminar">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-
-                {target.ultimoEstado === 'DOWN' && (
-                  <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-500/10 border border-red-200/60 dark:border-red-500/20 rounded-xl text-[11px] font-semibold text-red-600 dark:text-red-400">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    {target.ticketAbiertoId
-                      ? 'Caída detectada: ya existe un ticket automático para este objetivo.'
-                      : `Acumulando fallos (${target.fallosConsecutivos}/${target.umbralFallos}) antes de generar ticket.`}
-                  </div>
-                )}
-                {target.ultimoEstado === 'UP' && !target.ticketAbiertoId && (
-                  <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/60 dark:border-emerald-500/20 rounded-xl text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    Servicio operando con normalidad.
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {!loading && targets.length > 0 && (
+      {!loading && filtered.length > 0 && (
         <Pagination
           page={page}
           pageSize={pageSize}
