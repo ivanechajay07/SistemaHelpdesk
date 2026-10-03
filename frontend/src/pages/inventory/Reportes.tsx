@@ -4,23 +4,54 @@ import {
 } from '../../store/inventoryStore';
 import { useToast } from '../../components/ui/Toast';
 import InventoryPageHeader from './InventoryPageHeader';
-import { BarChart3, Download, FileSpreadsheet, Loader2, PackageCheck, Wrench, PackagePlus, ArrowLeftRight, Boxes, CheckCircle2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart3, Download, FileSpreadsheet, Loader2, PackageCheck, Wrench, PackagePlus, ArrowLeftRight, Boxes, CheckCircle2, Layers, MapPin } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ChartTooltip from '../../components/ui/ChartTooltip';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards, formatReportDate } from '../../lib/reportPdf';
 import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt } from '../../lib/reportExcel';
 
-const COLORS = ['#10b981', '#f59e0b', '#f97316', '#8b5cf6', '#06b6d4', '#3b82f6', '#ef4444', '#6366f1', '#ec4899', '#94a3b8'];
-const tooltipStyle = { backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px', fontWeight: 600 };
+const COLORS = ['#06b6d4', '#10b981', '#3b82f6', '#f59e0b', '#f97316', '#0ea5e9', '#ef4444', '#14b8a6', '#84cc16', '#94a3b8'];
 
-function Seccion({ title, icon: Icon, iconCls, children, delay = 0 }: { title: string; icon: React.ElementType; iconCls: string; children: React.ReactNode; delay?: number }) {
+/** Barras horizontales de distribución con porcentaje. */
+function DistBars({ items, total, gradient, empty }: {
+  items: { name: string; value: number }[]; total: number; gradient: string; empty: string;
+}) {
+  if (!items || items.length === 0) return <p className="text-sm text-slate-400 py-8 text-center">{empty}</p>;
+  const max = Math.max(...items.map((i) => i.value), 1);
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm anim-fade-in-up" style={{ animationDelay: `${delay}ms` }}>
+    <div className="space-y-3">
+      {items.map((x) => {
+        const pct = total ? Math.round((x.value / total) * 100) : 0;
+        return (
+          <div key={x.name}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">{x.name}</span>
+              <span className="text-xs font-black text-slate-800 dark:text-white tabular-nums shrink-0">
+                {x.value} <span className="text-slate-400 dark:text-slate-500 font-bold">· {pct}%</span>
+              </span>
+            </div>
+            <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-[width] duration-700`} style={{ width: `${(x.value / max) * 100}%` }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Seccion({ title, subtitle, icon: Icon, iconCls, children, delay = 0 }: { title: string; subtitle?: string; icon: React.ElementType; iconCls: string; children: React.ReactNode; delay?: number }) {
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-center gap-2.5 mb-4">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconCls}`}><Icon className="w-[18px] h-[18px]" /></div>
-        <h3 className="font-extrabold text-slate-900 dark:text-white">{title}</h3>
+        <div>
+          <h3 className="font-extrabold text-slate-900 dark:text-white leading-tight">{title}</h3>
+          {subtitle && <p className="text-[11px] text-slate-400 font-medium">{subtitle}</p>}
+        </div>
       </div>
       {children}
     </div>
@@ -47,10 +78,10 @@ export default function Reportes() {
     { label: 'Activos registrados', value: activoTotal, icon: Boxes, iconCls: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400' },
     { label: 'Operativos', value: dashboard?.operativos || 0, icon: CheckCircle2, iconCls: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400' },
     { label: 'En mantenimiento', value: dashboard?.enMantenimiento || 0, icon: Wrench, iconCls: 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400' },
-    { label: 'Movimientos', value: movimientos.length, icon: BarChart3, iconCls: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400' },
+    { label: 'Movimientos', value: movimientos.length, icon: BarChart3, iconCls: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400' },
     { label: 'Transferencias', value: transferencias.length, icon: ArrowLeftRight, iconCls: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400' },
     { label: 'Mantenimientos', value: mantenimientos.length, icon: Wrench, iconCls: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400' },
-    { label: 'Préstamos', value: prestamos.length, icon: PackagePlus, iconCls: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400' },
+    { label: 'Préstamos', value: prestamos.length, icon: PackagePlus, iconCls: 'bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400' },
   ];
 
   const exportPdf = async () => {
@@ -261,10 +292,10 @@ export default function Reportes() {
       <InventoryPageHeader icon={BarChart3} eyebrow="Inventario" title="Reportes" subtitle="Estadísticas consolidadas del inventario con exportación a PDF y Excel." gradient="from-cyan-600 via-teal-600 to-emerald-700" />
 
       <div className="flex flex-wrap gap-2.5">
-        <button onClick={exportPdf} disabled={exporting !== null} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 text-sm font-bold transition-colors disabled:opacity-50">
+        <button onClick={exportPdf} disabled={exporting !== null} className="btn-shine inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 text-white text-sm font-bold transition-all shadow-lg shadow-rose-500/25 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:translate-y-0">
           {exporting === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Exportar PDF
         </button>
-        <button onClick={exportExcel} disabled={exporting !== null} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/20 text-sm font-bold transition-colors disabled:opacity-50">
+        <button onClick={exportExcel} disabled={exporting !== null} className="btn-shine inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-bold transition-all shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:translate-y-0">
           {exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />} Exportar Excel
         </button>
       </div>
@@ -273,47 +304,73 @@ export default function Reportes() {
         <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-teal-500" /></div>
       ) : (
         <>
+          {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
             {stats.map((s, i) => (
-              <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm anim-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2.5 ${s.iconCls}`}><s.icon className="w-[18px] h-[18px]" /></div>
+              <div key={s.label} className="group bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2.5 ${s.iconCls} transition-transform group-hover:scale-110`}><s.icon className="w-[18px] h-[18px]" /></div>
                 <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{s.value}</p>
                 <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mt-1.5">{s.label}</p>
               </div>
             ))}
           </div>
 
+          {/* Gráficos principales */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Seccion title="Activos por Estado" icon={PackageCheck} iconCls="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400" delay={100}>
+            <Seccion title="Activos por Estado" subtitle="Situación actual del inventario" icon={PackageCheck} iconCls="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400" delay={100}>
               {(dashboard?.porEstado?.length || 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie data={dashboard!.porEstado} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} cornerRadius={5} dataKey="value">
-                      {dashboard!.porEstado.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={tooltipStyle} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie data={dashboard!.porEstado} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} cornerRadius={5} dataKey="value">
+                        {dashboard!.porEstado.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip content={<ChartTooltip hideLabel formatter={(v: any, name: any) => [`${v} activos`, ESTADO_LABELS[name] || name]} />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{dashboard?.totalActivos ?? activoTotal}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Activos</p>
+                  </div>
+                </div>
               ) : <p className="text-sm text-slate-400 py-10 text-center">Sin datos</p>}
             </Seccion>
 
-            <Seccion title="Movimientos por Tipo" icon={ArrowLeftRight} iconCls="bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400" delay={160}>
+            <Seccion title="Movimientos por Tipo" subtitle="Distribución de movimientos registrados" icon={ArrowLeftRight} iconCls="bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400" delay={160}>
               {movimientos.length > 0 ? (
                 (() => {
                   const counts = Object.entries(MOVIMIENTO_LABELS).map(([tipo, label]) => ({ name: label, value: movimientos.filter((m) => m.tipo === tipo).length })).filter((x) => x.value > 0);
                   return counts.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={counts} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={counts} margin={{ top: 16, right: 10, left: 0, bottom: 5 }}>
+                        <defs>
+                          <linearGradient id="gradTipo" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#0ea5e9" />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" opacity={0.2} />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} interval={0} angle={-20} textAnchor="end" height={50} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
-                        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
-                        <Bar dataKey="value" fill="#6366f1" radius={[8, 8, 3, 3]} maxBarSize={42} />
+                        <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} mov.`, 'Movimientos']} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+                        <Bar dataKey="value" fill="url(#gradTipo)" radius={[8, 8, 3, 3]} maxBarSize={42}>
+                          <LabelList dataKey="value" position="top" fill="#64748b" fontSize={11} fontWeight={700} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   ) : <p className="text-sm text-slate-400 py-10 text-center">Sin datos</p>;
                 })()
               ) : <p className="text-sm text-slate-400 py-10 text-center">Sin datos</p>}
+            </Seccion>
+          </div>
+
+          {/* Distribución por categoría y sede */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Seccion title="Activos por Categoría" subtitle="Top categorías del inventario" icon={Layers} iconCls="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400" delay={220}>
+              <DistBars items={dashboard?.porCategoria || []} total={dashboard?.totalActivos ?? activoTotal} gradient="from-cyan-500 to-teal-500" empty="Sin datos" />
+            </Seccion>
+            <Seccion title="Activos por Sede" subtitle="Distribución por ubicación" icon={MapPin} iconCls="bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400" delay={280}>
+              <DistBars items={dashboard?.porSede || []} total={dashboard?.totalActivos ?? activoTotal} gradient="from-amber-500 to-orange-500" empty="Sin datos" />
             </Seccion>
           </div>
         </>
