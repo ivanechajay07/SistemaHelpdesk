@@ -920,12 +920,13 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 grid grid-cols-[1fr_auto_1fr] items-center px-4 lg:px-6 z-10 shrink-0">
-          <div className="flex items-center gap-3 justify-self-start" />
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 text-center truncate max-w-[38vw] lg:max-w-lg justify-self-center px-2">
-            {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
-          </h2>
-          <div className="flex items-center gap-2 justify-self-end">
+        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 grid grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 lg:px-6 z-10 shrink-0">
+          <div className="min-w-0 lg:col-start-2 lg:justify-self-center">
+            <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate lg:text-center">
+              {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
+            </h2>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2 justify-self-end lg:col-start-3">
             <GlobalSearch />
             <div className="hidden md:block text-right mr-1">
               <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 leading-tight">{greeting},</p>

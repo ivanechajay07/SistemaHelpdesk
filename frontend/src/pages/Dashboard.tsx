@@ -3,7 +3,7 @@ import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users,
 import UserAvatar from '../components/ui/UserAvatar';
 import MiniCalendar from '../components/ui/MiniCalendar';
 import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LineChart, Line, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LineChart, Line, Legend, LabelList } from 'recharts';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTicketStore, type Ticket as TicketModel } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
@@ -225,6 +225,14 @@ export default function Dashboard() {
       }));
   }, [tickets]);
 
+  // Resumen de actividad semanal
+  const weekdayTotal = weekdayData.reduce((s, d) => s + d.tickets, 0);
+  const weekdayAvg = Math.round(weekdayTotal / 7);
+  const weekdayPeak = weekdayData.reduce((a, b) => (b.tickets > a.tickets ? b : a), weekdayData[0] ?? { name: '-', tickets: 0 });
+
+  // Resumen de prioridades
+  const priorityTotal = priorityData.reduce((s, d) => s + d.value, 0);
+
   // ==== Tickets vencidos (SLA) pendientes ====
   const overdueTickets = useMemo(() => {
     return tickets
@@ -431,14 +439,34 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
-          <h2 className="text-base font-bold flex items-center gap-2 mb-4">
-            <CalendarDays className="w-5 h-5 text-blue-500" />
-            Actividad por Día
-          </h2>
-          <div className="h-[260px] w-full mt-auto">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
+                <CalendarDays className="w-[18px] h-[18px] text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Actividad por Día</h2>
+                <p className="text-xs text-slate-400 font-medium">Tickets creados según el día</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              Pico: {weekdayPeak.name}
+            </span>
+          </div>
+          <div className="h-[210px] w-full mt-auto">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weekdayData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
+              <BarChart data={weekdayData} margin={{ top: 14, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="weekGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#60a5fa" />
+                    <stop offset="100%" stopColor="#bfdbfe" />
+                  </linearGradient>
+                  <linearGradient id="weekGradPeak" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" />
+                    <stop offset="100%" stopColor="#60a5fa" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.12} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={8} />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dx={-8} />
                 <Tooltip
@@ -446,13 +474,17 @@ export default function Dashboard() {
                   formatter={(value: any) => [`${value} tickets`, 'Creados']}
                   cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
                 />
-                <Bar dataKey="tickets" radius={[8, 8, 0, 0]} maxBarSize={32} isAnimationActive animationDuration={900}>
+                <Bar dataKey="tickets" radius={[8, 8, 0, 0]} maxBarSize={34} isAnimationActive animationDuration={900}>
                   {weekdayData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell key={`cell-${index}`} fill={entry.name === weekdayPeak.name ? 'url(#weekGradPeak)' : 'url(#weekGrad)'} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Total <b className="text-slate-800 dark:text-white tabular-nums">{weekdayTotal}</b></span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Promedio <b className="text-slate-800 dark:text-white tabular-nums">{weekdayAvg}/día</b></span>
           </div>
         </div>
       </div>
@@ -679,24 +711,35 @@ export default function Dashboard() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Priority Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <h2 className="text-base font-bold mb-4">Tickets por Prioridad</h2>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-500/15 flex items-center justify-center">
+                <AlertTriangle className="w-[18px] h-[18px] text-rose-600 dark:text-rose-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Tickets por Prioridad</h2>
+                <p className="text-xs text-slate-400 font-medium">Distribución según urgencia</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">{priorityTotal} total</span>
+          </div>
           <div className="h-[220px] w-full">
             {priorityData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={priorityData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <BarChart data={priorityData} layout="vertical" margin={{ top: 5, right: 34, left: 5, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.12} />
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} width={72} />
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                    formatter={(value: any) => [`${value} tickets`, 'Cantidad']}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                    formatter={(value: any) => [`${value} tickets (${priorityTotal ? Math.round((value / priorityTotal) * 100) : 0}%)`, 'Cantidad']}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }}
                   />
                   <Bar
                     dataKey="value"
-                    radius={[8, 8, 0, 0]}
-                    maxBarSize={50}
+                    radius={[0, 8, 8, 0]}
+                    maxBarSize={26}
                     isAnimationActive
                     animationDuration={900}
                     onMouseEnter={(_, index) => setActivePriority(index)}
@@ -709,6 +752,7 @@ export default function Dashboard() {
                         opacity={activePriority === null || activePriority === index ? 1 : 0.35}
                       />
                     ))}
+                    <LabelList dataKey="value" position="right" fill="#64748b" fontSize={11} fontWeight={700} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -752,29 +796,43 @@ export default function Dashboard() {
       {/* ===== Top áreas + Tickets vencidos ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
-          <h2 className="text-base font-bold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-500" />
-            Top Áreas
-          </h2>
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-sky-100 dark:bg-sky-500/15 flex items-center justify-center">
+                <Users className="w-[18px] h-[18px] text-sky-600 dark:text-sky-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Top Áreas</h2>
+                <p className="text-xs text-slate-400 font-medium">Entidades con más tickets</p>
+              </div>
+            </div>
+            {areaData.length > 0 && (
+              <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                Líder: {areaData[0].name}
+              </span>
+            )}
+          </div>
           <div className="h-[220px] w-full">
             {areaData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={areaData} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}>
+                <BarChart data={areaData} layout="vertical" margin={{ top: 5, right: 34, left: 5, bottom: 0 }}>
                   <defs>
                     <linearGradient id="areaGrad" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#0ea5e9" />
-                      <stop offset="100%" stopColor="#6366f1" />
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="100%" stopColor="#2563eb" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.15} />
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.12} />
+                  <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={120} />
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
                     formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }}
                   />
-                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} fill="url(#areaGrad)" isAnimationActive animationDuration={900} />
+                  <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} fill="url(#areaGrad)" isAnimationActive animationDuration={900}>
+                    <LabelList dataKey="value" position="right" fill="#64748b" fontSize={11} fontWeight={700} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
