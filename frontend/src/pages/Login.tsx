@@ -297,8 +297,8 @@ export default function Login() {
           {/* Blobs suaves animados */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
             <div className="absolute -top-24 -right-20 w-80 h-80 bg-blue-200/50 dark:bg-indigo-500/10 rounded-full blur-3xl anim-blob" />
-            <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-indigo-100/60 dark:bg-violet-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
-            <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-violet-100/50 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
+            <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-blue-100/60 dark:bg-blue-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
+            <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-sky-100/50 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
           </div>
 
           <div className="relative anim-float-slow">
@@ -339,8 +339,8 @@ export default function Login() {
       {/* ===== Fondo animado corporativo ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-blue-200/50 dark:bg-indigo-500/10 rounded-full blur-[140px] anim-blob" />
-        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-indigo-100/60 dark:bg-violet-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
-        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-violet-100/50 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
+        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-blue-100/60 dark:bg-blue-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
+        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-sky-100/50 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
         <div
           className="absolute inset-0 opacity-[0.35] dark:opacity-[0.2]"
           style={{
@@ -354,11 +354,11 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16">
 
         <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-2xl shadow-indigo-900/15 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-500" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-500" />
 
           {/* ===== Panel de marca (degradado corporativo interactivo) ===== */}
           <section
-            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-700 via-indigo-600 to-violet-600 dark:from-blue-800 dark:via-indigo-700 dark:to-violet-700 p-10 xl:p-14 text-white select-none anim-gradient-bg"
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-500 via-blue-700 to-indigo-700 dark:from-blue-700 dark:via-blue-800 dark:to-indigo-800 p-10 xl:p-14 text-white select-none anim-gradient-bg"
             onMouseMove={handleBrandMouseMove}
           >
             <div
@@ -368,7 +368,7 @@ export default function Login() {
             />
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/20 rounded-full blur-3xl anim-blob" />
-              <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-violet-300/30 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
+              <div className="absolute -bottom-32 -left-16 w-80 h-80 bg-blue-300/30 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
               <div className="absolute top-1/3 -left-10 w-40 h-40 bg-blue-200/25 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
             </div>
 
@@ -530,7 +530,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || !username || !password}
-                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-indigo-500/40 hover:shadow-indigo-500/60 hover:-translate-y-0.5 active:scale-[0.98]"
+                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       {loading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Ingresando...</>
@@ -840,7 +840,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={regLoading || Object.keys(regErrors).length > 0}
-                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-indigo-500/40 hover:shadow-indigo-500/60 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
+                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
                     >
                       {regLoading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Creando cuenta...</>
