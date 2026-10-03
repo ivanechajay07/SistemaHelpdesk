@@ -6,6 +6,7 @@ import { useCatalogStore } from '../../store/catalogStore';
 import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
+import Pagination from '../../components/ui/Pagination';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
   ArrowLeftRight, Plus, Loader2, ArrowRight, CheckCircle2, Ban, PackageCheck,
@@ -20,8 +21,12 @@ export default function Transferencias() {
   const [recibirId, setRecibirId] = useState<number | null>(null);
   const [anularId, setAnularId] = useState<number | null>(null);
   const [form, setForm] = useState<{ sedeOrigenId?: number; sedeDestinoId?: number; motivo?: string; observaciones?: string; activoIds: number[] }>({ activoIds: [] });
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
 
   useEffect(() => { fetchTransferencias(); fetchSedes(); fetchActivos({ page: 0, size: 100 }); }, [fetchTransferencias, fetchSedes, fetchActivos]);
+
+  const paged = transferencias.slice((page - 1) * size, page * size);
 
   const toggleActivo = (id: number) => {
     setForm((f) => ({ ...f, activoIds: f.activoIds.includes(id) ? f.activoIds.filter((x) => x !== id) : [...f.activoIds, id] }));
@@ -71,7 +76,7 @@ export default function Transferencias() {
           <div className="col-span-full flex items-center justify-center gap-3 text-slate-400 py-16"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div>
         ) : transferencias.length === 0 ? (
           <div className="col-span-full flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600 py-16"><PackageCheck className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin transferencias registradas</p></div>
-        ) : transferencias.map((t) => (
+        ) : paged.map((t) => (
           <div key={t.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all anim-fade-in-up">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -112,6 +117,15 @@ export default function Transferencias() {
           </div>
         ))}
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={size}
+        total={transferencias.length}
+        onPageChange={setPage}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
+        label="transferencias"
+      />
 
       <FormModal
         isOpen={showModal}

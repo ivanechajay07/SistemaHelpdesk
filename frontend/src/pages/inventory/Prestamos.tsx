@@ -6,6 +6,7 @@ import { useUserStore } from '../../store/userStore';
 import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
+import Pagination from '../../components/ui/Pagination';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
   PackagePlus, Plus, Loader2, Undo2, AlertTriangle,
@@ -19,8 +20,12 @@ export default function Prestamos() {
   const [saving, setSaving] = useState(false);
   const [devolverId, setDevolverId] = useState<number | null>(null);
   const [form, setForm] = useState<{ activoId?: number; solicitanteId?: number; fechaEntrega: string; fechaDevolucionPrevista: string; motivo?: string; observaciones?: string }>({ fechaEntrega: '', fechaDevolucionPrevista: '' });
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
 
   useEffect(() => { fetchPrestamos(); fetchActivos({ page: 0, size: 100 }); fetchUsers(); }, [fetchPrestamos, fetchActivos, fetchUsers]);
+
+  const paged = prestamos.slice((page - 1) * size, page * size);
 
   const submit = async () => {
     if (!form.activoId || !form.solicitanteId || !form.fechaEntrega || !form.fechaDevolucionPrevista) {
@@ -75,7 +80,7 @@ export default function Prestamos() {
                 <tr><td colSpan={7} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div></td></tr>
               ) : prestamos.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-16"><div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600"><PackagePlus className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin préstamos registrados</p></div></td></tr>
-              ) : prestamos.map((p) => (
+              ) : paged.map((p) => (
                 <tr key={p.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                   <td className="px-4 py-3.5">
                     <p className="font-bold text-slate-800 dark:text-slate-100">{p.activoNombre}</p>
@@ -108,6 +113,15 @@ export default function Prestamos() {
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={size}
+        total={prestamos.length}
+        onPageChange={setPage}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
+        label="préstamos"
+      />
 
       <FormModal
         isOpen={showModal}

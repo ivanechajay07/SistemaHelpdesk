@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useInventarioStore, MOVIMIENTO_LABELS } from '../../store/inventoryStore';
 import { useToast } from '../../components/ui/Toast';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
+import Pagination from '../../components/ui/Pagination';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
   ArrowLeftRight, Plus, Loader2, ArrowDownLeft, ArrowUpRight,
@@ -25,12 +26,14 @@ export default function Movimientos() {
   const { movimientos, movimientosLoading, fetchMovimientos, registrarMovimiento, activos, fetchActivos } = useInventarioStore();
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroActivo, setFiltroActivo] = useState('');
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<{ activoId?: number; tipo: string; ubicacionDestino?: string; motivo?: string; observaciones?: string }>({ tipo: 'CAMBIO_UBICACION' });
 
   useEffect(() => {
-    fetchMovimientos();
+    fetchMovimientos(undefined, 0, 1000);
     fetchActivos({ page: 0, size: 100 });
   }, [fetchMovimientos, fetchActivos]);
 
@@ -38,6 +41,7 @@ export default function Movimientos() {
     (filtroTipo ? m.tipo === filtroTipo : true) &&
     (filtroActivo ? String(m.activoId) === filtroActivo : true)
   );
+  const paged = filtered.slice((page - 1) * size, page * size);
 
   const submit = async () => {
     if (!form.activoId || !form.tipo) { toast({ variant: 'error', title: 'Campos requeridos', message: 'Selecciona activo y tipo de movimiento' }); return; }
@@ -59,11 +63,11 @@ export default function Movimientos() {
 
       <div className="flex flex-col lg:flex-row lg:items-center gap-3">
         <div className="flex flex-wrap gap-2.5">
-          <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className="h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/60 cursor-pointer">
+          <select value={filtroTipo} onChange={(e) => { setFiltroTipo(e.target.value); setPage(1); }} className="h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/60 cursor-pointer">
             <option value="">Todos los tipos</option>
             {Object.entries(MOVIMIENTO_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
-          <select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)} className="h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/60 cursor-pointer">
+          <select value={filtroActivo} onChange={(e) => { setFiltroActivo(e.target.value); setPage(1); }} className="h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/60 cursor-pointer">
             <option value="">Todos los activos</option>
             {activos.map((a) => <option key={a.id} value={a.id}>{a.codigo} — {a.nombre}</option>)}
           </select>
@@ -91,7 +95,7 @@ export default function Movimientos() {
                 <tr><td colSpan={6} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div></td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-16"><div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600"><History className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin movimientos registrados</p></div></td></tr>
-              ) : filtered.map((m) => {
+              ) : paged.map((m) => {
                 const conf = TIPO_ICONS[m.tipo] || TIPO_ICONS.TRASLADO;
                 const Icon = conf.icon;
                 return (
@@ -128,6 +132,15 @@ export default function Movimientos() {
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={size}
+        total={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
+        label="movimientos"
+      />
 
       <FormModal
         isOpen={showModal}

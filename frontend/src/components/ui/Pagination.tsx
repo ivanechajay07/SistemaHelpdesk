@@ -132,7 +132,7 @@ export default function Pagination({
                 aria-current={p === safePage ? 'page' : undefined}
                 className={`${btnBase} ${
                   p === safePage
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/30 scale-[1.05]'
+                    ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-500/30 scale-[1.05]'
                     : btnIdle
                 }`}
               >

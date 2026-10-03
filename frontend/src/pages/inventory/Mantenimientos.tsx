@@ -5,6 +5,7 @@ import {
 import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
+import Pagination from '../../components/ui/Pagination';
 import { useUserStore } from '../../store/userStore';
 import InventoryPageHeader from './InventoryPageHeader';
 import jsPDF from 'jspdf';
@@ -25,8 +26,12 @@ export default function Mantenimientos() {
   const [iniciarId, setIniciarId] = useState<number | null>(null);
   const [informe, setInforme] = useState<{ trabajoRealizado: string; problemaEncontrado: string; repuestos: string; costo?: number; proximaRevision: string; observaciones: string }>({ trabajoRealizado: '', problemaEncontrado: '', repuestos: '', proximaRevision: '', observaciones: '' });
   const [form, setForm] = useState<{ activoId?: number; tipo: string; fecha: string; tecnicoId?: number; proveedor?: string; descripcion?: string; proximaRevision?: string; costo?: number }>({ tipo: 'PREVENTIVO', fecha: '' });
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
 
   useEffect(() => { fetchMantenimientos(); fetchActivos({ page: 0, size: 100 }); fetchTechnicians(); }, [fetchMantenimientos, fetchActivos, fetchTechnicians]);
+
+  const paged = mantenimientos.slice((page - 1) * size, page * size);
 
   const submit = async () => {
     if (!form.activoId || !form.fecha) { toast({ variant: 'error', title: 'Campos requeridos', message: 'Selecciona activo y fecha' }); return; }
@@ -162,7 +167,7 @@ export default function Mantenimientos() {
                 <tr><td colSpan={7} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div></td></tr>
               ) : mantenimientos.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-16"><div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600"><Wrench className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin mantenimientos registrados</p></div></td></tr>
-              ) : mantenimientos.map((m) => (
+              ) : paged.map((m) => (
                 <tr key={m.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                   <td className="px-4 py-3.5">
                     <span className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${m.tipo === 'PREVENTIVO' ? 'bg-blue-50 text-blue-700 ring-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400' : 'bg-orange-50 text-orange-700 ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400'}`}>{m.tipo === 'PREVENTIVO' ? 'Preventivo' : 'Correctivo'}</span>
@@ -188,6 +193,15 @@ export default function Mantenimientos() {
           </table>
         </div>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={size}
+        total={mantenimientos.length}
+        onPageChange={setPage}
+        onPageSizeChange={(s) => { setSize(s); setPage(1); }}
+        label="mantenimientos"
+      />
 
       <FormModal
         isOpen={showModal}
