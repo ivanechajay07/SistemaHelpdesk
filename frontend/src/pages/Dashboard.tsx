@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import { useProfileImage } from '../lib/hooks';
 import NewTicketModal from '../components/tickets/NewTicketModal';
 import WeatherWidget from '../components/ui/WeatherWidget';
+import ChartTooltip from '../components/ui/ChartTooltip';
 import { useNavigate } from 'react-router-dom';
 
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -430,10 +431,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={8} />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-8} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                  cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
-                />
+                <Tooltip content={<ChartTooltip formatter={(v: any, name: any) => [`${v} tickets`, name]} />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
                 <Area type="monotone" dataKey="Creados" stroke="#3b82f6" strokeWidth={2.5} fill="url(#gradCreados)" isAnimationActive animationDuration={1000} />
                 <Area type="monotone" dataKey="Resueltos" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResueltos)" isAnimationActive animationDuration={1000} animationBegin={200} />
@@ -473,13 +471,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.12} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={8} />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dx={-8} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                  labelStyle={{ color: '#f8fafc', fontWeight: 700 }}
-                  itemStyle={{ color: '#e2e8f0', fontWeight: 600 }}
-                  formatter={(value: any) => [`${value} tickets`, 'Creados']}
-                  cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
-                />
+                <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} tickets`, 'Creados']} />} cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }} />
                 <Bar dataKey="tickets" radius={[8, 8, 0, 0]} maxBarSize={34} isAnimationActive animationDuration={900}>
                   {weekdayData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.name === weekdayPeak.name ? 'url(#weekGradPeak)' : 'url(#weekGrad)'} />
@@ -533,10 +525,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                   <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={8} />
                   <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-6} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px' }}
-                    cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
-                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
                   <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
                   {technicianStats.slice(0, 6).map((t, i) => (
                     <Line
@@ -631,12 +620,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.12} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
-                  formatter={(value: any) => [`${value} tickets`, 'Creados']}
-                  cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '5 5' }}
-                />
+                <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} tickets`, 'Creados']} />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '5 5' }} />
                 <ReferenceLine y={volumeAvg} stroke="#94a3b8" strokeDasharray="4 4" strokeWidth={1} />
                 <Area
                   type="monotone"
@@ -698,10 +682,7 @@ export default function Dashboard() {
                         />
                       ))}
                     </Pie>
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                      formatter={(value: any, name: any) => [`${value} tickets`, name]}
-                    />
+                    <Tooltip content={<ChartTooltip hideLabel formatter={(v: any, name: any) => [`${v} tickets`, name]} />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -761,11 +742,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.12} />
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} width={72} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                    formatter={(value: any) => [`${value} tickets (${priorityTotal ? Math.round((value / priorityTotal) * 100) : 0}%)`, 'Cantidad']}
-                    cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
-                  />
+                  <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} tickets (${priorityTotal ? Math.round((v / priorityTotal) * 100) : 0}%)`, 'Cantidad']} />} cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }} />
                   <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} isAnimationActive animationDuration={900}>
                     {priorityData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -811,13 +788,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.12} />
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={110} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                    labelStyle={{ color: '#f8fafc', fontWeight: 700 }}
-                    itemStyle={{ color: '#e2e8f0', fontWeight: 600 }}
-                    formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
-                    cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
-                  />
+                  <Tooltip content={<ChartTooltip formatter={(v: any, _name: any, entry: any) => [`${v} tickets`, entry.payload?.fullName]} />} cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }} />
                   <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} fill="url(#catGrad)" isAnimationActive animationDuration={900}>
                     <LabelList dataKey="value" position="right" fill="#64748b" fontSize={11} fontWeight={700} />
                   </Bar>
@@ -862,13 +833,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.12} />
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={120} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
-                    labelStyle={{ color: '#f8fafc', fontWeight: 700 }}
-                    itemStyle={{ color: '#e2e8f0', fontWeight: 600 }}
-                    formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }}
-                  />
+                  <Tooltip content={<ChartTooltip formatter={(v: any, _name: any, entry: any) => [`${v} tickets`, entry.payload?.fullName]} />} cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }} />
                   <Bar dataKey="value" radius={[0, 8, 8, 0]} maxBarSize={26} fill="url(#areaGrad)" isAnimationActive animationDuration={900}>
                     <LabelList dataKey="value" position="right" fill="#64748b" fontSize={11} fontWeight={700} />
                   </Bar>
