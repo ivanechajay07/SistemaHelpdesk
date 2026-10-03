@@ -23,11 +23,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useUserStore } from '../store/userStore';
 import Pagination from '../components/ui/Pagination';
+import ChartTooltip from '../components/ui/ChartTooltip';
 import { usePagedList } from '../lib/hooks';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards } from '../lib/reportPdf';
 import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt, exSection } from '../lib/reportExcel';
 
-const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#6366f1', '#94a3b8', '#ec4899'];
+const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#06b6d4', '#94a3b8', '#0ea5e9'];
 
 const PRIORITY_COLORS: Record<string, string> = {
   CRITICA: '#ef4444',
@@ -55,7 +56,7 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, string> = {
   NUEVO: 'bg-blue-50 text-blue-700 ring-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400',
-  ASIGNADO: 'bg-purple-50 text-purple-700 ring-purple-500/20 dark:bg-purple-500/10 dark:text-purple-400',
+  ASIGNADO: 'bg-sky-50 text-sky-700 ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400',
   EN_PROCESO: 'bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400',
   EN_REVISION: 'bg-cyan-50 text-cyan-700 ring-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-400',
   RESUELTO: 'bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400',
@@ -217,11 +218,11 @@ export default function Reports() {
   const resolutionRate = total > 0 ? (resolvedCount / total) * 100 : 0;
 
   const kpis = [
-    { label: 'Total Tickets', value: total, icon: Inbox, iconBg: 'bg-blue-100 dark:bg-blue-500/15', textColor: 'text-blue-600 dark:text-blue-400', barGradient: 'from-blue-500 to-indigo-500', barPct: 100 },
+    { label: 'Total Tickets', value: total, icon: Inbox, iconBg: 'bg-blue-100 dark:bg-blue-500/15', textColor: 'text-blue-600 dark:text-blue-400', barGradient: 'from-blue-500 to-sky-500', barPct: 100 },
     { label: 'En Proceso', value: getStatusCount('EN_PROCESO') + getStatusCount('ASIGNADO'), icon: Clock, iconBg: 'bg-amber-100 dark:bg-amber-500/15', textColor: 'text-amber-600 dark:text-amber-400', barGradient: 'from-amber-400 to-orange-500', barPct: total ? ((getStatusCount('EN_PROCESO') + getStatusCount('ASIGNADO')) / total) * 100 : 0 },
     { label: 'Resueltos', value: getStatusCount('RESUELTO'), icon: CheckCircle2, iconBg: 'bg-emerald-100 dark:bg-emerald-500/15', textColor: 'text-emerald-600 dark:text-emerald-400', barGradient: 'from-emerald-400 to-teal-500', barPct: total ? (getStatusCount('RESUELTO') / total) * 100 : 0 },
     { label: 'Cerrados', value: getStatusCount('CERRADO'), icon: Archive, iconBg: 'bg-slate-100 dark:bg-slate-500/15', textColor: 'text-slate-600 dark:text-slate-400', barGradient: 'from-slate-400 to-slate-600', barPct: total ? (getStatusCount('CERRADO') / total) * 100 : 0 },
-    { label: 'Tasa Resolución', value: resolutionRate, suffix: '%', decimals: 1, icon: TrendingUp, iconBg: 'bg-violet-100 dark:bg-violet-500/15', textColor: 'text-violet-600 dark:text-violet-400', barGradient: 'from-violet-500 to-fuchsia-500', barPct: resolutionRate },
+    { label: 'Tasa Resolución', value: resolutionRate, suffix: '%', decimals: 1, icon: TrendingUp, iconBg: 'bg-cyan-100 dark:bg-cyan-500/15', textColor: 'text-cyan-600 dark:text-cyan-400', barGradient: 'from-cyan-500 to-sky-500', barPct: resolutionRate },
   ];
 
   const handlePrint = () => {
@@ -587,23 +588,13 @@ export default function Reports() {
     { value: 'year', label: 'Este Año' },
   ];
 
-  const tooltipStyle = {
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
-    border: '1px solid #334155',
-    borderRadius: '12px',
-    color: '#f8fafc',
-    fontSize: '12px',
-    fontWeight: 600,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-  };
-
   return (
     <div className="space-y-6">
 
       {/* ===== HERO ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-indigo-500/20 print:hidden anim-fade-in-up">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-800 to-blue-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-900/20 print:hidden anim-fade-in-up">
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-fuchsia-400/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
         <div className="absolute top-14 right-1/4 w-16 h-16 border border-white/10 rounded-full pointer-events-none hidden sm:block" />
 
@@ -668,7 +659,7 @@ export default function Reports() {
               onClick={() => setDateFilter(f.value)}
               className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-bold transition-all duration-300 active:scale-95 ${
                 dateFilter === f.value
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/30 scale-[1.03]'
+                  ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-500/30 scale-[1.03]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
@@ -694,7 +685,7 @@ export default function Reports() {
 
       {/* ===== INFORME POR USUARIO ===== */}
       <div className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 anim-fade-in-up overflow-hidden" style={{ animationDelay: '360ms' }}>
-        <div className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 sm:px-6 py-4">
+        <div className="relative bg-gradient-to-r from-blue-700 to-sky-600 px-5 sm:px-6 py-4">
           <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
           <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
@@ -703,13 +694,13 @@ export default function Reports() {
               </div>
               <div>
                 <h3 className="font-extrabold text-white leading-tight">Informe por Usuario</h3>
-                <p className="text-[11px] text-indigo-100 font-medium">Tickets completados y su informe de resolución</p>
+                <p className="text-[11px] text-blue-100 font-medium">Tickets completados y su informe de resolución</p>
               </div>
             </div>
             <button
               onClick={handleExportUserPDF}
               disabled={!selectedTecnicoId || exporting === 'user-pdf' || userCompletedTickets.length === 0}
-              className="btn-shine flex items-center justify-center gap-2 px-4 py-2 bg-white text-indigo-700 rounded-xl text-xs font-black shadow-lg shadow-indigo-900/30 transition-all active:scale-95 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 whitespace-nowrap"
+              className="btn-shine flex items-center justify-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-xl text-xs font-black shadow-lg shadow-blue-900/30 transition-all active:scale-95 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 whitespace-nowrap"
             >
               {exporting === 'user-pdf' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
               Exportar PDF
@@ -722,7 +713,7 @@ export default function Reports() {
             <select
               value={selectedTecnicoId}
               onChange={(e) => setSelectedTecnicoId(e.target.value ? Number(e.target.value) : '')}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
             >
               <option value="">Seleccionar técnico...</option>
               {technicians.map((t) => (
@@ -761,9 +752,9 @@ export default function Reports() {
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                   {pagedUserTickets.map((t) => (
-                    <tr key={t.id} className="hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5 transition-colors align-top">
+                    <tr key={t.id} className="hover:bg-blue-50/40 dark:hover:bg-blue-500/5 transition-colors align-top">
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{t.codigo}</span>
+                        <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{t.codigo}</span>
                       </td>
                       <td className="px-4 py-3 max-w-[220px]">
                         <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{t.titulo}</p>
@@ -802,6 +793,13 @@ export default function Reports() {
         </div>
       </div>
 
+      {/* ===== SECCIÓN: ANÁLISIS VISUAL ===== */}
+      <div className="flex items-center gap-3 print:hidden anim-fade-in-up">
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+        <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">Análisis visual</span>
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+      </div>
+
       {/* ===== GRÁFICAS PRINCIPALES ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -837,7 +835,7 @@ export default function Reports() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={tooltipStyle} />
+                    <Tooltip content={<ChartTooltip hideLabel formatter={(v: any, name: any) => [`${v} tickets`, name]} />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -878,7 +876,7 @@ export default function Reports() {
             </div>
           </div>
           {priorityData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={330}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={priorityData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                 <defs>
                   {Object.keys(PRIORITY_COLORS).map(key => (
@@ -891,7 +889,7 @@ export default function Reports() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" opacity={0.2} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+                <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} tickets`, 'Cantidad']} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
                 <Bar dataKey="value" radius={[10, 10, 4, 4]} maxBarSize={64} animationDuration={900} animationEasing="cubic-bezier(.21,1.02,.73,1)">
                   {priorityData.map(entry => (
                     <Cell key={`cell-${entry.rawName}`} fill={`url(#grad-${entry.rawName})`} />
@@ -900,7 +898,7 @@ export default function Reports() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[330px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 gap-2">
+            <div className="h-[260px] flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 gap-2">
               <BarChart3 className="w-10 h-10" />
               <p className="text-sm font-medium text-slate-400">Sin datos en este periodo</p>
             </div>
@@ -912,8 +910,8 @@ export default function Reports() {
       {categoryData.length > 0 && (
         <div className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-xl transition-all duration-300 anim-fade-in-up" style={{ animationDelay: '560ms' }}>
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-500/15 flex items-center justify-center">
-              <BarChart3 className="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
+              <BarChart3 className="w-[18px] h-[18px] text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <h3 className="font-extrabold text-slate-900 dark:text-white leading-tight">Top Subcategorías</h3>
@@ -924,19 +922,26 @@ export default function Reports() {
             <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="gradCat" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.55} />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.95} />
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.55} />
+                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0.95} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#94a3b8" opacity={0.2} />
               <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
               <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} width={140} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+              <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} tickets`, 'Tickets']} />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
               <Bar dataKey="value" fill="url(#gradCat)" radius={[0, 10, 10, 0]} maxBarSize={22} animationDuration={900} animationEasing="cubic-bezier(.21,1.02,.73,1)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* ===== SECCIÓN: DETALLE ===== */}
+      <div className="flex items-center gap-3 print:hidden anim-fade-in-up">
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+        <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">Detalle de tickets</span>
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+      </div>
 
       {/* ===== TABLA DETALLE ===== */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden anim-fade-in-up" style={{ animationDelay: '630ms' }}>
