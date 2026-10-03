@@ -474,7 +474,9 @@ export default function Dashboard() {
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={8} />
                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dx={-8} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                  labelStyle={{ color: '#f8fafc', fontWeight: 700 }}
+                  itemStyle={{ color: '#e2e8f0', fontWeight: 600 }}
                   formatter={(value: any) => [`${value} tickets`, 'Creados']}
                   cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
                 />
@@ -810,7 +812,9 @@ export default function Dashboard() {
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={110} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                    labelStyle={{ color: '#f8fafc', fontWeight: 700 }}
+                    itemStyle={{ color: '#e2e8f0', fontWeight: 600 }}
                     formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
                     cursor={{ fill: 'rgba(100, 116, 139, 0.10)' }}
                   />
@@ -859,7 +863,9 @@ export default function Dashboard() {
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} width={120} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.92)', border: '1px solid #1e293b', borderRadius: '12px', color: '#f8fafc', fontSize: '13px' }}
+                    labelStyle={{ color: '#f8fafc', fontWeight: 700 }}
+                    itemStyle={{ color: '#e2e8f0', fontWeight: 600 }}
                     formatter={(value: any, _name: any, props: any) => [`${value} tickets`, props.payload.fullName]}
                     cursor={{ fill: 'rgba(59, 130, 246, 0.06)' }}
                   />
