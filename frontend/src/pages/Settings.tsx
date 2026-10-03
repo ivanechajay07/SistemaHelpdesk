@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck, Clock } from 'lucide-react';
+import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck, Clock, Sparkles, Settings as SettingsIcon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../lib/axios';
@@ -323,29 +323,41 @@ export default function Settings() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Configuración
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">Administra tu cuenta y las preferencias del sistema.</p>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-800 to-indigo-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-900/20 anim-fade-in-up">
+        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
+        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
+        <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
+        <div className="relative flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0">
+            <SettingsIcon className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
+              <Sparkles className="w-3.5 h-3.5" /> Configuración
+            </span>
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">Ajustes de la cuenta</h1>
+            <p className="text-white/85 mt-1.5 font-medium text-sm sm:text-base max-w-2xl">Administra tu perfil, notificaciones, seguridad y las preferencias del sistema.</p>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         {/* Tabs Sidebar */}
-        <div className="w-full lg:w-56 shrink-0">
-          <nav className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+        <div className="w-full lg:w-64 shrink-0">
+          <nav className="lg:sticky lg:top-6 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap text-sm ${
+                className={`group relative flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-all whitespace-nowrap text-sm active:scale-95 ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                    ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-500/30'
+                    : 'text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 hover:-translate-y-0.5'
                 }`}
               >
-                <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-white' : ''}`} />
+                <tab.icon className="w-4 h-4 shrink-0" />
                 {tab.name}
               </button>
             ))}
@@ -354,7 +366,8 @@ export default function Settings() {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 lg:p-8 min-h-[500px]">
+          <div key={activeTab} className="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-6 lg:p-8 min-h-[500px] anim-fade-in-up">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400" />
             
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
