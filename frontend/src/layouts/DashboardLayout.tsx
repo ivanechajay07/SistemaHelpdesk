@@ -389,7 +389,7 @@ export default function DashboardLayout() {
   const notifConfig: Record<AppNotification['type'], { icon: React.ElementType; classes: string }> = {
     TICKET_CREATED: { icon: TicketPlus, classes: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400' },
     PASSWORD_CHANGED: { icon: KeyRound, classes: 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400' },
-    USER_PENDING: { icon: UserPlus, classes: 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400' },
+    USER_PENDING: { icon: UserPlus, classes: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400' },
     TASK_ASSIGNED: { icon: ListTodo, classes: 'bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-400' },
     TASK_COMPLETED: { icon: CheckCircle2, classes: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400' },
   };
@@ -484,20 +484,20 @@ export default function DashboardLayout() {
   const canSeeInventario = isAdmin() || hasPermission('INV_VIEW');
 
   const navItems: NavItem[] = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', show: !isClientOnly, gradient: 'from-sky-500 to-blue-600', shadow: 'shadow-sky-500/30' },
-    { name: 'Tickets', icon: Ticket, path: '/tickets', show: true, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30', badge: newTicketsCount + totalUnread },
-    { name: 'Tareas', icon: ListTodo, path: '/tareas', show: canSeeTasks, gradient: 'from-teal-500 to-emerald-600', shadow: 'shadow-teal-500/30' },
-    { name: 'Conocimiento', icon: BookOpen, path: '/knowledge', show: true, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30' },
-    { name: 'Monitoreo', icon: Activity, path: '/monitoring', show: hasPermission('MONITORING_VIEW'), gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/30' },
-    { name: 'Usuarios', icon: Users, path: '/users', show: hasPermission('USER_MANAGE'), gradient: 'from-cyan-500 to-teal-600', shadow: 'shadow-cyan-500/30' },
-    { name: 'Roles', icon: Shield, path: '/roles', show: hasPermission('ROLE_MANAGE'), gradient: 'from-fuchsia-500 to-pink-600', shadow: 'shadow-fuchsia-500/30' },
-    { name: 'Entidad', icon: Building2, path: '/entidades', show: hasPermission('ENTITY_MANAGE'), gradient: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/30' },
-    { name: 'Categorías', icon: Layers, path: '/categories', show: hasPermission('CATEGORY_MANAGE'), gradient: 'from-amber-500 to-yellow-600', shadow: 'shadow-amber-500/30' },
-    { name: 'Plantillas', icon: FileStack, path: '/plantillas', show: hasPermission('CATEGORY_MANAGE'), gradient: 'from-violet-500 to-fuchsia-600', shadow: 'shadow-violet-500/30' },
-    { name: 'Reportes', icon: FileText, path: '/reports', show: hasPermission('REPORT_VIEW'), gradient: 'from-lime-500 to-green-600', shadow: 'shadow-lime-500/30' },
-    { name: 'Auditoría', icon: ScrollText, path: '/auditoria', show: isAdmin(), gradient: 'from-slate-600 to-slate-800', shadow: 'shadow-slate-600/30' },
-    { name: 'Inventario', icon: Boxes, path: '/inventario', show: canSeeInventario, gradient: 'from-cyan-500 to-teal-600', shadow: 'shadow-cyan-500/30' },
-    { name: 'Configuración', icon: Settings, path: '/settings', show: true, gradient: 'from-slate-500 to-slate-700', shadow: 'shadow-slate-500/30' },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', show: !isClientOnly, gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Tickets', icon: Ticket, path: '/tickets', show: true, gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30', badge: newTicketsCount + totalUnread },
+    { name: 'Tareas', icon: ListTodo, path: '/tareas', show: canSeeTasks, gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Conocimiento', icon: BookOpen, path: '/knowledge', show: true, gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Monitoreo', icon: Activity, path: '/monitoring', show: hasPermission('MONITORING_VIEW'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Usuarios', icon: Users, path: '/users', show: hasPermission('USER_MANAGE'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Roles', icon: Shield, path: '/roles', show: hasPermission('ROLE_MANAGE'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Entidad', icon: Building2, path: '/entidades', show: hasPermission('ENTITY_MANAGE'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Categorías', icon: Layers, path: '/categories', show: hasPermission('CATEGORY_MANAGE'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Plantillas', icon: FileStack, path: '/plantillas', show: hasPermission('CATEGORY_MANAGE'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Reportes', icon: FileText, path: '/reports', show: hasPermission('REPORT_VIEW'), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Auditoría', icon: ScrollText, path: '/auditoria', show: isAdmin(), gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Inventario', icon: Boxes, path: '/inventario', show: canSeeInventario, gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
+    { name: 'Configuración', icon: Settings, path: '/settings', show: true, gradient: 'from-blue-600 to-sky-500', shadow: 'shadow-blue-500/30' },
   ].filter(item => item.show);
 
   // Menú lateral agrupado por módulos. Las secciones sin elementos visibles se omiten.
@@ -592,7 +592,7 @@ export default function DashboardLayout() {
         className="fixed top-0 left-0 right-0 h-[3px] z-[60] pointer-events-none"
         aria-hidden="true"
       >
-        <div className="h-full w-full origin-left bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 shadow-[0_0_12px_rgba(99,102,241,0.7)] anim-top-progress" />
+        <div className="h-full w-full origin-left bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400 shadow-[0_0_12px_rgba(99,102,241,0.7)] anim-top-progress" />
       </div>
 
       {/* Mobile Overlay */}
@@ -611,7 +611,7 @@ export default function DashboardLayout() {
         <div className="relative h-16 flex items-center justify-between px-4 border-b border-slate-200/50 dark:border-slate-800/50 shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
+              <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-sky-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
                 H
               </div>
               <h1 className="text-lg font-black tracking-tight whitespace-nowrap">
@@ -620,7 +620,7 @@ export default function DashboardLayout() {
             </div>
           )}
           {collapsed && (
-            <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg mx-auto">
+            <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-sky-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg mx-auto">
               H
             </div>
           )}
@@ -771,7 +771,7 @@ export default function DashboardLayout() {
 
                 {/* Submenú de Tareas: Listado / Calendario / Gantt */}
                 {item.name === 'Tareas' && canSeeTasks && !collapsed && tasksSubOpen && (
-                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-teal-200 dark:border-teal-700/40 space-y-0.5 anim-fade-in">
+                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-blue-200 dark:border-blue-700/40 space-y-0.5 anim-fade-in">
                     {taskSubItems.map((sub) => {
                       const isActive = sub.path === '/tareas'
                         ? location.pathname === '/tareas'
@@ -782,7 +782,7 @@ export default function DashboardLayout() {
                             onClick={() => navigate(sub.path)}
                             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
                               isActive
-                                ? 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400'
+                                ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
                           >
@@ -797,7 +797,7 @@ export default function DashboardLayout() {
 
                 {/* Submenú de Inventario: Dashboard / Activos / Movimientos / etc. */}
                 {item.name === 'Inventario' && canSeeInventario && !collapsed && invSubOpen && (
-                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-cyan-200 dark:border-cyan-700/40 space-y-0.5 anim-fade-in">
+                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-blue-200 dark:border-blue-700/40 space-y-0.5 anim-fade-in">
                     {invSubItems.map((sub) => {
                       const isActive = sub.path === '/inventario'
                         ? location.pathname === '/inventario'
@@ -808,7 +808,7 @@ export default function DashboardLayout() {
                             onClick={() => navigate(sub.path)}
                             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
                               isActive
-                                ? 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'
+                                ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
                           >
@@ -823,13 +823,13 @@ export default function DashboardLayout() {
 
                 {/* Submenú de Conocimiento: Base de conocimiento y Directorio de Correo Corporativo */}
                 {item.name === 'Conocimiento' && !collapsed && knowledgeSubOpen && (
-                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-violet-200 dark:border-violet-700/40 space-y-0.5 anim-fade-in">
+                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-blue-200 dark:border-blue-700/40 space-y-0.5 anim-fade-in">
                     <li>
                       <button
                         onClick={() => navigate('/knowledge')}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
                           location.pathname === '/knowledge'
-                            ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                            ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                             : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
                         }`}
                       >
@@ -843,7 +843,7 @@ export default function DashboardLayout() {
                           onClick={() => navigate('/knowledge/correos')}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
                             location.pathname === '/knowledge/correos'
-                              ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                              ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                               : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
                           }`}
                         >
@@ -857,7 +857,7 @@ export default function DashboardLayout() {
 
                 {/* Submenú de Monitoreo: Estado de la red y Dashboard de incidencias */}
                 {item.name === 'Monitoreo' && !collapsed && monitoringSubOpen && (
-                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-emerald-200 dark:border-emerald-700/40 space-y-0.5 anim-fade-in">
+                  <ul className="mt-1 mb-1 ml-5 pl-4 border-l-2 border-blue-200 dark:border-blue-700/40 space-y-0.5 anim-fade-in">
                     {[
                       { key: 'estado', label: 'Estado de la Red', icon: Activity, path: '/monitoring' },
                       { key: 'dashboard', label: 'Dashboard de Incidencias', icon: BarChart3, path: '/monitoring/dashboard' },
@@ -869,7 +869,7 @@ export default function DashboardLayout() {
                             onClick={() => navigate(sub.path)}
                             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 hover:translate-x-0.5 ${
                               isActive
-                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
                           >
@@ -899,7 +899,7 @@ export default function DashboardLayout() {
                   className="w-10 h-10 shrink-0 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm"
                 />
               ) : (
-                <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm border-2 border-white dark:border-slate-800 shadow-sm">
+                <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white font-bold text-sm border-2 border-white dark:border-slate-800 shadow-sm">
                   {user?.nombre?.charAt(0) || 'U'}{user?.apellidos?.charAt(0) || ''}
                 </div>
               )}
@@ -929,7 +929,7 @@ export default function DashboardLayout() {
                   className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs border-2 border-white dark:border-slate-800 shadow-sm">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white font-bold text-xs border-2 border-white dark:border-slate-800 shadow-sm">
                   {user?.nombre?.charAt(0) || 'U'}
                 </div>
               )}
@@ -1120,7 +1120,7 @@ export default function DashboardLayout() {
                           onClick={() => setNotifFilter(f.key)}
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all duration-200 ${
                             notifFilter === f.key
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                              ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-sm'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                           }`}
                         >
