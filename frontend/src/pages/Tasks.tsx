@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Loader2, Edit2, Trash2, ListTodo, UserCheck, CalendarDays,
-  Inbox, CheckCircle2, TrendingUp, Flame, FileDown, Images,
+  Inbox, CheckCircle2, TrendingUp, Flame, FileDown, Images, Sparkles, Clock,
+  CheckCheck, Layers, ListChecks, CalendarRange, ChartGantt,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
+import ChartTooltip from '../components/ui/ChartTooltip';
 import { useTaskStore, type Task, type TaskStatus } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
 import { TaskModal, getPrioridadCls, getEstadoCls, getEstadoLabel } from '../components/tasks/TaskModal';
@@ -93,6 +96,7 @@ export default function Tasks() {
   const [dialog, setDialog] = useState<{ variant: DialogVariant; title: string; message: string; action?: () => Promise<void> } | null>(null);
   const [statusTask, setStatusTask] = useState<Task | null>(null);
   const [reportingId, setReportingId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   // Solo ADMIN y SUPERVISOR gestionan tareas; el técnico solo actualiza el estado de las suyas
   const canManage = isAdmin() || hasRole('SUPERVISOR');
@@ -216,42 +220,73 @@ export default function Tasks() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md shadow-teal-500/30">
-              <ListTodo className="w-5 h-5 text-white" />
-            </span>
-            Gestor de Tareas
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-            {canManage ? 'Crea, edita y da seguimiento a las tareas del equipo.' : 'Avance de tus tareas asignadas.'}
-          </p>
+      {/* ===== HERO ===== */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-emerald-600 to-slate-800 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-teal-900/20 anim-fade-in-up">
+        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0">
+              <ListTodo className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
+                <Sparkles className="w-3.5 h-3.5" /> Gestión de actividades
+              </span>
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">Gestor de Tareas</h1>
+              <p className="text-white/85 mt-1.5 font-medium text-sm sm:text-base max-w-2xl">
+                {canManage ? 'Crea, edita y da seguimiento a las tareas del equipo.' : 'Avance de tus tareas asignadas.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="inline-flex bg-white/10 backdrop-blur-sm rounded-xl p-1 gap-1 border border-white/15">
+              {[
+                { label: 'Lista', icon: ListChecks, path: '/tareas', active: true },
+                { label: 'Calendario', icon: CalendarRange, path: '/tareas/calendario', active: false },
+                { label: 'Gantt', icon: ChartGantt, path: '/tareas/gantt', active: false },
+              ].map((v) => (
+                <button
+                  key={v.path}
+                  onClick={() => navigate(v.path)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
+                    v.active ? 'bg-white text-teal-700 shadow-sm' : 'text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  <v.icon className="w-3.5 h-3.5" /> {v.label}
+                </button>
+              ))}
+            </div>
+            {canManage && (
+              <button
+                onClick={() => { setEditingTask(null); setModalOpen(true); }}
+                className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"
+              >
+                <Plus className="w-4 h-4" /> Nueva Tarea
+              </button>
+            )}
+          </div>
         </div>
-        {canManage && (
-          <button
-            onClick={() => { setEditingTask(null); setModalOpen(true); }}
-            className="btn-shine flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-teal-500/25 active:scale-95 w-full md:w-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva Tarea
-          </button>
-        )}
       </div>
 
-      {/* Resumen */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* ===== RESUMEN ===== */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total', value: counts.total, cls: 'from-slate-500 to-slate-700' },
-          { label: 'Pendientes', value: counts.pendientes, cls: 'from-slate-400 to-slate-600' },
-          { label: 'En Proceso', value: counts.proceso, cls: 'from-blue-500 to-indigo-600' },
-          { label: 'Completadas', value: counts.completadas, cls: 'from-emerald-500 to-teal-600' },
-        ].map((s) => (
-          <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-            <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${s.cls} opacity-10 rounded-full blur-2xl -mr-4 -mt-4`} />
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{s.label}</p>
-            <p className="text-2xl font-black text-slate-800 dark:text-white mt-1 tabular-nums">{s.value}</p>
+          { label: 'Total', value: counts.total, icon: Layers, cls: 'from-slate-500 to-slate-700', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-300' },
+          { label: 'Pendientes', value: counts.pendientes, icon: Clock, cls: 'from-slate-400 to-slate-600', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-300' },
+          { label: 'En Proceso', value: counts.proceso, icon: ListChecks, cls: 'from-blue-500 to-sky-500', bg: 'bg-blue-100 dark:bg-blue-500/15', text: 'text-blue-600 dark:text-blue-400' },
+          { label: 'Completadas', value: counts.completadas, icon: CheckCheck, cls: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-100 dark:bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400' },
+        ].map((s, i) => (
+          <div key={s.label} className="group relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${s.cls}`} />
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{s.label}</p>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.bg} transition-transform group-hover:scale-110`}>
+                <s.icon className={`w-[18px] h-[18px] ${s.text}`} />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-slate-800 dark:text-white tabular-nums leading-none">{s.value}</p>
           </div>
         ))}
       </div>
@@ -308,23 +343,17 @@ export default function Tasks() {
               <YAxis allowDecimals={false} width={26} tick={{ fontSize: 10, fontWeight: 700 }} tickLine={false} axisLine={false} className="fill-slate-400" />
               <Tooltip
                 cursor={{ stroke: '#14b8a6', strokeWidth: 1.5, strokeDasharray: '4 4' }}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: 'none',
-                  boxShadow: '0 10px 30px -10px rgba(13,148,136,.35)',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  background: 'rgba(255,255,255,.96)',
-                  color: '#0f172a',
-                }}
-                labelStyle={{ color: '#0d9488', fontWeight: 900 }}
-                formatter={(value, name) => [
-                  name === 'completadas'
-                    ? `${Number(value)} tarea${Number(value) !== 1 ? 's' : ''}`
-                    : `${Number(value)} acumuladas`,
-                  name === 'completadas' ? 'Día' : 'Total mes',
-                ] as [string, string]}
-                labelFormatter={(label) => `Día ${label} de ${monthlyStats.nombreMes}`}
+                content={
+                  <ChartTooltip
+                    labelFormatter={(label: any) => `Día ${label} de ${monthlyStats.nombreMes}`}
+                    formatter={(value: any, name: any) => [
+                      name === 'completadas'
+                        ? `${Number(value)} tarea${Number(value) !== 1 ? 's' : ''}`
+                        : `${Number(value)} acumuladas`,
+                      name === 'completadas' ? 'Día' : 'Total mes',
+                    ]}
+                  />
+                }
               />
               <Area
                 type="monotone"
@@ -365,8 +394,8 @@ export default function Tasks() {
         </p>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* ===== FILTROS ===== */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-3 anim-fade-in-up">
         <div className="relative flex-1 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
           <input
@@ -475,7 +504,7 @@ export default function Tasks() {
                             <button
                               onClick={() => handleDownloadReport(task)}
                               disabled={reportingId === task.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[11px] font-black uppercase tracking-wide ring-1 ring-indigo-200 dark:ring-indigo-500/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 active:scale-95 transition-all disabled:opacity-60"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-black uppercase tracking-wide ring-1 ring-blue-200 dark:ring-blue-500/30 hover:bg-blue-100 dark:hover:bg-blue-500/20 active:scale-95 transition-all disabled:opacity-60"
                             >
                               {reportingId === task.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
                               Informe PDF
