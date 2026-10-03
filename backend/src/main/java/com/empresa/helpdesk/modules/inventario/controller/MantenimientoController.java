@@ -1,8 +1,8 @@
 package com.empresa.helpdesk.modules.inventario.controller;
 
+import com.empresa.helpdesk.modules.inventario.dto.MantenimientoCierreRequest;
 import com.empresa.helpdesk.modules.inventario.dto.MantenimientoRequest;
 import com.empresa.helpdesk.modules.inventario.dto.MantenimientoResponse;
-import com.empresa.helpdesk.modules.inventario.enums.MantenimientoEstado;
 import com.empresa.helpdesk.modules.inventario.service.MantenimientoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,7 +14,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/inventario/mantenimientos")
@@ -43,12 +42,10 @@ public class MantenimientoController {
     }
 
     @PatchMapping("/{id}/estado")
-    @Operation(summary = "Cambiar estado de mantenimiento")
+    @Operation(summary = "Cambiar estado de mantenimiento (con informe de lo realizado)")
     @PreAuthorize("hasAnyAuthority('INV_MANT', 'ROLE_ADMIN')")
     public ResponseEntity<MantenimientoResponse> cambiarEstado(@PathVariable Long id,
-                                                               @RequestBody Map<String, Object> body) {
-        MantenimientoEstado estado = MantenimientoEstado.valueOf((String) body.get("estado"));
-        String trabajoRealizado = (String) body.get("trabajoRealizado");
-        return ResponseEntity.ok(mantenimientoService.actualizarEstado(id, estado, trabajoRealizado));
+                                                               @Valid @RequestBody MantenimientoCierreRequest request) {
+        return ResponseEntity.ok(mantenimientoService.actualizarEstado(id, request));
     }
 }

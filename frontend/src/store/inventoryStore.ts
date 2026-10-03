@@ -133,6 +133,16 @@ export interface Mantenimiento {
   fechaCreacion?: string;
 }
 
+/** Informe de lo realizado al cerrar/cambiar el estado de un mantenimiento. */
+export interface MantenimientoInforme {
+  trabajoRealizado?: string;
+  problemaEncontrado?: string;
+  repuestos?: string;
+  costo?: number;
+  proximaRevision?: string;
+  observaciones?: string;
+}
+
 export interface Prestamo {
   id: number;
   activoId: number;
@@ -218,7 +228,7 @@ interface InventarioState {
   anularTransferencia: (id: number, motivo?: string) => Promise<void>;
   fetchMantenimientos: () => Promise<void>;
   crearMantenimiento: (data: any) => Promise<void>;
-  cambiarEstadoMantenimiento: (id: number, estado: MantenimientoEstado, trabajoRealizado?: string) => Promise<void>;
+  cambiarEstadoMantenimiento: (id: number, estado: MantenimientoEstado, informe?: MantenimientoInforme) => Promise<void>;
   fetchPrestamos: () => Promise<void>;
   crearPrestamo: (data: any) => Promise<void>;
   devolverPrestamo: (id: number) => Promise<void>;
@@ -418,9 +428,9 @@ export const useInventarioStore = create<InventarioState>((set) => ({
     }
   },
 
-  cambiarEstadoMantenimiento: async (id, estado, trabajoRealizado) => {
+  cambiarEstadoMantenimiento: async (id, estado, informe) => {
     try {
-      await api.patch(`/inventario/mantenimientos/${id}/estado`, { estado, trabajoRealizado });
+      await api.patch(`/inventario/mantenimientos/${id}/estado`, { estado, ...informe });
     } catch (e: any) {
       console.error(e);
       throw new Error(e.response?.data?.message || 'Error al cambiar estado');

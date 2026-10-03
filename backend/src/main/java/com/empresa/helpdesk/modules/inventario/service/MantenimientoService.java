@@ -1,6 +1,7 @@
 package com.empresa.helpdesk.modules.inventario.service;
 
 import com.empresa.helpdesk.modules.audit.service.AuditService;
+import com.empresa.helpdesk.modules.inventario.dto.MantenimientoCierreRequest;
 import com.empresa.helpdesk.modules.inventario.dto.MantenimientoRequest;
 import com.empresa.helpdesk.modules.inventario.dto.MantenimientoResponse;
 import com.empresa.helpdesk.modules.inventario.entity.Activo;
@@ -77,11 +78,19 @@ public class MantenimientoService {
     }
 
     @Transactional
-    public MantenimientoResponse actualizarEstado(Long id, MantenimientoEstado estado, String trabajoRealizado) {
+    public MantenimientoResponse actualizarEstado(Long id, MantenimientoCierreRequest req) {
         Mantenimiento m = mantenimientoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mantenimiento no encontrado"));
+
+        MantenimientoEstado estado = req.getEstado();
         m.setEstado(estado);
-        if (trabajoRealizado != null) m.setTrabajoRealizado(trabajoRealizado);
+        // Informe de lo realizado: se guarda lo que venga informado.
+        if (req.getTrabajoRealizado() != null) m.setTrabajoRealizado(req.getTrabajoRealizado());
+        if (req.getProblemaEncontrado() != null) m.setProblemaEncontrado(req.getProblemaEncontrado());
+        if (req.getRepuestos() != null) m.setRepuestos(req.getRepuestos());
+        if (req.getCosto() != null) m.setCosto(req.getCosto());
+        if (req.getProximaRevision() != null) m.setProximaRevision(req.getProximaRevision());
+        if (req.getObservaciones() != null) m.setObservaciones(req.getObservaciones());
         m = mantenimientoRepository.save(m);
 
         Activo activo = m.getActivo();
