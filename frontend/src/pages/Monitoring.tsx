@@ -8,6 +8,7 @@ import PageHeader from '../components/ui/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
 import { useMonitoringStore, type MonitoredTarget, type MonitoredTargetRequest, type TargetType } from '../store/monitoringStore';
+import { useAuthStore } from '../store/authStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
@@ -29,7 +30,8 @@ const emptyForm: TargetForm = {
 };
 
 export default function Monitoring() {
-  const { targets, loading, fetchTargets, createTarget, updateTarget, deleteTarget, checkNow } = useMonitoringStore();
+  const { targets, loading, fetchTargets, createTarget, updateTarget, deleteTarget, checkNow, connectRealtime, disconnectRealtime, realtimeConnected } = useMonitoringStore();
+  const { token } = useAuthStore();
   const toast = useToast();
   const navigate = useNavigate();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -64,9 +66,15 @@ export default function Monitoring() {
 
   useEffect(() => {
     fetchTargets();
-    const interval = setInterval(() => fetchTargets(), 15000);
+    // El estado llega por WebSocket en tiempo real; el polling es solo respaldo.
+    const interval = setInterval(() => fetchTargets(), 30000);
     return () => clearInterval(interval);
   }, [fetchTargets]);
+
+  useEffect(() => {
+    if (token) connectRealtime(token);
+    return () => disconnectRealtime();
+  }, [token, connectRealtime, disconnectRealtime]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -190,6 +198,10 @@ export default function Monitoring() {
         subtitle="Vigila servicios y equipos; los tickets se generan automáticamente ante caídas."
         gradient="from-emerald-600 via-teal-600 to-slate-800"
       >
+        <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white/15 text-white border border-white/20 backdrop-blur-sm">
+          <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
+          {realtimeConnected ? 'Tiempo real' : 'Conectando…'}
+        </span>
         <button
           onClick={openCreate}
           className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"

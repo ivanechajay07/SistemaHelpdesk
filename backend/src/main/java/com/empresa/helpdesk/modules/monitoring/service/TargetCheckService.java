@@ -1,5 +1,6 @@
 package com.empresa.helpdesk.modules.monitoring.service;
 
+import com.empresa.helpdesk.modules.monitoring.dto.MonitoredTargetResponse;
 import com.empresa.helpdesk.modules.monitoring.entity.MonitoredTarget;
 import com.empresa.helpdesk.modules.monitoring.entity.MonitoringIncident;
 import com.empresa.helpdesk.modules.monitoring.enums.IncidentEstado;
@@ -7,6 +8,7 @@ import com.empresa.helpdesk.modules.monitoring.enums.TargetStatus;
 import com.empresa.helpdesk.modules.monitoring.enums.TargetType;
 import com.empresa.helpdesk.modules.monitoring.repository.MonitoredTargetRepository;
 import com.empresa.helpdesk.modules.monitoring.repository.MonitoringIncidentRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.empresa.helpdesk.modules.notification.service.EmailService;
 import com.empresa.helpdesk.modules.ticket.entity.Category;
 import com.empresa.helpdesk.modules.ticket.entity.Subcategory;
@@ -59,6 +61,7 @@ public class TargetCheckService {
 
     private final MonitoredTargetRepository monitoredTargetRepository;
     private final MonitoringIncidentRepository monitoringIncidentRepository;
+    private final SimpMessagingTemplate messagingTemplate;
     private final TicketRepository ticketRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
     private final CategoryRepository categoryRepository;
@@ -164,6 +167,30 @@ public class TargetCheckService {
         }
 
         monitoredTargetRepository.save(target);
+        broadcast(target);
+    }
+
+    /** Emite el estado actualizado del objetivo a los clientes en tiempo real. */
+    private void broadcast(MonitoredTarget t) {
+        try {
+            messagingTemplate.convertAndSend("/topic/monitoring", MonitoredTargetResponse.builder()
+                    .id(t.getId())
+                    .nombre(t.getNombre())
+                    .tipo(t.getTipo())
+                    .host(t.getHost())
+                    .puerto(t.getPuerto())
+                    .intervaloSegundos(t.getIntervaloSegundos())
+                    .umbralFallos(t.getUmbralFallos())
+                    .activo(t.getActivo())
+                    .ultimoEstado(t.getUltimoEstado())
+                    .ultimaLatenciaMs(t.getUltimaLatenciaMs())
+                    .ultimoChequeo(t.getUltimoChequeo())
+                    .fallosConsecutivos(t.getFallosConsecutivos())
+                    .ticketAbiertoId(t.getTicketAbiertoId())
+                    .build());
+        } catch (Exception ex) {
+            log.debug("No se pudo emitir el estado del objetivo {}: {}", t.getNombre(), ex.getMessage());
+        }
     }
 
     /** Abre una incidencia cuando el objetivo pasa a caído. */

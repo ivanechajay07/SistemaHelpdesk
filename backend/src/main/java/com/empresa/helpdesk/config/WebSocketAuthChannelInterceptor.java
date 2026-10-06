@@ -99,6 +99,14 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         } else if (destination.startsWith("/user/")) {
             // Cola privada de la sesión autenticada (p. ej. /user/queue/chat)
             return;
+        } else if (destination.equals("/topic/monitoring")) {
+            // Estado de red en tiempo real: requiere permiso de monitoreo o ser ADMIN.
+            if (principal instanceof org.springframework.security.core.Authentication auth
+                    && auth.getAuthorities().stream().anyMatch(a ->
+                        "MONITORING_VIEW".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()))) {
+                return;
+            }
+            throw new MessageDeliveryException("No tienes acceso al monitoreo de red");
         } else {
             // Denegar por defecto cualquier otro destino
             throw new MessageDeliveryException("Suscripción no autorizada");
