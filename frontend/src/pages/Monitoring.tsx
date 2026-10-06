@@ -307,7 +307,7 @@ export default function Monitoring() {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`relative w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${status.bg} ${status.text} transition-transform group-hover:scale-110`}>
-                      {target.tipo === 'HTTP' ? <Globe className="w-5 h-5" /> : <Network className="w-5 h-5" />}
+                      {target.tipo === 'HTTP' ? <Globe className="w-5 h-5" /> : target.tipo === 'TCP' ? <Network className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
                       {target.activo && (target.ultimoEstado === 'UP' || target.ultimoEstado === 'DOWN') && (
                         <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${target.ultimoEstado === 'UP' ? 'bg-emerald-500' : 'bg-red-500'} ${isDown ? 'animate-ping' : ''}`} />
                       )}
@@ -431,6 +431,7 @@ export default function Monitoring() {
                     className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all">
                     <option value="HTTP">HTTP (sitio web / API)</option>
                     <option value="TCP">TCP (puerto / servicio)</option>
+                    <option value="PING">PING (equipo de red / PC)</option>
                   </select>
                 </div>
                 <div>

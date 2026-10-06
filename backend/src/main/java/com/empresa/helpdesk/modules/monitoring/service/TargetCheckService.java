@@ -239,10 +239,22 @@ public class TargetCheckService {
             } else if (target.getTipo() == TargetType.TCP) {
                 if (target.getPuerto() == null) return false;
                 return probeTcp(target.getHost(), target.getPuerto());
+            } else if (target.getTipo() == TargetType.PING) {
+                return probePing(target.getHost());
             }
             return false;
         } catch (Exception ex) {
             log.debug("Fallo de verificación para {}: {}", target.getNombre(), ex.getMessage());
+            return false;
+        }
+    }
+
+    /** Ping ICMP (con fallback a TCP echo del SO): útil para vigilar equipos por IP. */
+    private boolean probePing(String host) {
+        try {
+            InetAddress addr = InetAddress.getByName(host);
+            return addr.isReachable(TIMEOUT_MS);
+        } catch (Exception ex) {
             return false;
         }
     }

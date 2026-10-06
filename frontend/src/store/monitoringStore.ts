@@ -9,7 +9,7 @@ const socketBase = import.meta.env.VITE_API_URL
 
 let stompClient: Client | null = null;
 
-export type TargetType = 'HTTP' | 'TCP';
+export type TargetType = 'HTTP' | 'TCP' | 'PING';
 export type TargetStatus = 'PENDING' | 'UP' | 'DOWN';
 
 export interface MonitoredTarget {
