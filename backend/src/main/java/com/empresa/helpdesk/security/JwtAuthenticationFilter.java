@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +29,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final UserRepository userRepository;
+
+    /** Cierra la sesión tras N minutos sin actividad (0 = deshabilitado). */
+    @Value("${app.security.idle-timeout-minutes:15}")
+    private long idleTimeoutMinutes;
 
     @Override
     protected void doFilterInternal(
@@ -57,19 +62,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Sesión inactiva: no se autentica; el cliente debe volver a entrar.
+                    if (userDetails instanceof User user && estaInactivo(user)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Sesión inactiva para {}: se exige nuevo inicio de sesión", username);
+                        }
+                    } else {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request)
+                        );
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                    // Actualizar la última actividad y el dispositivo del usuario
-                    // (máximo una vez por minuto)
-                    touchPresence(username, request);
+                        // Actualizar la última actividad y el dispositivo del usuario
+                        // (máximo una vez por minuto)
+                        touchPresence(username, request);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -80,6 +92,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /** true si la última actividad supera el tiempo de inactividad configurado. */
+    private boolean estaInactivo(User user) {
+        return idleTimeoutMinutes > 0
+                && user.getLastActivity() != null
+                && user.getLastActivity().isBefore(LocalDateTime.now().minusMinutes(idleTimeoutMinutes));
     }
 
     private void touchPresence(String username, HttpServletRequest request) {

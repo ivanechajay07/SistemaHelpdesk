@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import api from '../lib/axios';
+import { authService } from '../services/authService';
+import PasswordStrength from '../components/ui/PasswordStrength';
+import { passwordError } from '../lib/passwordPolicy';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
 
 export default function ResetPassword() {
@@ -36,8 +38,9 @@ export default function ResetPassword() {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+    const policyError = passwordError(newPassword);
+    if (policyError) {
+      setError(policyError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -47,7 +50,7 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      await api.post('/auth/reset-password', { token, newPassword });
+      await authService.resetPassword(token, newPassword);
       setSuccess(true);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al restablecer la contraseña. El enlace puede haber expirado.');
@@ -117,13 +120,15 @@ export default function ResetPassword() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
+                  maxLength={12}
+                  autoComplete="new-password"
                   autoFocus
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors">
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mt-1.5">Mínimo 6 caracteres</p>
+              <PasswordStrength value={newPassword} className="border-white/10 bg-white/5" />
             </div>
 
             <div>
@@ -139,6 +144,8 @@ export default function ResetPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  maxLength={12}
+                  autoComplete="new-password"
                 />
               </div>
             </div>

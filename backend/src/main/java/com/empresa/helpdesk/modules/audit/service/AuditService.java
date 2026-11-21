@@ -1,11 +1,16 @@
 package com.empresa.helpdesk.modules.audit.service;
 
+import com.empresa.helpdesk.modules.audit.dto.AuditLogResponse;
 import com.empresa.helpdesk.modules.audit.entity.AuditLog;
 import com.empresa.helpdesk.modules.audit.repository.AuditLogRepository;
 import com.empresa.helpdesk.security.DeviceInfoResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -69,6 +74,32 @@ public class AuditService {
         } catch (Exception e) {
             log.error("Error registrando auditoría [{} / {}]: {}", accion, entidad, e.getMessage());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditLogResponse> buscar(String q, int page, int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "fecha"));
+        Page<AuditLog> resultado = (q != null && !q.isBlank())
+                ? auditLogRepository.buscar(q.trim(), pageable)
+                : auditLogRepository.findAll(pageable);
+        return resultado.map(this::toResponse);
+    }
+
+    private AuditLogResponse toResponse(AuditLog a) {
+        return AuditLogResponse.builder()
+                .id(a.getId())
+                .usuario(a.getUsuario())
+                .accion(a.getAccion())
+                .entidad(a.getEntidad())
+                .entidadId(a.getEntidadId())
+                .detalle(a.getDetalle())
+                .dispositivoTipo(a.getDispositivoTipo())
+                .dispositivoModelo(a.getDispositivoModelo())
+                .navegador(a.getNavegador())
+                .ip(a.getIp())
+                .fecha(a.getFecha())
+                .build();
     }
 
     private DeviceInfoResolver.DeviceInfo resolverDispositivo() {

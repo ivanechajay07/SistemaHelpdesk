@@ -20,11 +20,24 @@ spring:
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
 
+  # Límites de subida (el endpoint de chat permite hasta 10 MB).
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:helpdesk_db}?useSSL=false&connectionTimeZone=LOCAL&forceConnectionTimeZoneToSession=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # Varios usuarios concurrentes: pool dimensionado y timeouts explícitos.
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN:5}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
@@ -34,7 +47,6 @@ spring:
     properties:
       hibernate:
         format_sql: ${JPA_FORMAT_SQL:false}
-        dialect: org.hibernate.dialect.MySQLDialect
 
   # Migraciones versionadas. En una BD ya existente (sin historial Flyway) se
   # marca el baseline en la versión 1 y no se re-ejecuta V1__baseline.sql.
@@ -60,8 +72,11 @@ spring:
 
 server:
   port: ${SERVER_PORT:8081}
+  # Detrás de Nginx/Cloudflare: respeta X-Forwarded-Proto/Host para que
+  # Spring detecte correctamente same-origin y HTTPS.
+  forward-headers-strategy: framework
   error:
-    include-message: on_param
+    include-message: never
   servlet:
     encoding:
       charset: UTF-8
@@ -72,10 +87,27 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   security:
-    swagger-enabled: ${SWAGGER_ENABLED:true}
+    swagger-enabled: ${SWAGGER_ENABLED:false}
+    # true en producción (HTTPS): la cookie de refresh solo viaja por TLS.
+    cookie-secure: ${COOKIE_SECURE:false}
+    # Bloqueo temporal tras intentos fallidos
+    max-login-attempts: ${MAX_LOGIN_ATTEMPTS:5}
+    lock-minutes: ${LOCK_MINUTES:15}
+    # Límite por IP para oficinas detrás de NAT. El límite por usuario sigue en 5/min.
+    login-ip-attempts: ${LOGIN_IP_ATTEMPTS:120}
+    login-ip-window-seconds: ${LOGIN_IP_WINDOW_SECONDS:60}
+    # Cierre de sesión por inactividad (0 = deshabilitado)
+    idle-timeout-minutes: ${IDLE_TIMEOUT_MINUTES:15}
   jwt:
     secret: ${JWT_SECRET}
     expiration: ${JWT_EXPIRATION:86400000}
+  upload:
+    # Escaneo antivirus opcional con ClamAV (clamd INSTREAM).
+    clamav-host: ${CLAMAV_HOST:}
+    clamav-port: ${CLAMAV_PORT:3310}
+    clamav-timeout-ms: ${CLAMAV_TIMEOUT_MS:5000}
+    # true = rechazar archivos si ClamAV no responde (recomendado en producción).
+    clamav-fail-closed: ${CLAMAV_FAIL_CLOSED:false}
   crypto:
     secret: ${CRYPTO_SECRET:${JWT_SECRET}}
   file:
@@ -91,9 +123,9 @@ app:
 # Swagger/OpenAPI: deshabilitable en producción con SWAGGER_ENABLED=false
 springdoc:
   api-docs:
-    enabled: ${SWAGGER_ENABLED:true}
+    enabled: ${SWAGGER_ENABLED:false}
   swagger-ui:
-    enabled: ${SWAGGER_ENABLED:true}
+    enabled: ${SWAGGER_ENABLED:false}
 
 # Logging configuration
 # show-sql y el bind de parámetros (que incluye datos sensibles) quedan

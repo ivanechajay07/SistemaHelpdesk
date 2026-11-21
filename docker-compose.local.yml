@@ -1,0 +1,85 @@
+# ============================================================================
+# Ejecucion aislada del stack en Docker.
+#
+# Permite levantar el proyecto SIN chocar con otros contenedores/proyectos que
+# ya esten usando los puertos habituales (5173, 8082, 8083, 3306, 8025, 1025)
+# y SIN tocar sus datos (volumenes separados por el nombre de proyecto).
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml down
+#
+# Accesos:
+#   Frontend    -> http://localhost:5174
+#   API/Swagger -> http://localhost:8089/swagger-ui/index.html (requiere SWAGGER_ENABLED=true)
+#   phpMyAdmin  -> http://localhost:8086
+#   Mailpit     -> http://localhost:8026  (SMTP interno en mailpit:1025)
+#   MySQL       -> localhost:3312
+# ============================================================================
+name: helpdesk-local
+
+services:
+  mysql:
+    container_name: helpdesk_local_mysql
+    ports: !override
+      - "127.0.0.1:3312:3306"
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: helpdesk_local_mailpit
+    ports: !override
+      - "127.0.0.1:8026:8025"
+      - "127.0.0.1:1026:1025"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    container_name: helpdesk_local_backend
+    ports: !override
+      - "127.0.0.1:8089:8080"
+    depends_on:
+      mailpit:
+        condition: service_started
+    environment:
+      # URL pública con la que acceden los usuarios (localhost o IP de LAN).
+      # Si usas otro dispositivo, define PUBLIC_FRONTEND_URL=http://TU_IP:5174.
+      CORS_ALLOWED_ORIGINS: "${PUBLIC_FRONTEND_URL:-http://localhost:5174},http://localhost:5174"
+      FRONTEND_URL: "${PUBLIC_FRONTEND_URL:-http://localhost:5174}"
+      # Usa el Mailpit de este stack: no envia correos reales por Gmail.
+      MAIL_HOST: "mailpit"
+      MAIL_PORT: "1025"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: helpdesk_local_phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: "200M"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports: !override
+      - "127.0.0.1:8086:80"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    container_name: helpdesk_local_frontend
+    ports: !override
+      # 0.0.0.0 permite entrar desde otro dispositivo de la LAN.
+      - "${FRONTEND_BIND:-0.0.0.0}:5174:8080"

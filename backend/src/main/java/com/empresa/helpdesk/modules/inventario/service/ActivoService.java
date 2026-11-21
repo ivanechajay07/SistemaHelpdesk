@@ -7,11 +7,13 @@ import com.empresa.helpdesk.modules.catalog.repository.EntidadRepository;
 import com.empresa.helpdesk.modules.catalog.repository.SedeRepository;
 import com.empresa.helpdesk.modules.inventario.dto.ActivoRequest;
 import com.empresa.helpdesk.modules.inventario.dto.ActivoResponse;
+import com.empresa.helpdesk.modules.inventario.dto.TicketAsociadoResponse;
 import com.empresa.helpdesk.modules.inventario.entity.Activo;
 import com.empresa.helpdesk.modules.inventario.entity.CategoriaActivo;
 import com.empresa.helpdesk.modules.inventario.entity.Especificacion;
 import com.empresa.helpdesk.modules.inventario.enums.ActivoEstado;
 import com.empresa.helpdesk.modules.inventario.repository.ActivoRepository;
+import com.empresa.helpdesk.modules.inventario.repository.ActivoTicketRepository;
 import com.empresa.helpdesk.modules.inventario.repository.CategoriaActivoRepository;
 import com.empresa.helpdesk.modules.inventario.repository.EspecificacionRepository;
 import com.empresa.helpdesk.modules.user.entity.User;
@@ -37,12 +39,38 @@ import java.util.UUID;
 public class ActivoService {
 
     private final ActivoRepository activoRepository;
+    private final ActivoTicketRepository activoTicketRepository;
     private final CategoriaActivoRepository categoriaRepository;
     private final EspecificacionRepository especificacionRepository;
     private final EntidadRepository entidadRepository;
     private final SedeRepository sedeRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+
+    @Transactional(readOnly = true)
+    public List<TicketAsociadoResponse> ticketsAsociados(Long activoId) {
+        return activoTicketRepository.findByActivoIdOrderByFechaCreacionDesc(activoId).stream()
+                .map(at -> {
+                    var ticket = at.getTicket();
+                    return TicketAsociadoResponse.builder()
+                            .id(ticket.getId())
+                            .codigo(ticket.getCodigo())
+                            .titulo(ticket.getTitulo())
+                            .categoria(ticket.getSubcategoria() != null
+                                    && ticket.getSubcategoria().getCategory() != null
+                                    ? ticket.getSubcategoria().getCategory().getName() : null)
+                            .estado(ticket.getEstado() != null ? ticket.getEstado().name() : null)
+                            .prioridad(ticket.getPrioridad() != null ? ticket.getPrioridad().name() : null)
+                            .fechaCreacion(at.getFechaCreacion())
+                            .tecnicoNombre(ticket.getTecnico() != null
+                                    ? ticket.getTecnico().getNombre() + " "
+                                      + (ticket.getTecnico().getApellidos() == null
+                                            ? "" : ticket.getTecnico().getApellidos())
+                                    : null)
+                            .build();
+                })
+                .toList();
+    }
 
     @Transactional(readOnly = true)
     public Page<ActivoResponse> buscar(String q, ActivoEstado estado, Long entidadId, Long sedeId,

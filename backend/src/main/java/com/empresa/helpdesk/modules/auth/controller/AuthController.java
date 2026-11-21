@@ -14,13 +14,18 @@ import com.empresa.helpdesk.modules.auth.dto.ResetPasswordRequest;
 import com.empresa.helpdesk.modules.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.Map;
 
 @RestController
@@ -29,14 +34,55 @@ import java.util.Map;
 @Tag(name = "Authentication", description = "Endpoints para autenticación de usuarios")
 public class AuthController {
 
+    private static final String REFRESH_COOKIE = "HD_REFRESH";
+
     private final AuthService authService;
+
+    /** En producción debe ser true (HTTPS). En local HTTP se deja false. */
+    @Value("${app.security.cookie-secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${app.jwt.refresh-expiration:604800000}")
+    private long refreshExpirationMs;
+
+    private ResponseCookie buildRefreshCookie(String token) {
+        return ResponseCookie.from(REFRESH_COOKIE, token)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ofMillis(refreshExpirationMs))
+                .build();
+    }
+
+    private ResponseCookie clearRefreshCookie() {
+        return ResponseCookie.from(REFRESH_COOKIE, "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/api/v1/auth")
+                .maxAge(Duration.ZERO)
+                .build();
+    }
+
+    /** Devuelve la respuesta sin exponer el refresh token en el cuerpo. */
+    private ResponseEntity<AuthResponse> withRefreshCookie(AuthResponse response) {
+        String refreshToken = response.getRefreshToken();
+        response.setRefreshToken(null);
+        if (refreshToken == null) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(refreshToken).toString())
+                .body(response);
+    }
 
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión", description = "Autentica al usuario y devuelve un token JWT")
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody AuthRequest request
     ) {
-        return ResponseEntity.ok(authService.login(request));
+        return withRefreshCookie(authService.login(request));
     }
 
     @PostMapping("/heartbeat")
@@ -54,8 +100,36 @@ public class AuthController {
 
     @PostMapping("/refresh")
     @Operation(summary = "Renovar access token", description = "Genera un nuevo access token a partir del refresh token")
-    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
-        return ResponseEntity.ok(authService.refresh(request));
+    public ResponseEntity<AuthResponse> refresh(
+            @CookieValue(name = REFRESH_COOKIE, required = false) String cookieToken,
+            @RequestBody(required = false) RefreshRequest request
+    ) {
+        String token = cookieToken;
+        if (token == null || token.isBlank()) {
+            token = request != null ? request.getRefreshToken() : null;
+        }
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        RefreshRequest refreshRequest = new RefreshRequest();
+        refreshRequest.setRefreshToken(token);
+        return withRefreshCookie(authService.refresh(refreshRequest));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Cerrar sesión", description = "Revoca el refresh token del dispositivo actual")
+    public ResponseEntity<Map<String, String>> logout(
+            @CookieValue(name = REFRESH_COOKIE, required = false) String cookieToken,
+            @RequestBody(required = false) RefreshRequest request
+    ) {
+        String token = cookieToken;
+        if (token == null || token.isBlank()) {
+            token = request != null ? request.getRefreshToken() : null;
+        }
+        authService.logout(token);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
+                .body(Map.of("message", "Sesión cerrada correctamente."));
     }
 
     @PostMapping("/change-password")
@@ -111,13 +185,13 @@ public class AuthController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Cerrar otras sesiones", description = "Invalida los tokens de los demás dispositivos y renueva el de este")
     public ResponseEntity<AuthResponse> revokeOtherSessions() {
-        return ResponseEntity.ok(authService.cerrarOtrasSesiones());
+        return withRefreshCookie(authService.cerrarOtrasSesiones());
     }
 
     @PostMapping("/2fa/verify")
     @Operation(summary = "Verificar código 2FA", description = "Segundo paso del login cuando la cuenta tiene 2FA activo")
     public ResponseEntity<AuthResponse> verify2fa(@Valid @RequestBody MfaVerifyRequest request) {
-        return ResponseEntity.ok(authService.verificarMfa(request));
+        return withRefreshCookie(authService.verificarMfa(request));
     }
 
     @PostMapping("/2fa/setup")

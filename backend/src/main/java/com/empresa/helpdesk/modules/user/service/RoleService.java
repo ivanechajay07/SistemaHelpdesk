@@ -54,14 +54,33 @@ public class RoleService {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
-        // Evita escalada de privilegios: el rol ADMIN solo lo puede tocar un ADMIN.
-        if ("ADMIN".equalsIgnoreCase(role.getName()) && !isCurrentUserAdmin()) {
-            throw new AccessDeniedException(
-                    "Solo un administrador puede modificar los permisos del rol ADMIN");
+        List<Permission> newPermissions = permissionRepository.findAllById(request.getPermissionIds());
+
+        // Evita escalada de privilegios: un usuario no administrador no puede
+        // modificar el rol ADMIN, ni su propio rol, ni otorgar permisos que él
+        // mismo no posee.
+        if (!isCurrentUserAdmin()) {
+            if ("ADMIN".equalsIgnoreCase(role.getName())) {
+                throw new AccessDeniedException(
+                        "Solo un administrador puede modificar los permisos del rol ADMIN");
+            }
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            java.util.Set<String> propias = auth == null ? java.util.Set.of()
+                    : auth.getAuthorities().stream()
+                        .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                        .collect(Collectors.toSet());
+            if (propias.contains("ROLE_" + role.getName().toUpperCase())) {
+                throw new AccessDeniedException("No puedes modificar los permisos de tu propio rol");
+            }
+            boolean otorgaPermisoAjeno = newPermissions.stream()
+                    .map(p -> p.getName() != null ? p.getName().toUpperCase() : "")
+                    .anyMatch(nombre -> !propias.contains(nombre));
+            if (otorgaPermisoAjeno) {
+                throw new AccessDeniedException(
+                        "No puedes otorgar permisos que no tienes asignados");
+            }
         }
 
-        List<Permission> newPermissions = permissionRepository.findAllById(request.getPermissionIds());
-        
         role.setPermissions(new HashSet<>(newPermissions));
         Role updatedRole = roleRepository.save(role);
 

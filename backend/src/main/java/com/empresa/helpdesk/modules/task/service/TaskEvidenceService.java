@@ -25,6 +25,9 @@ public class TaskEvidenceService {
     private final TaskEvidenceRepository evidenceRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final com.empresa.helpdesk.security.upload.FileValidationService fileValidationService;
+
+    private static final int MAX_EVIDENCIAS_POR_TAREA = 20;
 
     @Transactional(readOnly = true)
     public List<TaskEvidenceResponse> getEvidences(Long taskId) {
@@ -44,10 +47,18 @@ public class TaskEvidenceService {
 
         String tipo = normalizarTipo(request.getTipo());
 
+        if (evidenceRepository.countByTaskId(taskId) >= MAX_EVIDENCIAS_POR_TAREA) {
+            throw new RuntimeException(
+                    "La tarea alcanzó el límite de " + MAX_EVIDENCIAS_POR_TAREA + " evidencias.");
+        }
+
+        // Valida que sea realmente una imagen (data URL) y su tamaño máximo.
+        var imagen = fileValidationService.validarImagenDataUrl(request.getImagenData(), 6_000_000L);
+
         TaskEvidence evidence = TaskEvidence.builder()
                 .task(task)
                 .tipo(tipo)
-                .imagenData(request.getImagenData())
+                .imagenData(imagen.dataUrl())
                 .comentario(trimOrNull(request.getComentario()))
                 .subidoPor(current)
                 .build();

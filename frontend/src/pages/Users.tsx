@@ -7,6 +7,9 @@ import { UserModal } from '../components/users/UserModal';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import UserAvatar from '../components/ui/UserAvatar';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import EmptyState from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
@@ -154,12 +157,15 @@ export default function Users() {
         subtitle="Administra los usuarios y técnicos del sistema."
         gradient="from-blue-600 via-blue-700 to-slate-800"
       >
-        <button
+        <Button
           onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}
-          className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
+          variant="secondary"
+          size="lg"
+          leftIcon={<Plus className="w-4 h-4" />}
+          className="btn-shine border-0 bg-white text-blue-700 shadow-lg shadow-blue-900/30 hover:bg-blue-50"
         >
-          <Plus className="w-4 h-4" /> Nuevo Usuario
-        </button>
+          Nuevo Usuario
+        </Button>
       </PageHeader>
 
       {/* Resumen de presencia */}
@@ -190,12 +196,12 @@ export default function Users() {
       )}
 
       {/* Buscador */}
-      <div className="relative w-full sm:max-w-md anim-fade-in-up" style={{ animationDelay: '120ms' }}>
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
+      <div className="w-full sm:max-w-md anim-fade-in-up" style={{ animationDelay: '120ms' }}>
+        <Input
           type="text"
+          aria-label="Buscar usuarios"
           placeholder="Buscar por nombre, correo o usuario..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
+          leftIcon={<Search className="w-4 h-4" />}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -220,9 +226,27 @@ export default function Users() {
           ))}
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-16 text-center">
-          <Search className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-          <p className="font-medium text-slate-500">No se encontraron usuarios.</p>
+        <div className="rounded-card border border-slate-200/80 bg-white/90 shadow-card ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/80">
+          <EmptyState
+            icon={UsersIcon}
+            title={users.length === 0 ? 'Aún no hay usuarios' : 'Sin coincidencias'}
+            description={
+              users.length === 0
+                ? 'Crea el primer usuario o técnico para empezar a operar.'
+                : 'Prueba con otro nombre, correo o nombre de usuario.'
+            }
+            action={
+              users.length === 0 ? (
+                <Button
+                  size="sm"
+                  leftIcon={<Plus className="w-3.5 h-3.5" />}
+                  onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}
+                >
+                  Nuevo Usuario
+                </Button>
+              ) : undefined
+            }
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">

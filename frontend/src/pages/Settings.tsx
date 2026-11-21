@@ -1,17 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck, Clock, Sparkles, Settings as SettingsIcon } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { User, Bell, Lock, Palette, Save, LogOut, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera, Upload, X, Zap, ShieldCheck, Clock, Settings as SettingsIcon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import api from '../lib/axios';
+import { authService } from '../services/authService';
+import { profileService } from '../services/profileService';
+import { settingsService } from '../services/settingsService';
 import { QRCodeSVG } from 'qrcode.react';
 import { PROFILE_IMAGE_EVENT } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import UserAvatar from '../components/ui/UserAvatar';
+import PageHeader from '../components/ui/PageHeader';
+import PasswordStrength from '../components/ui/PasswordStrength';
+import { passwordError } from '../lib/passwordPolicy';
 
 export default function Settings() {
   const { user, setAuth, isAdmin } = useAuthStore();
   const { isDark, toggleTheme, autoSchedule, setAutoSchedule } = useThemeStore();
   const [activeTab, setActiveTab] = useState('profile');
+  const location = useLocation();
+
+  // Permite abrir una pestaña concreta desde el menú de usuario (?tab=security).
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get('tab');
+    if (tab && ['profile', 'notifications', 'security', 'appearance', 'automation'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dialog, setDialog] = useState<{
     variant: DialogVariant;
@@ -35,6 +50,9 @@ export default function Settings() {
   const [, setImageFile] = useState<File | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  // Confirmación de contraseña obligatoria al cambiar el correo electrónico.
+  const [profilePassword, setProfilePassword] = useState('');
+  const emailChanged = !!user?.email && profileData.email.trim().toLowerCase() !== user.email.toLowerCase();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,7 +74,7 @@ export default function Settings() {
       try {
         const form = new FormData();
         form.append('file', file);
-        await api.post('/users/me/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await profileService.uploadAvatar(form);
         setProfileMessage({ type: 'success', text: 'Foto de perfil actualizada.' });
         window.dispatchEvent(new Event(PROFILE_IMAGE_EVENT));
       } catch (err: any) {
@@ -75,7 +93,7 @@ export default function Settings() {
       window.dispatchEvent(new Event(PROFILE_IMAGE_EVENT));
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
-    api.delete('/users/me/avatar').catch(() => {});
+    profileService.deleteAvatar().catch(() => {});
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -91,8 +109,12 @@ export default function Settings() {
         telefono: profileData.telefono,
         direccion: profileData.direccion,
       };
+      if (emailChanged) {
+        payload.currentPassword = profilePassword;
+      }
 
-      await api.put('/users/me', payload);
+      await profileService.update(payload);
+      setProfilePassword('');
 
       setAuth({
         ...user,
@@ -129,7 +151,7 @@ export default function Settings() {
 
   // Cargar las preferencias guardadas en el backend
   useEffect(() => {
-    api.get('/users/me/notifications')
+    profileService.getNotificationPreferences()
       .then((r) => {
         const saved = r.data || {};
         if (Object.keys(saved).length > 0) {
@@ -153,7 +175,7 @@ export default function Settings() {
     const prefs = notifications.reduce((acc, n) => ({ ...acc, [n.id]: n.active }), {} as Record<string, boolean>);
     try {
       if (user?.id) localStorage.setItem(`notif_prefs_${user.id}`, JSON.stringify(prefs));
-      await api.put('/users/me/notifications', { preferences: prefs });
+      await profileService.updateNotificationPreferences(prefs);
       setNotifMessage({ type: 'success', text: 'Preferencias guardadas.' });
     } catch {
       setNotifMessage({ type: 'success', text: 'Preferencias guardadas localmente.' });
@@ -178,22 +200,15 @@ export default function Settings() {
       setSecurityMessage({ type: 'error', text: 'Las nuevas contraseñas no coinciden.' });
       return;
     }
-    if (
-      securityData.new.length < 8 ||
-      !/[A-Z]/.test(securityData.new) ||
-      !/[a-z]/.test(securityData.new) ||
-      !/\d/.test(securityData.new)
-    ) {
-      setSecurityMessage({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.' });
+    const passwordValidation = passwordError(securityData.new);
+    if (passwordValidation) {
+      setSecurityMessage({ type: 'error', text: passwordValidation });
       return;
     }
 
     setIsSavingSecurity(true);
     try {
-      await api.post('/auth/change-password', {
-        currentPassword: securityData.current,
-        newPassword: securityData.new
-      });
+      await authService.changePassword(securityData.current, securityData.new);
       setSecurityMessage({ type: 'success', text: 'Contraseña actualizada con éxito.' });
       setSecurityData({ current: '', new: '', confirm: '' });
     } catch (err: any) {
@@ -216,7 +231,7 @@ export default function Settings() {
     setMfaBusy(true);
     setMfaMsg(null);
     try {
-      const { data } = await api.post('/auth/2fa/setup');
+      const { data } = await authService.setup2fa();
       setMfaSetup({ secret: data.secret, otpauthUrl: data.otpauthUrl });
       setMfaCode('');
     } catch (e: any) {
@@ -230,7 +245,7 @@ export default function Settings() {
     setMfaBusy(true);
     setMfaMsg(null);
     try {
-      await api.post('/auth/2fa/enable', { code: mfaCode.trim() });
+      await authService.enable2fa(mfaCode.trim());
       setTwoFactorEnabled(true);
       setMfaSetup(null);
       setMfaCode('');
@@ -246,7 +261,7 @@ export default function Settings() {
     setMfaBusy(true);
     setMfaMsg(null);
     try {
-      await api.post('/auth/2fa/disable', { password: mfaPassword });
+      await authService.disable2fa(mfaPassword);
       setTwoFactorEnabled(false);
       setMfaPassword('');
       setMfaSetup(null);
@@ -266,7 +281,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (!canManageAutomation) return;
-    api.get('/settings/automation')
+    settingsService.getAutomation()
       .then((r) => setAutomation(r.data))
       .catch(() => setAutomation({ autoAssignment: false, slaEscalation: true }));
   }, [canManageAutomation]);
@@ -276,7 +291,7 @@ export default function Settings() {
     setIsSavingAutomation(true);
     setAutomationMessage(null);
     try {
-      const { data } = await api.put('/settings/automation', automation);
+      const { data } = await settingsService.updateAutomation(automation);
       setAutomation(data);
       setAutomationMessage({ type: 'success', text: 'Configuración guardada.' });
     } catch (err: any) {
@@ -289,7 +304,7 @@ export default function Settings() {
 
   const handleRevokeOtherSessions = async () => {
     try {
-      const { data } = await api.post('/auth/sessions/revoke-others');
+      const { data } = await authService.revokeOtherSessions();
       setAuth({
         id: data.id,
         username: data.username,
@@ -299,7 +314,7 @@ export default function Settings() {
         roles: data.roles || [],
         permissions: data.permissions || [],
         twoFactorEnabled: data.twoFactorEnabled,
-      }, data.accessToken, data.refreshToken);
+      }, data.accessToken);
       setDialog({
         variant: 'success',
         title: 'Sesiones cerradas',
@@ -324,24 +339,13 @@ export default function Settings() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-800 to-sky-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-900/20 anim-fade-in-up">
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
-        <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
-        <div className="relative flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0">
-            <SettingsIcon className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
-              <Sparkles className="w-3.5 h-3.5" /> Configuración
-            </span>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">Ajustes de la cuenta</h1>
-            <p className="text-white/85 mt-1.5 font-medium text-sm sm:text-base max-w-2xl">Administra tu perfil, notificaciones, seguridad y las preferencias del sistema.</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Configuración"
+        title="Ajustes de la cuenta"
+        subtitle="Administra tu perfil, notificaciones, seguridad y las preferencias del sistema."
+        icon={SettingsIcon}
+        gradient="from-slate-800 via-blue-800 to-sky-900"
+      />
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         {/* Tabs Sidebar */}
@@ -459,6 +463,22 @@ export default function Settings() {
                       onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                       className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm" 
                     />
+                    {emailChanged && (
+                      <>
+                        <input
+                          type="password"
+                          value={profilePassword}
+                          onChange={(e) => setProfilePassword(e.target.value)}
+                          required
+                          autoComplete="current-password"
+                          placeholder="Confirma tu contraseña actual"
+                          className="mt-2 w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-amber-300 dark:border-amber-500/40 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all outline-none text-sm"
+                        />
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+                          Por seguridad, cambiar el correo requiere tu contraseña actual.
+                        </p>
+                      </>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Nombre de Usuario</label>
@@ -584,36 +604,26 @@ export default function Settings() {
                         <input 
                           type={showNewPass ? 'text' : 'password'}
                           required
+                          maxLength={12}
+                          autoComplete="new-password"
                           value={securityData.new}
                           onChange={(e) => setSecurityData({...securityData, new: e.target.value})}
-                          placeholder="Mínimo 8 caracteres" 
+                          placeholder="Entre 8 y 12 caracteres" 
                           className="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-sm" 
                         />
                         <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                           {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      {securityData.new && (
-                        <div className="mt-2 grid grid-cols-2 gap-1.5">
-                          {[
-                            { label: 'Mínimo 8 caracteres', ok: securityData.new.length >= 8 },
-                            { label: 'Una mayúscula', ok: /[A-Z]/.test(securityData.new) },
-                            { label: 'Una minúscula', ok: /[a-z]/.test(securityData.new) },
-                            { label: 'Un número', ok: /\d/.test(securityData.new) },
-                          ].map((c) => (
-                            <span key={c.label} className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${c.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                              <CheckCircle2 className={`w-3.5 h-3.5 ${c.ok ? '' : 'opacity-30'}`} />
-                              {c.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <PasswordStrength value={securityData.new} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Confirmar Nueva Contraseña</label>
                       <input 
                         type="password"
                         required
+                        maxLength={12}
+                        autoComplete="new-password"
                         value={securityData.confirm}
                         onChange={(e) => setSecurityData({...securityData, confirm: e.target.value})}
                         placeholder="••••••••" 

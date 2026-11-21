@@ -13,6 +13,9 @@ import { useClickOutside, usePagedList } from '../lib/hooks';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import UserAvatar from '../components/ui/UserAvatar';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import EmptyState from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useToast } from '../components/ui/Toast';
 import SlaBadge from '../components/ui/SlaBadge';
@@ -280,12 +283,15 @@ export default function Tickets() {
         subtitle="Administra y resuelve las incidencias reportadas."
         gradient="from-blue-600 via-blue-700 to-slate-800"
       >
-        <button
+        <Button
           onClick={() => setIsModalOpen(true)}
-          className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
+          variant="secondary"
+          size="lg"
+          leftIcon={<Plus className="w-4 h-4" />}
+          className="btn-shine border-0 bg-white text-blue-700 shadow-lg shadow-blue-900/30 hover:bg-blue-50"
         >
-          <Plus className="w-4 h-4" /> Nuevo Ticket
-        </button>
+          Nuevo Ticket
+        </Button>
       </PageHeader>
 
       {error && (
@@ -345,12 +351,12 @@ export default function Tickets() {
         {/* Search & Filters Bar */}
         <div className="p-4 border-b border-slate-200/50 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-800/20">
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <input 
+            <div className="flex-1">
+              <Input
                 type="text"
+                aria-label="Buscar tickets por código o título"
                 placeholder="Buscar por código o título..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-950/50 border border-slate-300/80 dark:border-slate-700/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-slate-400"
+                leftIcon={<Search className="w-4 h-4" />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -480,12 +486,12 @@ export default function Tickets() {
                   ))
                 ) : filteredTickets.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-slate-500">
-                      <div className="flex flex-col items-center gap-2">
-                        <Search className="w-8 h-8 text-slate-300 dark:text-slate-600" />
-                        <p className="font-medium">No se encontraron tickets</p>
-                        <p className="text-xs text-slate-400">Intenta ajustar los filtros de búsqueda</p>
-                      </div>
+                    <td colSpan={9} className="px-6 py-8">
+                      <EmptyState
+                        icon={TicketIcon}
+                        title="Sin tickets"
+                        description="No hay tickets que coincidan con la búsqueda o los filtros actuales."
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -651,9 +657,12 @@ export default function Tickets() {
           {/* Tarjetas para tablet y móvil */}
           <div className="lg:hidden flex flex-col gap-3 p-4">
             {filteredTickets.length === 0 && !loading ? (
-              <div className="text-center text-slate-500 py-8 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-                <Search className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-                <p className="font-medium text-sm">No se encontraron tickets</p>
+              <div className="rounded-xl border border-slate-200/50 bg-slate-50/50 dark:border-slate-700/50 dark:bg-slate-800/20">
+                <EmptyState
+                  icon={TicketIcon}
+                  title="Sin tickets"
+                  description="No hay tickets que coincidan con la búsqueda o los filtros actuales."
+                />
               </div>
             ) : (
               pagedTickets.map((ticket) => (

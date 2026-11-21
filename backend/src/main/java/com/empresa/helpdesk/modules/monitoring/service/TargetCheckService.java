@@ -271,9 +271,11 @@ public class TargetCheckService {
             return false;
         }
 
+        // Sin redirecciones: un 302 podría llevar a metadatos de cloud o a la
+        // red interna sin pasar por urlSegura (SSRF).
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(TIMEOUT_MS))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(uri)
@@ -302,17 +304,32 @@ public class TargetCheckService {
         if (host == null || host.isBlank()) {
             return false;
         }
+        String hostLower = host.toLowerCase();
+        // Nombres de metadatos de proveedores cloud: nunca permitidos.
+        if (hostLower.equals("metadata.google.internal")
+                || hostLower.endsWith(".metadata.google.internal")
+                || hostLower.equals("metadata")
+                || hostLower.endsWith(".internal")) {
+            return false;
+        }
         try {
             for (InetAddress addr : InetAddress.getAllByName(host)) {
                 if (addr.isMulticastAddress() || addr.isAnyLocalAddress()) {
                     return false;
                 }
-                // Nunca permitir el endpoint de metadatos de la nube
+                // Link-local incluye 169.254.0.0/16 (metadatos cloud) y APIPA:
+                // se bloquea siempre, incluso con monitoreo interno habilitado.
+                if (addr.isLinkLocalAddress()) {
+                    return false;
+                }
                 if (CLOUD_METADATA_IP.equals(addr.getHostAddress())) {
                     return false;
                 }
+                if (esIpv6UnicaLocal(addr)) {
+                    return false;
+                }
                 if (!allowPrivateTargets
-                        && (addr.isLoopbackAddress() || addr.isSiteLocalAddress() || addr.isLinkLocalAddress())) {
+                        && (addr.isLoopbackAddress() || addr.isSiteLocalAddress())) {
                     return false;
                 }
             }
@@ -320,6 +337,12 @@ public class TargetCheckService {
             return false;
         }
         return true;
+    }
+
+    /** IPv6 unique-local (fc00::/7), equivalente privado de IPv6. */
+    private boolean esIpv6UnicaLocal(InetAddress addr) {
+        byte[] bytes = addr.getAddress();
+        return bytes.length == 16 && (bytes[0] & 0xFE) == 0xFC;
     }
 
     private String safeLogValue(String value) {

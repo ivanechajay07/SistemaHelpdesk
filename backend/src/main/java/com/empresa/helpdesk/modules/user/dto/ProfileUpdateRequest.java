@@ -35,4 +35,8 @@ public class ProfileUpdateRequest {
 
     @Size(max = 200, message = "La dirección no puede exceder 200 caracteres")
     private String direccion;
+
+    /** Obligatoria solo si se cambia el correo electrónico. */
+    @Size(max = 100, message = "La contraseña no puede superar 100 caracteres")
+    private String currentPassword;
 }

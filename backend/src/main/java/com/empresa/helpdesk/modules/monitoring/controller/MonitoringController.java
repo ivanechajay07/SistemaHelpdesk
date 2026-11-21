@@ -31,13 +31,15 @@ public class MonitoringController {
     }
 
     @PostMapping
-    @Operation(summary = "Registrar un nuevo objetivo de monitoreo")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(summary = "Registrar un nuevo objetivo de monitoreo (solo administrador)")
     public ResponseEntity<MonitoredTargetResponse> create(@Valid @RequestBody MonitoredTargetRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(monitoringService.create(request));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar un objetivo de monitoreo")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(summary = "Actualizar un objetivo de monitoreo (solo administrador)")
     public ResponseEntity<MonitoredTargetResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody MonitoredTargetRequest request) {
@@ -45,14 +47,16 @@ public class MonitoringController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Eliminar un objetivo de monitoreo")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(summary = "Eliminar un objetivo de monitoreo (solo administrador)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         monitoringService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/check")
-    @Operation(summary = "Forzar una verificación inmediata del objetivo")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(summary = "Forzar una verificación inmediata del objetivo (solo administrador)")
     public ResponseEntity<MonitoredTargetResponse> checkNow(@PathVariable Long id) {
         return ResponseEntity.ok(monitoringService.checkNow(id));
     }

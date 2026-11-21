@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import { useDialogA11y } from '../../lib/useDialogA11y';
 import {
   useInventarioStore, ESTADO_LABELS, ESTADO_LABELS as EL,
   ESTADO_BADGE as EB,
@@ -10,6 +11,7 @@ import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
 import Pagination from '../../components/ui/Pagination';
+import DataTable from '../../components/ui/DataTable';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
   Boxes, Plus, Search, Pencil, Trash2, Download, FileSpreadsheet, QrCode,
@@ -290,61 +292,119 @@ export default function Activos() {
       </div>
 
       {/* table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-[11px] uppercase tracking-wider font-black text-slate-500 dark:text-slate-400">
-                <th className="px-4 py-3.5">Código</th>
-                <th className="px-4 py-3.5">Activo</th>
-                <th className="px-4 py-3.5">Estado</th>
-                <th className="px-4 py-3.5 hidden md:table-cell">Sede</th>
-                <th className="px-4 py-3.5 hidden lg:table-cell">Responsable</th>
-                <th className="px-4 py-3.5 hidden xl:table-cell">Serie</th>
-                <th className="px-4 py-3.5 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(activoLoading && activos.length === 0) ? (
-                <tr><td colSpan={7} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando activos...</div></td></tr>
-              ) : activos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16"><div className="flex flex-col items-center justify-center gap-2 text-slate-300 dark:text-slate-600"><Package className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">No se encontraron activos</p></div></td></tr>
-              ) : activos.map((a) => (
-                <tr key={a.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-4 py-3.5"><button onClick={() => openDetalle(a.id)} className="inline-flex items-center gap-1.5 font-bold text-teal-600 dark:text-teal-400 hover:underline"><Tag className="w-3.5 h-3.5" />{a.codigo}</button></td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shrink-0"><Package className="w-4 h-4 text-white" /></div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[200px]">{a.nombre}</p>
-                        <p className="text-xs text-slate-400">{a.categoriaNombre || '—'}{a.marca ? ` · ${a.marca} ${a.modelo || ''}` : ''}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5"><Badge estado={a.estado} /></td>
-                  <td className="px-4 py-3.5 hidden md:table-cell"><span className="text-slate-600 dark:text-slate-300 text-xs font-semibold">{a.sedeNombre || '—'}</span></td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell"><span className="text-slate-600 dark:text-slate-300 text-xs font-semibold">{a.responsableNombre || 'Sin asignar'}</span></td>
-                  <td className="px-4 py-3.5 hidden xl:table-cell"><span className="font-mono text-xs text-slate-500">{a.numeroSerie || '—'}</span></td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => openDetalle(a.id)} title="Ver detalle" className="p-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-500/10 transition-colors"><Eye className="w-4 h-4" /></button>
-                      <button onClick={() => handleQr(a.id, a.codigo)} title="Ver QR" className="p-2 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-colors"><QrCode className="w-4 h-4" /></button>
-                      {isAdmin && (
-                        <>
-                          <button onClick={() => openEdit(a.id)} title="Editar" className="p-2 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => setBajaId(a.id)} title="Dar de baja" className="p-2 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-colors"><AlertTriangle className="w-4 h-4" /></button>
-                          <button onClick={() => setEliminarId(a.id)} title="Eliminar" className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Pagination page={page + 1} pageSize={size} total={activoTotal} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} onPageSizeChange={(s) => { setSize(s); setPage(0); }} label="activos" />
-      </div>
+      <DataTable
+        columns={[
+          {
+            key: 'codigo',
+            header: 'Código',
+            sortValue: (a) => a.codigo || '',
+            render: (a) => (
+              <button onClick={() => openDetalle(a.id)} className="inline-flex items-center gap-1.5 font-bold text-teal-600 hover:underline dark:text-teal-400">
+                <Tag className="w-3.5 h-3.5" />{a.codigo}
+              </button>
+            ),
+          },
+          {
+            key: 'nombre',
+            header: 'Activo',
+            mobilePrimary: true,
+            sortValue: (a) => a.nombre || '',
+            render: (a) => (
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500">
+                  <Package className="w-4 h-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="max-w-[200px] truncate font-bold text-slate-800 dark:text-slate-100">{a.nombre}</p>
+                  <p className="text-xs text-slate-400">{a.categoriaNombre || '—'}{a.marca ? ` · ${a.marca} ${a.modelo || ''}` : ''}</p>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'estado',
+            header: 'Estado',
+            sortValue: (a) => a.estado || '',
+            render: (a) => <Badge estado={a.estado} />,
+          },
+          {
+            key: 'sede',
+            header: 'Sede',
+            hideBelow: 'md',
+            sortValue: (a) => a.sedeNombre || '',
+            render: (a) => <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{a.sedeNombre || '—'}</span>,
+          },
+          {
+            key: 'responsable',
+            header: 'Responsable',
+            hideBelow: 'lg',
+            sortValue: (a) => a.responsableNombre || '',
+            render: (a) => <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{a.responsableNombre || 'Sin asignar'}</span>,
+          },
+          {
+            key: 'serie',
+            header: 'Serie',
+            hideBelow: 'xl',
+            sortValue: (a) => a.numeroSerie || '',
+            render: (a) => <span className="font-mono text-xs text-slate-500">{a.numeroSerie || '—'}</span>,
+          },
+          {
+            key: 'acciones',
+            header: 'Acciones',
+            align: 'right',
+            mobile: false,
+            render: (a) => (
+              <div className="flex items-center justify-end gap-1.5">
+                <button onClick={() => openDetalle(a.id)} title="Ver detalle" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-teal-50 hover:text-teal-600 dark:hover:bg-teal-500/10"><Eye className="w-4 h-4" /></button>
+                <button onClick={() => handleQr(a.id, a.codigo)} title="Ver QR" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-cyan-50 hover:text-cyan-600 dark:hover:bg-cyan-500/10"><QrCode className="w-4 h-4" /></button>
+                {isAdmin && (
+                  <>
+                    <button onClick={() => openEdit(a.id)} title="Editar" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-500/10"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => setBajaId(a.id)} title="Dar de baja" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-500/10"><AlertTriangle className="w-4 h-4" /></button>
+                    <button onClick={() => setEliminarId(a.id)} title="Eliminar" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button>
+                  </>
+                )}
+              </div>
+            ),
+          },
+        ]}
+        data={activos}
+        rowKey={(a) => a.id}
+        loading={activoLoading}
+        emptyIcon={Package}
+        emptyTitle="No se encontraron activos"
+        emptyDescription="Ajusta la búsqueda o registra el primer activo del inventario."
+        caption="Listado de activos"
+        minWidth="900px"
+        renderMobileCard={(a) => (
+          <div className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <button onClick={() => openDetalle(a.id)} className="inline-flex items-center gap-1 font-mono text-xs font-bold text-teal-600 hover:underline dark:text-teal-400">
+                  <Tag className="w-3.5 h-3.5" />{a.codigo}
+                </button>
+                <p className="mt-0.5 truncate font-bold text-slate-800 dark:text-slate-100">{a.nombre}</p>
+                <p className="text-xs text-slate-400">{a.categoriaNombre || '—'}{a.marca ? ` · ${a.marca}` : ''}</p>
+              </div>
+              <Badge estado={a.estado} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <p>Sede: <span className="font-semibold text-slate-700 dark:text-slate-200">{a.sedeNombre || '—'}</span></p>
+              <p>Responsable: <span className="font-semibold text-slate-700 dark:text-slate-200">{a.responsableNombre || 'Sin asignar'}</span></p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => openDetalle(a.id)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-700 transition-colors hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-400">
+                <Eye className="w-4 h-4" /> Detalle
+              </button>
+              <button onClick={() => handleQr(a.id, a.codigo)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-700 transition-colors hover:bg-cyan-100 dark:bg-cyan-500/10 dark:text-cyan-400">
+                <QrCode className="w-4 h-4" /> QR
+              </button>
+            </div>
+          </div>
+        )}
+      />
+
+      <Pagination page={page + 1} pageSize={size} total={activoTotal} totalPages={totalPages} onPageChange={(p) => setPage(p - 1)} onPageSizeChange={(s) => { setSize(s); setPage(0); }} label="activos" />
 
       {/* MODAL CREAR/EDITAR */}
       <FormModal
@@ -463,6 +523,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function DetallePanel({ activo, onClose, onQr }: { activo: any; onClose: () => void; onQr: (id: number, codigo: string) => void }) {
+  const titleId = useId();
+  const panelRef = useDialogA11y(Boolean(activo), onClose);
   if (!activo) return null;
   const rows: { icon: React.ElementType; label: string; value: any }[] = [
     { icon: Building2, label: 'Sede', value: activo.sedeNombre },
@@ -476,13 +538,20 @@ function DetallePanel({ activo, onClose, onQr }: { activo: any; onClose: () => v
   ];
   return (
     <div className="fixed inset-0 z-[85] flex justify-end bg-slate-900/50 backdrop-blur-sm anim-fade-in">
-      <div className="relative w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto anim-slide-in-right">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="relative w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl overflow-y-auto anim-slide-in-right focus:outline-none"
+      >
         <div className="h-1.5 w-full bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500" />
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg z-10">
           <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-5 h-5" /></button>
+            <button onClick={onClose} aria-label="Volver al listado" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-5 h-5" /></button>
             <div>
-              <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">{activo.nombre}</h3>
+              <h3 id={titleId} className="text-lg font-extrabold text-slate-900 dark:text-white">{activo.nombre}</h3>
               <p className="text-xs text-teal-600 dark:text-teal-400 font-bold font-mono">{activo.codigo}</p>
             </div>
           </div>
@@ -534,6 +603,8 @@ function DetallePanel({ activo, onClose, onQr }: { activo: any; onClose: () => v
 }
 
 function QrModal({ qr, onClose }: { qr: { token: string; codigo: string }; onClose: () => void }) {
+  const titleId = useId();
+  const panelRef = useDialogA11y(true, onClose);
   // URL pública configurable (VITE_PUBLIC_APP_URL) para que el QR sea escaneable
   // desde otros dispositivos; si no se define, se usa el origen actual.
   const publicBase =
@@ -544,12 +615,19 @@ function QrModal({ qr, onClose }: { qr: { token: string; codigo: string }; onClo
     : qr.codigo;
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
-      <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in focus:outline-none"
+      >
         <div className="h-1.5 w-full bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500" />
         <div className="p-6 text-center">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Código QR</h3>
-            <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button>
+            <h3 id={titleId} className="text-lg font-extrabold text-slate-900 dark:text-white">Código QR</h3>
+            <button onClick={onClose} aria-label="Cerrar QR" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button>
           </div>
           {qr.token ? (
             <div className="w-56 h-56 mx-auto rounded-2xl border-2 border-teal-100 dark:border-teal-500/30 bg-white p-3 flex items-center justify-center">

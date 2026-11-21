@@ -50,6 +50,8 @@ public class UserService {
     private final EmailService emailService;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
+    private final com.empresa.helpdesk.modules.auth.service.RefreshTokenService refreshTokenService;
+    private final com.empresa.helpdesk.security.upload.FileValidationService fileValidationService;
 
     @Value("${app.file.upload-dir:./uploads}")
     private String uploadDir;
@@ -77,6 +79,19 @@ public class UserService {
         return mapToResponse(user);
     }
 
+    private static final String ADMIN_ROLE = "ADMIN";
+
+    private boolean currentActorIsAdmin() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> ("ROLE_" + ADMIN_ROLE).equals(a.getAuthority()));
+    }
+
+    private boolean tieneRolAdmin(Set<Role> roles) {
+        return roles != null && roles.stream()
+                .anyMatch(r -> ADMIN_ROLE.equalsIgnoreCase(r.getName()));
+    }
+
     @Transactional
     public UserResponse createUser(UserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -95,6 +110,11 @@ public class UserService {
                 Role role = roleRepository.findById(roleId).orElseThrow(() -> new RuntimeException("Rol no encontrado"));
                 roles.add(role);
             }
+        }
+        // Solo un ADMIN puede crear cuentas con rol ADMIN (evita escalada de privilegios).
+        if (tieneRolAdmin(roles) && !currentActorIsAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Solo un administrador puede asignar el rol ADMIN");
         }
 
         User user = User.builder()
@@ -118,7 +138,15 @@ public class UserService {
     @Transactional
     public UserResponse updateUser(Long id, UserRequest request) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        User actor = getAuthenticatedUser();
+        boolean actorAdmin = currentActorIsAdmin();
         boolean wasActive = user.isActivo();
+
+        // Un usuario con USER_MANAGE que no sea ADMIN no puede tocar cuentas ADMIN.
+        if (tieneRolAdmin(user.getRoles()) && !actorAdmin) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Solo un administrador puede modificar usuarios con rol ADMIN");
+        }
 
         if (!user.getUsername().equals(request.getUsername()) && userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("El nombre de usuario ya está en uso");
@@ -135,8 +163,15 @@ public class UserService {
         user.setDireccion(request.getDireccion());
         user.setActivo(request.isActivo());
 
+        boolean passwordChanged = false;
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            // Cambiar la contraseña de otro usuario queda reservado a ADMIN.
+            if (!actorAdmin && !user.getId().equals(actor.getId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Solo un administrador puede cambiar la contraseña de otro usuario");
+            }
             user.setPassword(passwordEncoder.encode(request.getPassword()));
+            passwordChanged = true;
         }
 
         if (request.getRoleIds() != null) {
@@ -148,10 +183,27 @@ public class UserService {
                 Role role = roleRepository.findById(roleId).orElseThrow(() -> new RuntimeException("Rol no encontrado"));
                 roles.add(role);
             }
+            if (tieneRolAdmin(roles) && !actorAdmin) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Solo un administrador puede asignar el rol ADMIN");
+            }
             user.setRoles(roles);
         }
 
+        if (passwordChanged) {
+            // Invalida sesiones previas del usuario cuya contraseña cambió.
+            user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
+            user.setTwoFactorLastStep(null);
+        }
+        // Desactivar una cuenta revoca también sus sesiones renovables.
+        if (wasActive && !user.isActivo()) {
+            user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
+        }
+
         User saved = userRepository.save(user);
+        if (passwordChanged || (wasActive && !saved.isActivo())) {
+            refreshTokenService.revocarTodos(saved.getId());
+        }
 
         // Si el administrador activó la cuenta, notificar al usuario por correo
         if (!wasActive && saved.isActivo()) {
@@ -174,9 +226,18 @@ public class UserService {
         User user = userRepository.findByUsernameOrEmail(principal, principal)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        if (!user.getEmail().equalsIgnoreCase(request.getEmail())
-                && userRepository.existsByEmail(request.getEmail())) {
+        boolean cambiaEmail = !user.getEmail().equalsIgnoreCase(request.getEmail());
+        if (cambiaEmail && userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("El correo ya está en uso por otro usuario");
+        }
+        // Cambiar el correo exige confirmar la contraseña actual: evita que una
+        // sesión robada redirija los enlaces de restablecimiento a otro buzón.
+        if (cambiaEmail) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()
+                    || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new RuntimeException(
+                        "Debes confirmar tu contraseña actual para cambiar el correo electrónico");
+            }
         }
 
         user.setNombre(request.getNombre());
@@ -221,17 +282,11 @@ public class UserService {
     /** Guarda la foto de perfil del usuario autenticado (PNG/JPG/WebP, máx. 2 MB). */
     @Transactional
     public UserResponse guardarAvatar(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new RuntimeException("El archivo está vacío");
-        }
-        if (file.getSize() > MAX_AVATAR_BYTES) {
-            throw new RuntimeException("La imagen no debe superar 2 MB");
-        }
-        String ext = StringUtils.getFilenameExtension(file.getOriginalFilename());
-        ext = ext != null ? ext.toLowerCase() : "";
-        if (!AVATAR_EXT.contains(ext)) {
-            throw new RuntimeException("Formato no permitido. Usa PNG, JPG o WebP");
-        }
+        // Valida contenido real (magic bytes) y dimensiones, no solo la extensión.
+        var validado = fileValidationService.validar(
+                file,
+                new HashSet<>(AVATAR_EXT),
+                MAX_AVATAR_BYTES);
 
         User user = getAuthenticatedUser();
         try {
@@ -240,14 +295,12 @@ public class UserService {
             for (String e : AVATAR_EXT) {
                 Files.deleteIfExists(dir.resolve(user.getId() + "." + e));
             }
-            Path target = dir.resolve(user.getId() + "." + ext).normalize();
+            Path target = dir.resolve(user.getId() + "." + validado.extension()).normalize();
             if (!target.startsWith(dir)) {
                 throw new RuntimeException("Ruta no válida");
             }
-            try (InputStream in = file.getInputStream()) {
-                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-            }
-            user.setAvatarUrl(user.getId() + "." + ext);
+            Files.write(target, validado.content());
+            user.setAvatarUrl(user.getId() + "." + validado.extension());
             userRepository.save(user);
             auditService.registrar("EDITAR_AVATAR", "USUARIO", user.getId(), user.getUsername());
             return mapToResponse(user);
@@ -304,6 +357,11 @@ public class UserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
+        if (tieneRolAdmin(user.getRoles()) && !currentActorIsAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Solo un administrador puede eliminar usuarios con rol ADMIN");
+        }
+
         // No permitir que un usuario se elimine a sí mismo
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName() != null
@@ -342,6 +400,10 @@ public class UserService {
     @Transactional
     public void rejectUser(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        if (tieneRolAdmin(user.getRoles()) && !currentActorIsAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Solo un administrador puede rechazar cuentas con rol ADMIN");
+        }
         if (user.isActivo()) {
             throw new RuntimeException("No se puede rechazar una cuenta que ya fue activada");
         }

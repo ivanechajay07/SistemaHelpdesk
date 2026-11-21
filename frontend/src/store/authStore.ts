@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import api from '../lib/axios';
+import { refreshSession, session } from '../lib/session';
 
-interface User {
+export interface User {
   id: number;
   username: string;
   email: string;
@@ -15,10 +16,12 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string, refreshToken?: string) => void;
+  /** true cuando ya se intentó recuperar la sesión desde la cookie HttpOnly. */
+  hydrated: boolean;
+  setAuth: (user: User, token: string) => void;
   setToken: (token: string) => void;
+  hydrate: () => Promise<void>;
   refreshMe: () => Promise<void>;
   logout: () => void;
   hasRole: (role: string) => boolean;
@@ -26,67 +29,88 @@ interface AuthState {
   isAdmin: () => boolean;
 }
 
+const toUser = (data: any): User => ({
+  id: data.id,
+  username: data.username,
+  email: data.email,
+  nombre: data.nombre,
+  apellidos: data.apellidos,
+  roles: data.roles || [],
+  permissions: data.permissions || [],
+  twoFactorEnabled: data.twoFactorEnabled,
+});
+
 const loadUser = (): User | null => {
   try {
     const stored = localStorage.getItem('user');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        ...parsed,
-        roles: parsed.roles || [],
-        permissions: parsed.permissions || [],
-      };
-    }
-  } catch {}
-  return null;
+    return stored ? toUser(JSON.parse(stored)) : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearLocalSession = () => {
+  session.clear();
+  localStorage.removeItem('user');
+  // Limpieza de la migración anterior: los tokens ya no viven en localStorage.
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: loadUser(),
-  token: localStorage.getItem('access_token'),
-  refreshToken: localStorage.getItem('refresh_token'),
-  isAuthenticated: !!localStorage.getItem('access_token'),
+  token: null,
+  isAuthenticated: false,
+  hydrated: false,
 
-  setAuth: (user, token, refreshToken) => {
-    localStorage.setItem('access_token', token);
-    if (refreshToken) {
-      localStorage.setItem('refresh_token', refreshToken);
-    }
+  setAuth: (user, token) => {
+    session.setToken(token);
     localStorage.setItem('user', JSON.stringify(user));
-    set({ user, token, refreshToken: refreshToken ?? get().refreshToken, isAuthenticated: true });
+    set({ user, token, isAuthenticated: true });
   },
 
   setToken: (token) => {
-    localStorage.setItem('access_token', token);
+    session.setToken(token);
     set({ token });
+  },
+
+  hydrate: async () => {
+    if (get().hydrated) return;
+    try {
+      const data = await refreshSession();
+      const user = toUser(data);
+      localStorage.setItem('user', JSON.stringify(user));
+      set({ user, token: data.accessToken, isAuthenticated: true, hydrated: true });
+    } catch {
+      clearLocalSession();
+      set({ user: null, token: null, isAuthenticated: false, hydrated: true });
+    }
   },
 
   refreshMe: async () => {
     try {
       const { data } = await api.get('/auth/me');
-      const updated: User = {
-        ...data,
-        roles: data.roles || [],
-        permissions: data.permissions || [],
-      };
+      const updated = toUser(data);
       localStorage.setItem('user', JSON.stringify(updated));
       set({ user: updated });
     } catch {
-      // Sin sesión válida o error de red: se conserva la sesión actual
+      // Sin sesión válida o error de red: se conserva la sesión actual.
     }
   },
 
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
+    // El backend revoca el refresh token y borra la cookie HttpOnly.
+    api.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
+    clearLocalSession();
+    set({ user: null, token: null, isAuthenticated: false });
   },
 
   hasRole: (role: string) => {
     const user = get().user;
     if (!user) return false;
-    return user.roles.some(r => r === role || r === `ROLE_${role}`);
+    // Acepta tanto "ADMIN" como "ROLE_ADMIN" sin distinguir mayúsculas.
+    const normalizado = role.replace(/^ROLE_/i, '').toUpperCase();
+    return user.roles.some((r) => r.replace(/^ROLE_/i, '').toUpperCase() === normalizado);
   },
 
   hasPermission: (permission: string) => {
@@ -102,3 +126,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return user.roles.includes('ADMIN');
   },
 }));
+
+// El interceptor de axios puede renovar el token en segundo plano: mantener
+// sincronizados usuario, roles y estado de autenticación.
+session.onRefreshed((data) => {
+  const user = toUser(data);
+  localStorage.setItem('user', JSON.stringify(user));
+  useAuthStore.setState({ user, token: data.accessToken, isAuthenticated: true });
+});

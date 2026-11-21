@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Eye, Search, Loader2, ClipboardCheck, Calendar, User, Wrench } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
-import api from '../lib/axios';
+import { actaService } from '../services/actaService';
 import { useToast } from '../components/ui/Toast';
 import ActaModal from '../components/tickets/ActaModal';
 import Pagination from '../components/ui/Pagination';
+import DataTable from '../components/ui/DataTable';
 import { usePagedList } from '../lib/hooks';
 import type { Ticket } from '../store/ticketStore';
 
@@ -51,13 +52,14 @@ export default function ActasConformidad() {
   const [searchTerm, setSearchTerm] = useState('');
   const [openTicket, setOpenTicket] = useState<Ticket | null>(null);
   const [loadingTicket, setLoadingTicket] = useState<number | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const fetchActas = async () => {
       setLoading(true);
       setError('');
       try {
-        const { data } = await api.get('/actas');
+        const { data } = await actaService.list();
         setActas(data || []);
       } catch (err) {
         console.error(err);
@@ -67,12 +69,12 @@ export default function ActasConformidad() {
       }
     };
     fetchActas();
-  }, []);
+  }, [reloadKey]);
 
   const verActa = async (item: ActaListItem) => {
     setLoadingTicket(item.ticketId);
     try {
-      const { data } = await api.get(`/tickets/${item.ticketId}`);
+      const { data } = await actaService.getTicket(item.ticketId);
       setOpenTicket(data);
     } catch (err) {
       console.error(err);
@@ -115,126 +117,114 @@ export default function ActasConformidad() {
         </div>
       </PageHeader>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden anim-fade-in-up">
-        {error && (
-          <div className="m-5 p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg text-sm">
-            {error}
+      <DataTable
+        className="anim-fade-in-up"
+        columns={[
+          {
+            key: 'ticket',
+            header: 'Ticket',
+            mobilePrimary: true,
+            sortValue: (item) => item.codigo || '',
+            render: (item) => (
+              <div className="flex flex-col">
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{item.codigo}</span>
+                <span className="max-w-[280px] truncate font-semibold text-slate-800 dark:text-slate-200" title={item.titulo}>
+                  {item.titulo}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: 'solicitante',
+            header: 'Solicitante',
+            sortValue: (item) => item.solicitanteNombre || '',
+            render: (item) => <span className="text-slate-600 dark:text-slate-300">{item.solicitanteNombre}</span>,
+          },
+          {
+            key: 'tecnico',
+            header: 'Técnico',
+            sortValue: (item) => item.tecnicoNombre || '',
+            render: (item) => <span className="text-slate-600 dark:text-slate-300">{item.tecnicoNombre || 'Sin asignar'}</span>,
+          },
+          {
+            key: 'fecha',
+            header: 'Fecha acta',
+            sortValue: (item) => new Date(item.fecha).getTime(),
+            render: (item) => <span className="text-slate-500 dark:text-slate-400">{formatDate(item.fecha)}</span>,
+          },
+          {
+            key: 'estado',
+            header: 'Estado',
+            sortValue: (item) => item.estado || '',
+            render: (item) => (
+              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${getStatusColor(item.estado)}`}>
+                {item.estado?.replace('_', ' ')}
+              </span>
+            ),
+          },
+          {
+            key: 'ver',
+            header: 'Ver',
+            align: 'right',
+            mobile: false,
+            render: (item) => (
+              <button
+                onClick={() => verActa(item)}
+                disabled={loadingTicket === item.ticketId}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+                title="Visualizar acta firmada"
+              >
+                {loadingTicket === item.ticketId ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+                Ver acta
+              </button>
+            ),
+          },
+        ]}
+        data={paged}
+        rowKey={(item) => item.id}
+        loading={loading}
+        error={error || null}
+        onRetry={() => setReloadKey((key) => key + 1)}
+        emptyIcon={ClipboardCheck}
+        emptyTitle="Sin actas de conformidad"
+        emptyDescription={
+          actas.length === 0
+            ? 'Aún no hay actas firmadas. Se generan al cerrar tickets resueltos.'
+            : 'No hay actas que coincidan con la búsqueda.'
+        }
+        caption="Actas de conformidad firmadas"
+        minWidth="900px"
+        renderMobileCard={(item) => (
+          <div className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{item.codigo}</span>
+                <h3 className="text-sm font-bold leading-snug text-slate-900 dark:text-white">{item.titulo}</h3>
+              </div>
+              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${getStatusColor(item.estado)}`}>
+                {item.estado?.replace('_', ' ')}
+              </span>
+            </div>
+            <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> {item.solicitanteNombre}</p>
+              <p className="flex items-center gap-1.5"><Wrench className="h-3.5 w-3.5" /> {item.tecnicoNombre || 'Sin asignar'}</p>
+              <p className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {formatDate(item.fecha)}</p>
+            </div>
+            <button
+              onClick={() => verActa(item)}
+              disabled={loadingTicket === item.ticketId}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-500/10 dark:text-emerald-400"
+            >
+              {loadingTicket === item.ticketId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+              Ver acta firmada
+            </button>
           </div>
         )}
-
-        <div className="relative">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10">
-              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            </div>
-          )}
-
-          {/* Tabla desktop */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-slate-50/50 dark:bg-slate-800/20 text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                <tr>
-                  <th className="px-6 py-4 font-semibold text-[13px] tracking-wide">Ticket</th>
-                  <th className="px-6 py-4 font-semibold text-[13px] tracking-wide">Solicitante</th>
-                  <th className="px-6 py-4 font-semibold text-[13px] tracking-wide">Técnico</th>
-                  <th className="px-6 py-4 font-semibold text-[13px] tracking-wide">Fecha acta</th>
-                  <th className="px-6 py-4 font-semibold text-[13px] tracking-wide">Estado</th>
-                  <th className="px-6 py-4 font-semibold text-[13px] tracking-wide text-right">Ver</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {filtered.length === 0 && !loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-14 text-center text-slate-500 font-medium">
-                      <ClipboardCheck className="w-9 h-9 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                      {actas.length === 0
-                        ? 'Aún no hay actas de conformidad firmadas.'
-                        : 'No se encontraron coincidencias.'}
-                    </td>
-                  </tr>
-                ) : (
-                  paged.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{item.codigo}</span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-[280px] truncate" title={item.titulo}>
-                            {item.titulo}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{item.solicitanteNombre}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{item.tecnicoNombre || 'Sin asignar'}</td>
-                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{formatDate(item.fecha)}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getStatusColor(item.estado)}`}>
-                          {item.estado?.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => verActa(item)}
-                          disabled={loadingTicket === item.ticketId}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 rounded-lg transition-colors font-semibold text-xs disabled:opacity-50"
-                          title="Visualizar acta firmada"
-                        >
-                          {loadingTicket === item.ticketId ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                          Ver acta
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Tarjetas móvil */}
-          <div className="md:hidden flex flex-col gap-3 p-4">
-            {loading ? (
-              <div className="p-4 text-center text-slate-500 font-medium">Cargando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 font-medium">
-                <ClipboardCheck className="w-9 h-9 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                {actas.length === 0
-                  ? 'Aún no hay actas de conformidad firmadas.'
-                  : 'No se encontraron coincidencias.'}
-              </div>
-            ) : (
-              paged.map((item) => (
-                <div key={item.id} className="border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm">
-                  <div className="flex justify-between items-start gap-3 mb-2">
-                    <div className="min-w-0">
-                      <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{item.codigo}</span>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-snug">{item.titulo}</h3>
-                    </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${getStatusColor(item.estado)}`}>
-                      {item.estado?.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400 mb-3">
-                    <p className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {item.solicitanteNombre}</p>
-                    <p className="flex items-center gap-1.5"><Wrench className="w-3.5 h-3.5" /> {item.tecnicoNombre || 'Sin asignar'}</p>
-                    <p className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formatDate(item.fecha)}</p>
-                  </div>
-                  <button
-                    onClick={() => verActa(item)}
-                    disabled={loadingTicket === item.ticketId}
-                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 rounded-lg transition-colors font-semibold text-sm disabled:opacity-50"
-                  >
-                    {loadingTicket === item.ticketId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-                    Ver acta firmada
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      />
 
       {!loading && filtered.length > 0 && (
         <Pagination

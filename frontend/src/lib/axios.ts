@@ -1,7 +1,10 @@
 import axios from 'axios';
+import { refreshSession, session } from './session';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1',
+  // La cookie HttpOnly de refresh viaja en las peticiones al mismo origen.
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -9,35 +12,24 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    // El QR público no requiere autenticación: no adjuntar un token obsoleto
+    // El QR público no requiere autenticación: no adjuntar un token obsoleto.
     const isPublicQr = config.url?.includes('/inventario/activos/qr/');
-    const token = localStorage.getItem('access_token');
+    const token = session.getToken();
     if (token && !isPublicQr && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
-// Renovación automática del access token con el refresh token
+// Renovación automática del access token con la cookie HttpOnly de refresh.
 let refreshing: Promise<string | null> | null = null;
 
 const refreshAccessToken = async (): Promise<string | null> => {
-  const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) return null;
   try {
-    const { data } = await axios.post(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1'}/auth/refresh`,
-      { refreshToken }
-    );
-    if (data?.accessToken) {
-      localStorage.setItem('access_token', data.accessToken);
-      return data.accessToken as string;
-    }
-    return null;
+    const data = await refreshSession();
+    return data.accessToken as string;
   } catch {
     return null;
   }
@@ -50,9 +42,10 @@ api.interceptors.response.use(
     const isAuthCall =
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
-      originalRequest?.url?.includes('/auth/refresh');
+      originalRequest?.url?.includes('/auth/refresh') ||
+      originalRequest?.url?.includes('/auth/2fa/verify');
 
-    // Token expirado: intentar renovar una sola vez y reintentar la petición
+    // Token expirado: intentar renovar una sola vez y reintentar la petición.
     if (
       error.response?.status === 401 &&
       originalRequest &&
@@ -69,14 +62,13 @@ api.interceptors.response.use(
         return api(originalRequest);
       }
 
-      // Refresh inválido: cerrar sesión
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // Refresh inválido o expirado: limpiar la sesión local.
+      session.clear();
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
