@@ -1,0 +1,9 @@
+# Configuración de gitleaks para el repositorio.
+# .env.example contiene placeholders intencionales, nunca credenciales reales.
+[allowlist]
+description = "Plantillas y artefactos de prueba sin secretos reales"
+paths = [
+  '''^\.env\.example$''',
+  '''^test-create-user\.js$''',
+  '''^uploads/''',
+]

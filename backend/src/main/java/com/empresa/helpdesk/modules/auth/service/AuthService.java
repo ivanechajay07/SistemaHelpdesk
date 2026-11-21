@@ -24,10 +24,10 @@ import com.empresa.helpdesk.security.JwtService;
 import com.empresa.helpdesk.security.RateLimiterService;
 import com.empresa.helpdesk.security.TotpService;
 import com.empresa.helpdesk.security.DeviceInfoResolver;
-import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -39,6 +39,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,15 +65,39 @@ public class AuthService {
     private final AuditService auditService;
     private final TotpService totpService;
     private final CryptoService cryptoService;
+    private final RefreshTokenService refreshTokenService;
 
-    private static final int MAX_LOGIN_ATTEMPTS = 5;
-    private static final int LOCK_MINUTES = 15;
+    @Value("${app.security.max-login-attempts:5}")
+    private int maxLoginAttempts;
+
+    @Value("${app.security.lock-minutes:15}")
+    private long lockMinutes;
+
+    @Value("${app.security.idle-timeout-minutes:15}")
+    private long idleTimeoutMinutes;
+
+    @Value("${app.security.login-ip-attempts:120}")
+    private int loginIpAttempts;
+
+    @Value("${app.security.login-ip-window-seconds:60}")
+    private int loginIpWindowSeconds;
 
     public AuthResponse login(AuthRequest request) {
+        // Límite por IP (defensa contra fuerza bruta distribuida). El límite por
+        // usuario sigue siendo 5/min; este es más amplio para oficinas con NAT.
+        rateLimiter.verificar("login-ip:" + currentIp(), loginIpAttempts, loginIpWindowSeconds);
+
+        // Si la cuenta ya está bloqueada, informar de inmediato los minutos restantes
+        // (antes del rate limit por usuario, para no ocultar el bloqueo con un 429).
+        userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
+                .filter(u -> !u.isAccountNonLocked())
+                .ifPresent(u -> {
+                    throw cuentaBloqueada(request.getUsername());
+                });
+
         // Rate limiting: máx. 5 intentos por minuto por usuario
         rateLimiter.verificar("login:" + request.getUsername().toLowerCase(), 5, 60);
-        // Límite adicional por IP (defensa contra fuerza bruta distribuida)
-        rateLimiter.verificar("login-ip:" + currentIp(), 30, 60);
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -80,9 +105,21 @@ public class AuthService {
                             request.getPassword()
                     )
             );
+        } catch (org.springframework.security.authentication.LockedException e) {
+            throw cuentaBloqueada(request.getUsername());
         } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            registrarIntentoFallido(request.getUsername());
-            throw e;
+            ResultadoIntento resultado = registrarIntentoFallido(request.getUsername());
+            if (resultado == null) {
+                // Usuario inexistente: mensaje genérico (no se revela si existe).
+                throw e;
+            }
+            if (resultado.bloqueadoHasta() != null) {
+                throw cuentaBloqueada(request.getUsername());
+            }
+            throw new CredencialesInvalidasException(
+                    "Credenciales inválidas. Te quedan " + resultado.intentosRestantes()
+                    + " intento(s) antes de que la cuenta se bloquee.",
+                    resultado.intentosRestantes());
         }
 
         User user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername())
@@ -114,7 +151,7 @@ public class AuthService {
         }
 
         String jwtToken = jwtService.generateToken(new HashMap<>(), user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        String refreshToken = refreshTokenService.emitir(user);
 
         auditService.registrar(user.getUsername(), "LOGIN", "USUARIO", user.getId(), user.getUsername() + " inició sesión");
 
@@ -140,9 +177,11 @@ public class AuthService {
             throw new RuntimeException("Primero genera el secreto (paso de configuración).");
         }
         String secreto = cryptoService.decrypt(user.getTwoFactorSecret());
-        if (!totpService.verificar(secreto, request.getCode())) {
+        long paso = totpService.verificarPaso(secreto, request.getCode());
+        if (paso < 0) {
             throw new RuntimeException("Código inválido. Verifica la hora del dispositivo e inténtalo de nuevo.");
         }
+        registrarPasoTotp(user, paso);
         user.setTwoFactorEnabled(true);
         userRepository.save(user);
         auditService.registrar("ACTIVAR_2FA", "USUARIO", user.getId(), user.getUsername());
@@ -164,6 +203,9 @@ public class AuthService {
 
     /** Segundo paso del login: valida el código TOTP y emite los tokens definitivos. */
     public AuthResponse verificarMfa(MfaVerifyRequest request) {
+        // Límite por IP antes de procesar el token: evita fuerza bruta del código.
+        rateLimiter.verificar("mfa-ip:" + currentIp(), 20, 300);
+
         String username;
         try {
             if (!jwtService.isMfaToken(request.getMfaToken())) {
@@ -174,18 +216,25 @@ public class AuthService {
             throw new RuntimeException("La verificación expiró. Inicia sesión nuevamente.");
         }
 
+        // Límite estricto por usuario: 5 códigos cada 5 minutos.
+        rateLimiter.verificar("mfa:" + username.toLowerCase(), 5, 300);
+
         User user = userRepository.findByUsernameOrEmail(username, username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
         if (!user.isTwoFactorEnabled() || user.getTwoFactorSecret() == null) {
             throw new RuntimeException("La verificación 2FA no está activa para este usuario.");
         }
         String secreto = cryptoService.decrypt(user.getTwoFactorSecret());
-        if (!totpService.verificar(secreto, request.getCode())) {
+        long paso = totpService.verificarPaso(secreto, request.getCode());
+        if (paso < 0) {
             throw new RuntimeException("Código de verificación inválido.");
         }
+        registrarPasoTotp(user, paso);
+        userRepository.save(user);
+        rateLimiter.resetear("mfa:" + username.toLowerCase());
 
         String accessToken = jwtService.generateToken(new HashMap<>(), user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        String refreshToken = refreshTokenService.emitir(user);
         auditService.registrar(user.getUsername(), "LOGIN", "USUARIO", user.getId(),
                 user.getUsername() + " inició sesión (2FA)");
         return buildAuthResponse(user, accessToken, refreshToken);
@@ -200,12 +249,14 @@ public class AuthService {
     public AuthResponse cerrarOtrasSesiones() {
         User user = getAuthenticatedUser();
         user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+        // Revocar también los refresh tokens de todos los dispositivos.
+        refreshTokenService.revocarTodos(user.getId());
         auditService.registrar("CERRAR_SESIONES", "USUARIO", user.getId(),
                 user.getUsername() + " cerró las demás sesiones");
 
         String accessToken = jwtService.generateToken(new HashMap<>(), user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+        String refreshToken = refreshTokenService.emitir(user);
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
@@ -221,35 +272,28 @@ public class AuthService {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
     }
 
-    /** Renueva el access token usando un refresh token válido. */
+    /** Renueva el access token usando un refresh token válido (rotación en servidor). */
     public AuthResponse refresh(RefreshRequest request) {
-        String username;
-        try {
-            username = jwtService.extractUsername(request.getRefreshToken());
-            Claims claims = jwtService.extractClaim(request.getRefreshToken(), c -> c);
-            if (!"refresh".equals(claims.get("tipo", String.class))) {
-                throw new RuntimeException("Token inválido");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Sesión expirada. Inicia sesión nuevamente.");
-        }
+        rateLimiter.verificar("refresh-ip:" + currentIp(), 120, 60);
+        RefreshTokenService.Rotacion rotacion = refreshTokenService.rotar(request.getRefreshToken());
+        User user = rotacion.usuario();
 
-        User user = userRepository.findByUsernameOrEmail(username, username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-        if (!user.isActivo()) {
-            throw new RuntimeException("Tu cuenta está desactivada.");
-        }
-
-        // Rechazar refresh tokens revocados por cambio/restablecimiento de contraseña
-        int tvUser = user.getTokenVersion() != null ? user.getTokenVersion() : 0;
-        if (jwtService.extractTokenVersion(request.getRefreshToken()) != tvUser) {
-            throw new RuntimeException("Sesión expirada. Inicia sesión nuevamente.");
+        // Si la sesión estuvo inactiva más allá del límite, no se renueva:
+        // hay que volver a iniciar sesión.
+        if (idleTimeoutMinutes > 0 && user.getLastActivity() != null
+                && user.getLastActivity().isBefore(LocalDateTime.now().minusMinutes(idleTimeoutMinutes))) {
+            refreshTokenService.revocarTodos(user.getId());
+            throw new RuntimeException("Sesión expirada por inactividad. Inicia sesión nuevamente.");
         }
 
         String newAccessToken = jwtService.generateToken(new HashMap<>(), user);
-        // Rotación de refresh token: se emite uno nuevo en cada renovación
-        String newRefreshToken = jwtService.generateRefreshToken(user);
-        return buildAuthResponse(user, newAccessToken, newRefreshToken);
+        return buildAuthResponse(user, newAccessToken, rotacion.token());
+    }
+
+    /** Cierra la sesión actual revocando su refresh token (logout real). */
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revocar(refreshToken);
     }
 
     /** Cambio de contraseña autenticado (el propio usuario). */
@@ -270,7 +314,11 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         // Revocar todas las sesiones emitidas antes del cambio de contraseña
         user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
-        userRepository.save(user);
+        user.setTwoFactorLastStep(null);
+        // saveAndFlush garantiza que la contraseña y el tokenVersion se escriban
+        // antes de la revocación masiva de refresh tokens.
+        userRepository.saveAndFlush(user);
+        refreshTokenService.revocarTodos(user.getId());
         auditService.registrar("CAMBIO_PASSWORD", "USUARIO", user.getId(), user.getUsername() + " cambió su contraseña");
 
         try {
@@ -305,8 +353,9 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        // Rate limiting: máx. 3 registros por minuto por correo
+        // Rate limiting: máx. 3 registros por minuto por correo y 10 por IP
         rateLimiter.verificar("register:" + request.getEmail().toLowerCase(), 3, 60);
+        rateLimiter.verificar("register-ip:" + currentIp(), 10, 60);
         // Mensaje genérico para no permitir enumerar usuarios/correos existentes
         if (userRepository.existsByUsername(request.getUsername())
                 || userRepository.existsByEmail(request.getEmail())) {
@@ -342,6 +391,10 @@ public class AuthService {
 
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
+        // Evita abuso del envío de correos (spam/phishing) y fuerza bruta de correos.
+        rateLimiter.verificar("forgot:" + request.getEmail().toLowerCase(), 3, 300);
+        rateLimiter.verificar("forgot-ip:" + currentIp(), 10, 300);
+
         // No revelar si el correo está registrado (evita enumeración de usuarios):
         // si no existe la cuenta, se termina silenciosamente con la misma respuesta genérica.
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
@@ -381,6 +434,8 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        rateLimiter.verificar("reset-ip:" + currentIp(), 10, 300);
+
         PasswordResetRequest resetRequest = passwordResetRequestRepository
                 .findByTokenAndStatus(hashToken(request.getToken()), PasswordResetRequest.ResetStatus.PENDIENTE)
                 .orElseThrow(() -> new RuntimeException("El enlace de restablecimiento no es válido o ya fue utilizado."));
@@ -395,9 +450,13 @@ public class AuthService {
 
         User user = resetRequest.getUsuario();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        // Revocar sesiones vigentes tras el restablecimiento
+        // Revocar sesiones vigentes tras el restablecimiento y desbloquear la cuenta
         user.setTokenVersion((user.getTokenVersion() != null ? user.getTokenVersion() : 0) + 1);
-        userRepository.save(user);
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        user.setTwoFactorLastStep(null);
+        userRepository.saveAndFlush(user);
+        refreshTokenService.revocarTodos(user.getId());
 
         resetRequest.setStatus(PasswordResetRequest.ResetStatus.COMPLETADO);
         resetRequest.setFechaResolucion(LocalDateTime.now());
@@ -424,20 +483,95 @@ public class AuthService {
         }
     }
 
-    /** Registra un intento fallido y bloquea temporalmente la cuenta al superar el máximo. */
-    private void registrarIntentoFallido(String usernameOrEmail) {
-        userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail).ifPresent(u -> {
-            int intentos = (u.getFailedLoginAttempts() != null ? u.getFailedLoginAttempts() : 0) + 1;
-            if (intentos >= MAX_LOGIN_ATTEMPTS) {
-                u.setFailedLoginAttempts(0);
-                u.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_MINUTES));
-            } else {
-                u.setFailedLoginAttempts(intentos);
-            }
-            userRepository.save(u);
-            auditService.registrar(usernameOrEmail, "LOGIN_FALLIDO", "USUARIO", u.getId(),
-                    "Intento de inicio de sesión fallido");
-        });
+    /** Resultado de un intento fallido: intentos restantes o bloqueo aplicado. */
+    private record ResultadoIntento(int intentosRestantes, LocalDateTime bloqueadoHasta) {
+    }
+
+    /** Registra un intento fallido y bloquea temporalmente la cuenta al llegar al máximo. */
+    private ResultadoIntento registrarIntentoFallido(String usernameOrEmail) {
+        var encontrado = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+        if (encontrado.isEmpty()) {
+            return null;
+        }
+        User u = encontrado.get();
+        int intentos = (u.getFailedLoginAttempts() != null ? u.getFailedLoginAttempts() : 0) + 1;
+        boolean bloqueadaAhora = intentos >= maxLoginAttempts;
+        if (bloqueadaAhora) {
+            u.setFailedLoginAttempts(0);
+            u.setLockedUntil(LocalDateTime.now().plusMinutes(lockMinutes));
+        } else {
+            u.setFailedLoginAttempts(intentos);
+        }
+        userRepository.save(u);
+        if (bloqueadaAhora) {
+            // Al bloquear la cuenta se invalidan también sus sesiones renovables.
+            refreshTokenService.revocarTodos(u.getId());
+        }
+        auditService.registrar(usernameOrEmail, "LOGIN_FALLIDO", "USUARIO", u.getId(),
+                "Intento de inicio de sesión fallido");
+        return bloqueadaAhora
+                ? new ResultadoIntento(0, u.getLockedUntil())
+                : new ResultadoIntento(maxLoginAttempts - intentos, null);
+    }
+
+    /** Bloqueo temporal: informa los minutos restantes reales. */
+    private CuentaBloqueadaException cuentaBloqueada(String usernameOrEmail) {
+        LocalDateTime hasta = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
+                .map(User::getLockedUntil)
+                .orElse(null);
+        long minutos = lockMinutes;
+        if (hasta != null) {
+            long segundos = Duration.between(LocalDateTime.now(), hasta).getSeconds();
+            minutos = Math.max(1, (segundos + 59) / 60);
+        }
+        return new CuentaBloqueadaException(
+                "Cuenta bloqueada temporalmente por intentos fallidos. "
+                + "Intenta de nuevo en " + minutos + " minuto(s).",
+                minutos);
+    }
+
+    /** Credenciales incorrectas: incluye cuántos intentos quedan antes del bloqueo. */
+    public static class CredencialesInvalidasException extends RuntimeException {
+        private final int intentosRestantes;
+
+        public CredencialesInvalidasException(String message, int intentosRestantes) {
+            super(message);
+            this.intentosRestantes = intentosRestantes;
+        }
+
+        public int getIntentosRestantes() {
+            return intentosRestantes;
+        }
+    }
+
+    /** Se lanza al intentar entrar con una cuenta bloqueada temporalmente. */
+    public static class CuentaBloqueadaException extends RuntimeException {
+        private final long minutosRestantes;
+
+        public CuentaBloqueadaException(String message) {
+            this(message, 0);
+        }
+
+        public CuentaBloqueadaException(String message, long minutosRestantes) {
+            super(message);
+            this.minutosRestantes = minutosRestantes;
+        }
+
+        public long getMinutosRestantes() {
+            return minutosRestantes;
+        }
+    }
+
+    /**
+     * Registra el paso TOTP aceptado y rechaza la reutilización de un código
+     * que siga siendo válido por el desfase de ±30 s.
+     */
+    private void registrarPasoTotp(User user, long paso) {
+        if (user.getTwoFactorLastStep() != null && paso <= user.getTwoFactorLastStep()) {
+            throw new RuntimeException(
+                    "Este código ya fue utilizado. Espera al siguiente código de tu aplicación.");
+        }
+        user.setTwoFactorLastStep(paso);
     }
 
     /** IP del cliente de la petición actual (para el rate limiting por IP). */

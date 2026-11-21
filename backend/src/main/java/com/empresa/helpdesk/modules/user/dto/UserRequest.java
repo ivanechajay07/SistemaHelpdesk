@@ -1,5 +1,7 @@
 package com.empresa.helpdesk.modules.user.dto;
 
+import com.empresa.helpdesk.security.PasswordPolicy;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -27,9 +29,9 @@ public class UserRequest {
     private String email;
 
     // Opcional al editar (vacío = no cambiar). Al crear es obligatoria (se valida en el servicio).
-    @Size(max = 100, message = "La contraseña no puede superar 100 caracteres")
-    @Pattern(regexp = "^$|^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{8,100}$",
-            message = "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número")
+    @Size(max = 12, message = "La contraseña no puede superar 12 caracteres")
+    @Pattern(regexp = "^$|" + PasswordPolicy.REGEX,
+            message = PasswordPolicy.MESSAGE)
     private String password;
 
     @NotBlank(message = "El nombre es requerido")

@@ -40,8 +40,8 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String corsAllowedOrigins;
 
-    /** Permite restringir Swagger/OpenAPI en producción (SWAGGER_ENABLED=false). */
-    @Value("${app.security.swagger-enabled:true}")
+    /** Swagger/OpenAPI deshabilitado por defecto (SWAGGER_ENABLED=true solo en desarrollo). */
+    @Value("${app.security.swagger-enabled:false}")
     private boolean swaggerEnabled;
 
     @Bean
@@ -76,15 +76,25 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/**",
+                                // Solo los endpoints estrictamente necesarios sin sesión.
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/forgot-password",
+                                "/api/v1/auth/reset-password",
+                                "/api/v1/auth/2fa/verify",
+                                "/ws/**",
+                                "/error"
+                        ).permitAll()
+                        .requestMatchers(
+                                org.springframework.http.HttpMethod.GET,
                                 "/api/v1/inventario/activos/qr/**",
                                 // Adjuntos del chat: enlaces firmados con expiración (HMAC),
                                 // no requieren cabecera Authorization en el navegador.
                                 "/api/v1/chat/attachments/**",
                                 // Fotos de perfil: se cargan con <img src> (sin cabecera Authorization)
-                                "/api/v1/users/*/avatar",
-                                "/ws/**",
-                                "/error"
+                                "/api/v1/users/*/avatar"
                         ).permitAll()
                         .requestMatchers(
                                 "/v2/api-docs",

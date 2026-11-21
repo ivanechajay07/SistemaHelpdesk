@@ -26,6 +26,10 @@ public class ActaService {
     private final ActaConformidadRepository actaRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final com.empresa.helpdesk.security.upload.FileValidationService fileValidationService;
+
+    private static final long MAX_FOTO_BYTES = 4_000_000L;
+    private static final long MAX_FIRMA_BYTES = 1_500_000L;
 
     @Transactional(readOnly = true)
     public Optional<ActaResponse> getActaByTicket(Long ticketId) {
@@ -67,14 +71,24 @@ public class ActaService {
                     "Solo el técnico asignado o un administrador pueden registrar el acta de conformidad");
         }
 
+        // Firmas y foto se envían como data URL: se valida que sean imágenes
+        // reales (magic bytes/dimensiones) y se normalizan antes de guardar.
+        String foto = (request.getFotoData() != null && !request.getFotoData().isBlank())
+                ? fileValidationService.validarImagenDataUrl(request.getFotoData(), MAX_FOTO_BYTES).dataUrl()
+                : null;
+        String firmaSolicitante = fileValidationService
+                .validarImagenDataUrl(request.getFirmaSolicitante(), MAX_FIRMA_BYTES).dataUrl();
+        String firmaTecnico = fileValidationService
+                .validarImagenDataUrl(request.getFirmaTecnico(), MAX_FIRMA_BYTES).dataUrl();
+
         ActaConformidad acta = ActaConformidad.builder()
                 .ticket(ticket)
                 .fecha(request.getFecha() != null ? request.getFecha() : LocalDate.now())
                 .trabajosRealizados(request.getTrabajosRealizados().trim())
                 .observaciones(trimOrNull(request.getObservaciones()))
-                .fotoData(request.getFotoData())
-                .firmaSolicitante(request.getFirmaSolicitante())
-                .firmaTecnico(request.getFirmaTecnico())
+                .fotoData(foto)
+                .firmaSolicitante(firmaSolicitante)
+                .firmaTecnico(firmaTecnico)
                 .creadoPor(currentUser)
                 .build();
 

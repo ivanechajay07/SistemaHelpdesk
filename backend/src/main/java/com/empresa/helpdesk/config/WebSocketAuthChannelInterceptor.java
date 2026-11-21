@@ -62,9 +62,10 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
             String username = jwtService.extractUsername(token);
             User user = userRepository.findByUsernameOrEmail(username, username)
                     .orElseThrow(() -> new MessageDeliveryException("Usuario no encontrado"));
-            // Rechazar conexiones de cuentas desactivadas
-            if (!user.isActivo()) {
-                throw new MessageDeliveryException("Cuenta desactivada");
+            // Validación completa: expiración, cuenta activa/bloqueada y tokenVersion
+            // (un token revocado por cambio de contraseña ya no abre el WebSocket).
+            if (!jwtService.isTokenValid(token, user)) {
+                throw new MessageDeliveryException("Token inválido o revocado");
             }
             Principal principal = new UsernamePasswordAuthenticationToken(
                     user.getUsername(), null,

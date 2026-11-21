@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
+import { useDialogA11y } from '../../lib/useDialogA11y';
 
 export type FormTheme = 'users' | 'tickets' | 'tasks' | 'monitoring' | 'inventory' | 'categories' | 'templates' | 'knowledge';
 
@@ -100,6 +101,10 @@ export default function FormModal({
   error,
   closeOnBackdrop = false,
 }: FormModalProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useDialogA11y(isOpen, onClose);
+
   if (!isOpen) return null;
   const t = THEMES[theme];
 
@@ -109,23 +114,34 @@ export default function FormModal({
       onClick={closeOnBackdrop ? onClose : undefined}
     >
       <div
-        className={`my-auto w-full ${maxWidth} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)]`}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={subtitle ? descriptionId : undefined}
+        tabIndex={-1}
+        className={`my-auto w-full ${maxWidth} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] focus:outline-none`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-gradient-to-r ${t.header}`}>
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl text-white shadow-md ${t.iconBg}`}>{icon}</div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{title}</h2>
-              {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+              <h2 id={titleId} className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{title}</h2>
+              {subtitle && <p id={descriptionId} className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar formulario"
+            className="p-2 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 rounded-full transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
+        <form onSubmit={onSubmit} aria-busy={loading} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
           {error && (
             <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium">
               <AlertCircle className="w-4 h-4 shrink-0" />

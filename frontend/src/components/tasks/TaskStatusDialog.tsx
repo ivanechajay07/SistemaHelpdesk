@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useDialogA11y } from '../../lib/useDialogA11y';
 import {
   X, Play, CheckCircle2, Loader2, CalendarDays, ImagePlus, Trash2, FileDown, Images, Save,
 } from 'lucide-react';
@@ -91,6 +92,9 @@ export default function TaskStatusDialog({ isOpen, onClose, task }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, task?.id]);
+
+  const titleId = useId();
+  const panelRef = useDialogA11y(isOpen, onClose);
 
   if (!isOpen || !task) return null;
 
@@ -235,7 +239,12 @@ export default function TaskStatusDialog({ isOpen, onClose, task }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm anim-fade-in" onClick={onClose}>
       <div
-        className="w-full max-w-lg max-h-[calc(100dvh-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-lg max-h-[calc(100dvh-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera */}
@@ -244,12 +253,13 @@ export default function TaskStatusDialog({ isOpen, onClose, task }: Props) {
           <div className="flex items-start justify-between gap-3 relative">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-teal-100">Avance de tarea</p>
-              <h3 className="text-base font-extrabold text-white leading-snug truncate">{task.titulo}</h3>
+              <h3 id={titleId} className="text-base font-extrabold text-white leading-snug truncate">{task.titulo}</h3>
             </div>
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors shrink-0"
               title="Cerrar"
+              aria-label="Cerrar avance de tarea"
             >
               <X className="w-4 h-4" />
             </button>

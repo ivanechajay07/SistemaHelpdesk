@@ -4,7 +4,6 @@ import com.empresa.helpdesk.modules.inventario.dto.ActivoRequest;
 import com.empresa.helpdesk.modules.inventario.dto.ActivoResponse;
 import com.empresa.helpdesk.modules.inventario.dto.TicketAsociadoResponse;
 import com.empresa.helpdesk.modules.inventario.enums.ActivoEstado;
-import com.empresa.helpdesk.modules.inventario.repository.ActivoTicketRepository;
 import com.empresa.helpdesk.modules.inventario.service.ActivoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,7 +30,6 @@ import java.util.Map;
 public class ActivoController {
 
     private final ActivoService activoService;
-    private final ActivoTicketRepository activoTicketRepository;
 
     @GetMapping
     @Operation(summary = "Buscar activos con filtros")
@@ -107,21 +105,6 @@ public class ActivoController {
     @Operation(summary = "Tickets asociados al activo")
     @PreAuthorize("hasAnyAuthority('INV_VIEW', 'ROLE_ADMIN')")
     public ResponseEntity<List<TicketAsociadoResponse>> ticketsAsociados(@PathVariable Long id) {
-        List<TicketAsociadoResponse> tickets = activoTicketRepository.findByActivoIdOrderByFechaCreacionDesc(id)
-                .stream().map(at -> TicketAsociadoResponse.builder()
-                        .id(at.getTicket().getId())
-                        .codigo(at.getTicket().getCodigo())
-                        .titulo(at.getTicket().getTitulo())
-                        .categoria(at.getTicket().getSubcategoria() != null && at.getTicket().getSubcategoria().getCategory() != null
-                                ? at.getTicket().getSubcategoria().getCategory().getName() : null)
-                        .estado(at.getTicket().getEstado() != null ? at.getTicket().getEstado().name() : null)
-                        .prioridad(at.getTicket().getPrioridad() != null ? at.getTicket().getPrioridad().name() : null)
-                        .fechaCreacion(at.getFechaCreacion())
-                        .tecnicoNombre(at.getTicket().getTecnico() != null
-                                ? at.getTicket().getTecnico().getNombre() + " " + (at.getTicket().getTecnico().getApellidos() == null ? "" : at.getTicket().getTecnico().getApellidos())
-                                : null)
-                        .build())
-                .toList();
-        return ResponseEntity.ok(tickets);
+        return ResponseEntity.ok(activoService.ticketsAsociados(id));
     }
 }

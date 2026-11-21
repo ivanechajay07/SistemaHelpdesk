@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../lib/axios';
+import { publicService } from '../services/publicService';
 import { ESTADO_LABELS, ESTADO_BADGE } from '../store/inventoryStore';
 import {
   Package, Loader2, ShieldCheck, Tag, MapPin, User, Building2, Cpu, CalendarDays, X,
@@ -34,8 +34,8 @@ export default function QrPublic() {
   useEffect(() => {
     if (!token) return;
     let active = true;
-    api
-      .get(`/inventario/activos/qr/${encodeURIComponent(token)}`)
+    publicService
+      .getAssetByQr(token)
       .then((res) => {
         if (!active) return;
         setActivo(res.data);

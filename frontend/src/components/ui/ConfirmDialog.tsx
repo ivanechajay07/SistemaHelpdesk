@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { AlertTriangle, CheckCircle2, XCircle, Info, X } from 'lucide-react';
+import { useDialogA11y } from '../../lib/useDialogA11y';
 
 export type DialogVariant = 'warning' | 'danger' | 'success' | 'error' | 'info';
 
@@ -56,6 +57,10 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useDialogA11y(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const config = variantConfig[variant];
@@ -64,7 +69,15 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
-      <div className="my-auto relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
+        className="my-auto relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in focus:outline-none"
+      >
 
         {/* Barra superior de color según variante */}
         <div className={`h-1.5 w-full ${
@@ -88,10 +101,10 @@ export default function ConfirmDialog({
               <Icon className="w-6 h-6" />
             </div>
             <div className="min-w-0 pt-0.5">
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-snug pr-6">
+              <h3 id={titleId} className="text-base font-extrabold text-slate-900 dark:text-white leading-snug pr-6">
                 {title}
               </h3>
-              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed break-words">
+              <p id={descriptionId} className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed break-words">
                 {message}
               </p>
             </div>
@@ -100,6 +113,7 @@ export default function ConfirmDialog({
           <div className={`flex gap-3 mt-7 ${isConfirmation ? '' : 'justify-end'}`}>
             {isConfirmation && (
               <button
+                type="button"
                 onClick={onClose}
                 className="flex-1 px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-colors active:scale-[0.98]"
               >
@@ -107,6 +121,7 @@ export default function ConfirmDialog({
               </button>
             )}
             <button
+              type="button"
               onClick={() => { onConfirm?.(); }}
               className={`${isConfirmation ? 'flex-1' : 'min-w-[120px]'} px-4 py-2.5 text-sm font-bold text-white rounded-xl transition-all shadow-md active:scale-[0.98] ${config.confirmClasses}`}
             >

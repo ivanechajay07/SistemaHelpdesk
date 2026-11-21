@@ -36,6 +36,13 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${app.admin.password:${ADMIN_PASSWORD:admin123}}")
     private String adminPasswordConfig;
 
+    /**
+     * Permite (solo en desarrollo) arrancar con la contraseña por defecto.
+     * En cualquier otro caso el arranque falla para no desplegar credenciales conocidas.
+     */
+    @Value("${app.admin.allow-default-password:false}")
+    private boolean allowDefaultAdminPassword;
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -47,6 +54,14 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        // Fail-fast: nunca desplegar con la contraseña de administrador por defecto.
+        if ("admin123".equals(adminPasswordConfig) && !allowDefaultAdminPassword) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD no está definida o usa la contraseña por defecto 'admin123'. "
+                    + "Define una contraseña fuerte en el entorno (o ALLOW_DEFAULT_ADMIN_PASSWORD=true "
+                    + "solo para desarrollo local).");
+        }
+
         // Asegurar que los permisos existan
         Permission viewAll = createPermissionIfNotFound("TICKET_VIEW_ALL", "Ver todos los tickets");
         Permission assignTicket = createPermissionIfNotFound("TICKET_ASSIGN", "Asignar tickets");
@@ -153,8 +168,16 @@ public class DataSeeder implements CommandLineRunner {
             }
         }
         
-        // Asegurar SIEMPRE que el usuario admin tenga el rol de administrador
-        admin.setRoles(Set.of(adminRole));
+        // Asegurar que el usuario admin tenga el rol de administrador sin
+        // reemplazar la colección gestionada por Hibernate en cada arranque
+        // (provocaba "Duplicate entry" en usuario_roles al reiniciar).
+        boolean yaEsAdmin = admin.getRoles().stream()
+                .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getName()));
+        if (!yaEsAdmin) {
+            Set<Role> rolesAdmin = new HashSet<>(admin.getRoles());
+            rolesAdmin.add(adminRole);
+            admin.setRoles(rolesAdmin);
+        }
         userRepository.save(admin);
         System.out.println("Usuario administrador verificado y actualizado: admin");
         if ("admin123".equals(adminPasswordConfig)) {

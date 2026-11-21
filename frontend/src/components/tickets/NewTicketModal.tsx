@@ -5,7 +5,7 @@ import { useTicketStore } from '../../store/ticketStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useCatalogStore } from '../../store/catalogStore';
 import SearchableSelect from '../ui/SearchableSelect';
-import api from '../../lib/axios';
+import { templateService } from '../../services/templateService';
 
 interface TicketTemplate {
   id: number;
@@ -41,7 +41,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
     if (isOpen) {
       fetchCategories();
       fetchSedes();
-      api.get('/templates').then(({ data }) => setTemplates(data || [])).catch(() => setTemplates([]));
+      templateService.list().then(({ data }) => setTemplates(data || [])).catch(() => setTemplates([]));
       setError('');
       setFieldErrors({});
       setFormData({ titulo: '', descripcion: '', prioridad: 'MEDIA', subcategoriaId: '', entidad: '', sede: '' });

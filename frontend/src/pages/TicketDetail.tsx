@@ -1,14 +1,16 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useId, useState, useRef } from 'react';
+import { useDialogA11y } from '../lib/useDialogA11y';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import api from '../lib/axios';
+import { ticketService } from '../services/ticketService';
 import { useAuthStore } from '../store/authStore';
 import { useTicketStore } from '../store/ticketStore';
 import type { Ticket } from '../store/ticketStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/Toast';
-import { Send, ArrowLeft, Loader2, Paperclip, Bold, Italic, Underline, Strikethrough, Link as LinkIcon, Image as ImageIcon, MessageSquare, Smile, Code, List, AlignLeft, X, Lock, RotateCcw, Star, Check, CheckCheck, ClipboardCheck } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Paperclip, Bold, Italic, Underline, Strikethrough, Link as LinkIcon, Image as ImageIcon, MessageSquare, Smile, Code, List, AlignLeft, X, Lock, RotateCcw, Star, Check, CheckCheck, ClipboardCheck, Tag, Building2, MapPin, CalendarDays, Clock } from 'lucide-react';
+import Button from '../components/ui/Button';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
 import ActaModal from '../components/tickets/ActaModal';
 import UserAvatar from '../components/ui/UserAvatar';
@@ -40,6 +42,8 @@ export default function TicketDetail() {
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
+  const linkDialogTitleId = useId();
+  const linkDialogPanelRef = useDialogA11y(showLinkDialog, () => setShowLinkDialog(false));
   const stompClient = useRef<Client | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,8 +90,9 @@ export default function TicketDetail() {
 
   /** Marca los mensajes del ticket como leídos (REST) y limpia el badge global. */
   const markAsRead = async () => {
+    if (!id) return;
     try {
-      await api.post(`/tickets/${id}/messages/read`);
+      await ticketService.markMessagesRead(id);
       clearTicketUnread(Number(id));
       pendingReadRef.current = false;
     } catch {
@@ -96,11 +101,12 @@ export default function TicketDetail() {
   };
 
   useEffect(() => {
+    if (!id) return;
     const fetchDetails = async () => {
       try {
         const [ticketRes, messagesRes] = await Promise.all([
-          api.get(`/tickets/${id}`),
-          api.get(`/tickets/${id}/messages`)
+          ticketService.getById(id),
+          ticketService.getMessages(id)
         ]);
         setTicket(ticketRes.data);
         setMessages(messagesRes.data);
@@ -353,9 +359,7 @@ export default function TicketDetail() {
     formData.append('file', file);
 
     try {
-      const response = await api.post('/chat/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await ticketService.uploadAttachment(formData);
       const fileUrl = response.data;
 
       const chatMessage = {
@@ -438,6 +442,65 @@ export default function TicketDetail() {
     isAdmin() || ticket.usuarioId === user.id || ticket.tecnicoId === user.id
   );
 
+  const slaInfo = (() => {
+    if (!ticket) return null;
+    const estado = ticket.slaEstado;
+    const rest = ticket.slaHorasRestantes;
+    const tone =
+      estado === 'VENCIDO'
+        ? 'text-rose-600 dark:text-rose-400'
+        : estado === 'POR_VENCER'
+          ? 'text-amber-600 dark:text-amber-400'
+          : estado === 'CUMPLIDO'
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : 'text-blue-600 dark:text-blue-400';
+    const label =
+      estado === 'VENCIDO'
+        ? 'SLA vencido'
+        : estado === 'CUMPLIDO'
+          ? 'SLA cumplido'
+          : typeof rest === 'number'
+            ? rest >= 24
+              ? `${Math.floor(rest / 24)}d ${Math.round(rest % 24)}h restantes`
+              : `${Math.max(0, Math.round(rest))}h restantes`
+            : ticket.fechaVencimientoSla
+              ? new Date(ticket.fechaVencimientoSla).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
+              : 'Sin SLA definido';
+    const bar =
+      estado === 'VENCIDO'
+        ? 'bg-rose-500'
+        : estado === 'POR_VENCER'
+          ? 'bg-amber-500'
+          : estado === 'CUMPLIDO'
+            ? 'bg-emerald-500'
+            : 'bg-blue-500';
+    const limit = ticket.slaLimiteHoras ?? null;
+    const progress =
+      limit && limit > 0 && typeof rest === 'number'
+        ? Math.min(100, Math.max(0, Math.round(((limit - rest) / limit) * 100)))
+        : null;
+    return { tone, label, bar, progress };
+  })();
+
+  const infoRows: { icon: React.ElementType; label: string; value: string }[] = ticket
+    ? [
+        {
+          icon: Tag,
+          label: 'Categoría',
+          value: [ticket.categoriaNombre, ticket.subcategoriaNombre].filter(Boolean).join(' · ') || '—',
+        },
+        { icon: Building2, label: 'Entidad', value: ticket.entidad || '—' },
+        { icon: MapPin, label: 'Sede', value: ticket.sede || '—' },
+        {
+          icon: CalendarDays,
+          label: 'Creado',
+          value: ticket.fechaCreacion
+            ? new Date(ticket.fechaCreacion).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })
+            : '—',
+        },
+      ]
+    : [];
+
   const [dialog, setDialog] = useState<{
     variant: DialogVariant;
     title: string;
@@ -458,7 +521,7 @@ export default function TicketDetail() {
         setDialog(null);
         try {
           await reactivateTicket(Number(id));
-          const res = await api.get(`/tickets/${id}`);
+          const res = await ticketService.getById(id);
           setTicket(res.data);
           toast({
             variant: 'success',
@@ -509,78 +572,88 @@ export default function TicketDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-8rem)] max-w-5xl mx-auto w-full">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
-        <div className="flex items-start gap-3">
-           <button onClick={() => navigate('/tickets')} className="mt-0.5 p-2 -ml-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors shrink-0">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+
+      {/* ===== Cabecera del ticket ===== */}
+      <div className="relative overflow-hidden rounded-panel border border-slate-200/80 dark:border-slate-800 bg-white/85 dark:bg-slate-900/70 p-5 sm:p-6 shadow-sm ring-1 ring-slate-900/5 anim-fade-in-up">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400" />
+        <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-blue-400/10 dark:bg-blue-500/10 blur-3xl" />
+
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-3 min-w-0">
+            <button
+              onClick={() => navigate('/tickets')}
+              aria-label="Volver a tickets"
+              className="mt-0.5 p-2 -ml-1 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors shrink-0"
+            >
               <ArrowLeft className="w-5 h-5" />
-           </button>
-           <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                 <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
-                   {ticket?.codigo}: {ticket?.titulo}
-                 </h1>
-              </div>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getStatusColor(ticket?.estado || '')}`}>
+            </button>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-black font-mono text-slate-500 dark:text-slate-400">
+                  {ticket?.codigo}
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${getStatusColor(ticket?.estado || '')}`}>
                   {ticket?.estado?.replace('_', ' ')}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getPriorityColor(ticket?.prioridad || '')}`}>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${getPriorityColor(ticket?.prioridad || '')}`}>
                   {ticket?.prioridad}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {ticket?.tecnicoNombre ? `Asignado a: ${ticket.tecnicoNombre}` : 'Sin asignar'}
+              </div>
+              <h1 className="mt-2 text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
+                {ticket?.titulo}
+              </h1>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-[9px] font-black flex items-center justify-center">
+                    {(ticket?.solicitanteNombre || 'C').charAt(0)}
+                  </span>
+                  {ticket?.solicitanteNombre || 'Solicitante'}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-black flex items-center justify-center">
+                    {(ticket?.tecnicoNombre || 'S').charAt(0)}
+                  </span>
+                  {ticket?.tecnicoNombre || 'Sin asignar'}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  {ticket?.fechaCreacion ? new Date(ticket.fechaCreacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                 </span>
               </div>
-           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
-          {canActa && (
-            <button
-              onClick={() => setShowActa(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-emerald-500/20 shrink-0 active:scale-95"
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              Acta de Conformidad
-            </button>
-          )}
-          {canReactivate && (
-            <button
-              onClick={handleReactivate}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-cyan-500/20 shrink-0 active:scale-95"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reactivar ticket
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Calificación del cliente (CSAT) */}
-      {ticket?.calificacion != null && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/60 dark:border-cyan-500/20">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 shrink-0">
-            <Star className="w-5 h-5 text-white fill-white" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Calificación del cliente</p>
-            <div className="flex items-center gap-0.5 mt-1">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star key={i} className={`w-4 h-4 ${i <= (ticket.calificacion || 0) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />
-              ))}
-              <span className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300">{ticket.calificacion}/5</span>
             </div>
-            {ticket.comentarioCliente && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic leading-relaxed">"{ticket.comentarioCliente}"</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {canActa && (
+              <Button
+                onClick={() => setShowActa(true)}
+                variant="secondary"
+                leftIcon={<ClipboardCheck className="w-4 h-4" />}
+                className="border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
+              >
+                Acta de Conformidad
+              </Button>
+            )}
+            {canReactivate && (
+              <Button
+                onClick={handleReactivate}
+                variant="secondary"
+                leftIcon={<RotateCcw className="w-4 h-4" />}
+                className="border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-500/20"
+              >
+                Reactivar ticket
+              </Button>
             )}
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
 
       {/* Chat Container */}
-      <div className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col overflow-hidden min-h-0">
+      <div className="flex h-[calc(100dvh-19rem)] max-h-[880px] min-h-[520px] flex-col overflow-hidden rounded-panel border border-slate-200/80 bg-white/90 shadow-sm ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/80 anim-fade-in-up">
 
         {/* Encabezado del chat: participante + presencia / escribiendo */}
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-50 via-white to-white dark:from-blue-500/10 dark:via-slate-900 dark:to-slate-900 shrink-0">
@@ -800,10 +873,17 @@ export default function TicketDetail() {
              {/* Link Dialog */}
              {showLinkDialog && (
                 <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
-                  <div className="my-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-4 sm:p-6 anim-scale-in">
+                  <div
+                    ref={linkDialogPanelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={linkDialogTitleId}
+                    tabIndex={-1}
+                    className="my-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-4 sm:p-6 anim-scale-in focus:outline-none"
+                  >
                    <div className="flex items-center justify-between mb-5">
-                     <h3 className="text-base font-bold text-slate-900 dark:text-white">Insertar enlace</h3>
-                     <button onClick={() => setShowLinkDialog(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><X className="w-4 h-4" /></button>
+                     <h3 id={linkDialogTitleId} className="text-base font-bold text-slate-900 dark:text-white">Insertar enlace</h3>
+                     <button onClick={() => setShowLinkDialog(false)} aria-label="Cerrar diálogo de enlace" className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><X className="w-4 h-4" /></button>
                    </div>
                    <div className="space-y-3">
                      <div>
@@ -861,6 +941,77 @@ export default function TicketDetail() {
              </>)}
           </form>
         </div>
+      </div>
+
+        {/* ===== Panel de información ===== */}
+        <aside className="flex flex-col gap-4 anim-fade-in-up lg:sticky lg:top-5">
+
+          {/* Descripción */}
+          <section className="rounded-card border border-slate-200/80 bg-white/90 p-4 shadow-sm ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/70">
+            <h2 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+              <AlignLeft className="h-3.5 w-3.5" /> Descripción
+            </h2>
+            <p className="mt-2.5 whitespace-pre-wrap text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+              {ticket?.descripcion || 'Sin descripción registrada.'}
+            </p>
+          </section>
+
+          {/* Detalles */}
+          <section className="rounded-card border border-slate-200/80 bg-white/90 p-4 shadow-sm ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/70">
+            <h2 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+              <Tag className="h-3.5 w-3.5" /> Detalles
+            </h2>
+            <dl className="mt-3 space-y-3">
+              {infoRows.map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{label}</dt>
+                    <dd className="truncate text-xs font-semibold text-slate-700 dark:text-slate-200">{value}</dd>
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {/* SLA */}
+          <section className="rounded-card border border-slate-200/80 bg-white/90 p-4 shadow-sm ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/70">
+            <h2 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+              <Clock className="h-3.5 w-3.5" /> Acuerdo de servicio
+            </h2>
+            <p className={`mt-2 text-base font-black ${slaInfo?.tone ?? 'text-slate-500'}`}>{slaInfo?.label ?? '—'}</p>
+            {ticket?.fechaVencimientoSla && (
+              <p className="mt-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                Límite: {new Date(ticket.fechaVencimientoSla).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+              </p>
+            )}
+            {slaInfo?.progress != null && (
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                <div className={`h-full rounded-full transition-all ${slaInfo.bar}`} style={{ width: `${slaInfo.progress}%` }} />
+              </div>
+            )}
+          </section>
+
+          {/* CSAT */}
+          {ticket?.calificacion != null && (
+            <section className="rounded-card border border-cyan-200/70 bg-gradient-to-br from-cyan-50 to-blue-50 p-4 shadow-sm dark:border-cyan-500/20 dark:from-cyan-500/10 dark:to-blue-500/10">
+              <h2 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-cyan-600 dark:text-cyan-400">
+                <Star className="h-3.5 w-3.5" /> Calificación del cliente
+              </h2>
+              <div className="mt-2 flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className={`h-4 w-4 ${i <= (ticket.calificacion || 0) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />
+                ))}
+                <span className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300">{ticket.calificacion}/5</span>
+              </div>
+              {ticket.comentarioCliente && (
+                <p className="mt-1.5 text-xs italic leading-relaxed text-slate-500 dark:text-slate-400">“{ticket.comentarioCliente}”</p>
+              )}
+            </section>
+          )}
+        </aside>
       </div>
 
       <ConfirmDialog

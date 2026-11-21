@@ -3,9 +3,10 @@ import { useInventarioStore, MOVIMIENTO_LABELS } from '../../store/inventoryStor
 import { useToast } from '../../components/ui/Toast';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
 import Pagination from '../../components/ui/Pagination';
+import DataTable from '../../components/ui/DataTable';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
-  ArrowLeftRight, Plus, Loader2, ArrowDownLeft, ArrowUpRight,
+  ArrowLeftRight, Plus, ArrowDownLeft, ArrowUpRight,
   Repeat, MapPin, User as UserIcon, Building2, History,
 } from 'lucide-react';
 
@@ -77,61 +78,91 @@ export default function Movimientos() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-[11px] uppercase tracking-wider font-black text-slate-500 dark:text-slate-400">
-                <th className="px-4 py-3.5">Tipo</th>
-                <th className="px-4 py-3.5">Activo</th>
-                <th className="px-4 py-3.5 hidden lg:table-cell">Origen</th>
-                <th className="px-4 py-3.5 hidden lg:table-cell">Destino</th>
-                <th className="px-4 py-3.5">Fecha</th>
-                <th className="px-4 py-3.5 hidden md:table-cell">Usuario</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movimientosLoading && movimientos.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div></td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-16"><div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600"><History className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin movimientos registrados</p></div></td></tr>
-              ) : paged.map((m) => {
-                const conf = TIPO_ICONS[m.tipo] || TIPO_ICONS.TRASLADO;
-                const Icon = conf.icon;
-                return (
-                  <tr key={m.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${conf.cls.replace('text-', 'text-')}`}>
-                        <Icon className="w-3.5 h-3.5" /> {MOVIMIENTO_LABELS[m.tipo] || m.tipo}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="font-bold text-slate-800 dark:text-slate-100">{m.activoNombre}</p>
-                      <p className="font-mono text-xs text-slate-400">{m.activoCodigo}</p>
-                    </td>
-                    <td className="px-4 py-3.5 hidden lg:table-cell">
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-snug">
-                        {m.entidadOrigenNombre || m.sedeOrigenNombre ? `${m.sedeOrigenNombre || ''}${m.sedeOrigenNombre && m.entidadOrigenNombre ? ' · ' : ''}${m.entidadOrigenNombre || ''}` : '—'}
-                        {m.responsableAnteriorNombre ? <span className="block text-slate-400">Resp: {m.responsableAnteriorNombre}</span> : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 hidden lg:table-cell">
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-snug">
-                        {m.entidadDestinoNombre || m.sedeDestinoNombre ? `${m.sedeDestinoNombre || ''}${m.sedeDestinoNombre && m.entidadDestinoNombre ? ' · ' : ''}${m.entidadDestinoNombre || ''}` : '—'}
-                        {m.responsableNuevoNombre ? <span className="block text-slate-400">Resp: {m.responsableNuevoNombre}</span> : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                      {m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </td>
-                    <td className="px-4 py-3.5 hidden md:table-cell text-xs font-semibold text-slate-500">{m.usuarioOperacion || '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={[
+          {
+            key: 'tipo',
+            header: 'Tipo',
+            mobileLabel: 'Tipo',
+            sortValue: (m) => MOVIMIENTO_LABELS[m.tipo] || m.tipo,
+            render: (m) => {
+              const conf = TIPO_ICONS[m.tipo] || TIPO_ICONS.TRASLADO;
+              const Icon = conf.icon;
+              return (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${conf.cls}`}>
+                  <Icon className="w-3.5 h-3.5" /> {MOVIMIENTO_LABELS[m.tipo] || m.tipo}
+                </span>
+              );
+            },
+          },
+          {
+            key: 'activo',
+            header: 'Activo',
+            mobilePrimary: true,
+            sortValue: (m) => m.activoNombre || '',
+            render: (m) => (
+              <div>
+                <p className="font-bold text-slate-800 dark:text-slate-100">{m.activoNombre}</p>
+                <p className="font-mono text-xs text-slate-400">{m.activoCodigo}</p>
+              </div>
+            ),
+          },
+          {
+            key: 'origen',
+            header: 'Origen',
+            hideBelow: 'lg',
+            sortValue: (m) => m.sedeOrigenNombre || m.entidadOrigenNombre || '',
+            render: (m) => (
+              <div className="text-xs font-medium leading-snug text-slate-500 dark:text-slate-400">
+                {m.entidadOrigenNombre || m.sedeOrigenNombre
+                  ? `${m.sedeOrigenNombre || ''}${m.sedeOrigenNombre && m.entidadOrigenNombre ? ' · ' : ''}${m.entidadOrigenNombre || ''}`
+                  : '—'}
+                {m.responsableAnteriorNombre && <span className="block text-slate-400">Resp: {m.responsableAnteriorNombre}</span>}
+              </div>
+            ),
+          },
+          {
+            key: 'destino',
+            header: 'Destino',
+            hideBelow: 'lg',
+            sortValue: (m) => m.sedeDestinoNombre || m.entidadDestinoNombre || '',
+            render: (m) => (
+              <div className="text-xs font-medium leading-snug text-slate-500 dark:text-slate-400">
+                {m.entidadDestinoNombre || m.sedeDestinoNombre
+                  ? `${m.sedeDestinoNombre || ''}${m.sedeDestinoNombre && m.entidadDestinoNombre ? ' · ' : ''}${m.entidadDestinoNombre || ''}`
+                  : '—'}
+                {m.responsableNuevoNombre && <span className="block text-slate-400">Resp: {m.responsableNuevoNombre}</span>}
+              </div>
+            ),
+          },
+          {
+            key: 'fecha',
+            header: 'Fecha',
+            className: 'whitespace-nowrap',
+            sortValue: (m) => (m.fecha ? new Date(m.fecha).getTime() : 0),
+            render: (m) => (
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                {m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+              </span>
+            ),
+          },
+          {
+            key: 'usuario',
+            header: 'Usuario',
+            hideBelow: 'md',
+            sortValue: (m) => m.usuarioOperacion || '',
+            render: (m) => <span className="text-xs font-semibold text-slate-500">{m.usuarioOperacion || '—'}</span>,
+          },
+        ]}
+        data={paged}
+        rowKey={(m) => m.id}
+        loading={movimientosLoading}
+        emptyIcon={History}
+        emptyTitle="Sin movimientos registrados"
+        emptyDescription="Los traslados, asignaciones y bajas de activos aparecerán aquí."
+        caption="Historial de movimientos de inventario"
+        minWidth="820px"
+      />
 
       <Pagination
         page={page}

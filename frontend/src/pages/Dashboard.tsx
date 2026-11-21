@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon, Boxes, ListTodo, FileText, Plus, PieChart as PieIcon } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, AlertTriangle, Activity, TrendingUp, Users, ArrowUpRight, BarChart3, Award, CalendarDays, Sunrise, Sun, Moon, Boxes, ListTodo, FileText, Plus, PieChart as PieIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import UserAvatar from '../components/ui/UserAvatar';
 import MiniCalendar from '../components/ui/MiniCalendar';
 import { SkeletonStat, SkeletonList } from '../components/ui/Skeleton';
@@ -12,25 +12,21 @@ import NewTicketModal from '../components/tickets/NewTicketModal';
 import WeatherWidget from '../components/ui/WeatherWidget';
 import ChartTooltip from '../components/ui/ChartTooltip';
 import { useNavigate } from 'react-router-dom';
+import { CHART, CHART_SERIES, PRIORITY_CHART_COLORS } from '../lib/chartColors';
 
 const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-const TECNICO_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#0ea5e9'];
+const TECNICO_COLORS = CHART_SERIES;
 
 const STATUS_COLORS: Record<string, string> = {
-  NUEVO: '#3b82f6',
-  ASIGNADO: '#06b6d4',
-  EN_PROCESO: '#f59e0b',
-  RESUELTO: '#10b981',
+  NUEVO: CHART.blue,
+  ASIGNADO: CHART.cyan,
+  EN_PROCESO: CHART.amber,
+  RESUELTO: CHART.emerald,
   CERRADO: '#64748b',
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICA: '#ef4444',
-  ALTA: '#f97316',
-  MEDIA: '#eab308',
-  BAJA: '#10b981',
-};
+const PRIORITY_COLORS = PRIORITY_CHART_COLORS;
 
 const PRIORITY_DOT: Record<string, string> = {
   CRITICA: 'text-rose-500',
@@ -48,6 +44,23 @@ export default function Dashboard() {
   const profileImage = useProfileImage(user?.id);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
   const [activeStatus, setActiveStatus] = useState<number | null>(null);
+  // Vista compacta por defecto; el análisis avanzado se recuerda en el navegador.
+  const [showAdvanced, setShowAdvanced] = useState(() => {
+    try {
+      return localStorage.getItem('dashboard_advanced') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleAdvanced = () => setShowAdvanced((prev) => {
+    const next = !prev;
+    try {
+      localStorage.setItem('dashboard_advanced', String(next));
+    } catch {
+      // almacenamiento no disponible
+    }
+    return next;
+  });
   const navigate = useNavigate();
 
   // Saludo dinamico segun la hora del dia + reloj en vivo
@@ -138,14 +151,13 @@ export default function Dashboard() {
   }, [tickets]);
 
   const totalCount = dbStats?.totalTickets ?? tickets.length;
-  const openCount = tickets.filter((t) => t.estado !== 'CERRADO' && t.estado !== 'RESUELTO').length;
   const overdueCount = dbStats?.overdueTickets || 0;
 
   const stats = [
     {
       title: 'Total Tickets', value: totalCount, icon: Ticket,
       color: 'text-blue-500', bg: 'bg-blue-500/10', gradient: 'from-blue-500/20 to-blue-600/5',
-      bar: 'from-blue-500 to-sky-500', pct: 100, subtitle: `${openCount} abiertos`,
+      bar: 'from-blue-500 to-sky-500', pct: 100, subtitle: 'Histórico completo',
     },
     {
       title: 'En Proceso', value: dbStats?.inProgressTickets || 0, icon: Clock,
@@ -157,7 +169,7 @@ export default function Dashboard() {
     {
       title: 'Resueltos', value: dbStats?.resolvedTickets || 0, icon: CheckCircle,
       color: 'text-emerald-500', bg: 'bg-emerald-500/10', gradient: 'from-emerald-500/20 to-emerald-600/5',
-      bar: 'from-emerald-400 to-teal-500', pct: resolutionRate, subtitle: `Tasa ${resolutionRate}%`,
+      bar: 'from-emerald-400 to-teal-500', pct: resolutionRate, subtitle: 'Cerrados con éxito',
     },
     {
       title: 'Vencidos', value: overdueCount, icon: AlertTriangle,
@@ -260,115 +272,145 @@ export default function Dashboard() {
   ].filter((a) => a.show !== false);
 
   return (
-    <div className="space-y-6">
-      {/* ===== HERO: Bienvenida dinamica segun la hora ===== */}
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${heroGradient} px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-500/25 anim-fade-in-up transition-colors duration-700`}>
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none anim-float-slow" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none anim-float-slower" />
-        <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
-        <div className="absolute top-14 right-1/4 w-16 h-16 border border-white/10 rounded-full pointer-events-none hidden sm:block" />
+    <div className="space-y-5">
+      {/* ===== HERO: centro de operaciones ===== */}
+      <div className="relative overflow-hidden rounded-hero bg-slate-950 p-px shadow-2xl shadow-blue-950/25 anim-fade-in-up">
+        <div className={`relative overflow-hidden rounded-hero bg-gradient-to-br ${heroGradient} px-6 py-7 sm:px-8 sm:py-8 transition-colors duration-700`}>
+          {/* Aurora + malla sutil */}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(255,255,255,0.20),transparent_38%),radial-gradient(circle_at_84%_8%,rgba(34,211,238,0.30),transparent_42%),radial-gradient(circle_at_62%_108%,rgba(16,185,129,0.22),transparent_42%)]" />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.10]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,.75) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.75) 1px, transparent 1px)',
+              backgroundSize: '36px 36px',
+              maskImage: 'radial-gradient(ellipse at 30% 20%, black, transparent 75%)',
+            }}
+          />
+          <div className="pointer-events-none absolute -top-24 -right-20 h-64 w-64 rounded-full bg-cyan-300/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-blue-400/25 blur-3xl" />
 
-        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4 sm:gap-5">
-            {profileImage ? (
-              <img
-                src={profileImage}
-                alt="Foto de perfil"
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-white/40 shadow-lg shadow-black/20"
-              />
-            ) : (
-              <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-black/20">
-                {user?.nombre?.charAt(0) || 'U'}{user?.apellidos?.charAt(0) || ''}
-              </div>
-            )}
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
-                <GreetingIcon className="w-3.5 h-3.5" />
-                {greeting}
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-200 to-yellow-200">
-                  {user?.nombre} {user?.apellidos}
-                </span>
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-blue-100/90 font-medium text-xs sm:text-sm">
-                <span className="flex items-center gap-1.5 capitalize">
-                  <CalendarDays className="w-3.5 h-3.5" />
-                  {now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                </span>
-                <span className="flex items-center gap-1.5 tabular-nums">
-                  <Clock className="w-3.5 h-3.5" />
-                  {now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center gap-3 self-start lg:self-auto">
-            <div className="flex items-center gap-2">
-              {[
-                { label: 'Total', value: totalCount },
-                { label: 'Abiertos', value: openCount },
-                { label: 'Vencidos', value: overdueCount },
-              ].map((c) => (
-                <div key={c.label} className="px-3 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 text-center min-w-[74px]">
-                  <p className="text-lg font-black text-white leading-none tabular-nums">{c.value}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/70 mt-1">{c.label}</p>
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt="Foto de perfil"
+                  className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl object-cover border-2 border-white/40 shadow-xl shadow-black/25"
+                />
+              ) : (
+                <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white font-black text-xl shadow-xl shadow-black/25">
+                  {user?.nombre?.charAt(0) || 'U'}{user?.apellidos?.charAt(0) || ''}
                 </div>
-              ))}
+              )}
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/15 text-[10px] font-black tracking-[0.16em] uppercase text-white/90">
+                    <Activity className="w-3 h-3" />
+                    Centro de operaciones
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-[10px] font-bold text-white/80">
+                    <GreetingIcon className="w-3 h-3" />
+                    {greeting}
+                  </span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight truncate">
+                  {user?.nombre} {user?.apellidos}
+                </h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-white/80 text-[11px] sm:text-xs font-semibold">
+                  <span className="flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span className="capitalize">{now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 tabular-nums">
+                    <Clock className="w-3.5 h-3.5" />
+                    {now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-lg bg-emerald-400/15 px-2 py-1 text-emerald-100">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                    Sistema en línea
+                  </span>
+                </div>
+              </div>
             </div>
-            <WeatherWidget />
+
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <button
+                onClick={() => setIsNewTicketModalOpen(true)}
+                className="group inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-[11px] font-black text-blue-700 shadow-lg shadow-black/15 hover:-translate-y-px hover:shadow-xl active:scale-95 transition-all"
+              >
+                <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center group-hover:rotate-90 transition-transform">
+                  <Plus className="w-3.5 h-3.5" />
+                </span>
+                Nuevo ticket
+              </button>
+              <WeatherWidget />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Atajos rápidos */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {quickActions.map((a, i) => (
           <button
             key={a.label}
             onClick={() => (a.action === 'new' ? setIsNewTicketModalOpen(true) : navigate(a.path))}
-            className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${a.gradient} p-4 text-left text-white shadow-lg ${a.shadow} hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 anim-fade-in-up`}
+            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 p-3.5 text-left shadow-sm hover:shadow-xl hover:border-blue-200 dark:hover:border-blue-500/30 hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up"
             style={{ animationDelay: `${i * 60}ms` }}
           >
-            <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-xl transition-transform group-hover:scale-150" />
-            <div className="relative flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <span className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${a.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+            <div className="flex items-center gap-3">
+              <span className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${a.gradient} text-white shadow-lg ${a.shadow} flex items-center justify-center group-hover:scale-105 transition-transform`}>
                 <a.icon className="w-5 h-5" />
               </span>
-              <div className="min-w-0">
-                <p className="text-sm font-black leading-tight">{a.label}</p>
-                <p className="text-[10px] font-semibold text-white/70 truncate mt-0.5">{a.desc}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black leading-tight text-slate-800 dark:text-slate-100 truncate">{a.label}</p>
+                <p className="text-[10px] font-medium text-slate-400 truncate mt-0.5">{a.desc}</p>
               </div>
+              <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
             </div>
           </button>
         ))}
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {!dbStats && tickets.length === 0
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)
           : stats.map((stat, index) => (
           <div
             key={index}
-            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden anim-fade-in-up"
+            className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/85 dark:bg-slate-900/70 p-5 shadow-sm ring-1 ring-slate-900/5 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 anim-fade-in-up"
             style={{ animationDelay: `${index * 60}ms` }}
           >
-            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.gradient} to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-150`}></div>
-            <div className="relative flex items-start justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stat.title}</p>
-                <p className="text-3xl font-black mt-1.5 text-slate-800 dark:text-white tracking-tight tabular-nums">{stat.value}</p>
-                <p className={`text-[11px] font-semibold mt-1 ${stat.alert ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}>{stat.subtitle}</p>
+            <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${stat.bar}`} />
+            <div className={`pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${stat.gradient} blur-2xl opacity-80 transition-transform group-hover:scale-125`} />
+
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{stat.title}</p>
+                <p className="mt-2 text-4xl font-black tracking-tight text-slate-800 dark:text-white tabular-nums leading-none">{stat.value}</p>
+                <span className={`mt-2.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  stat.alert
+                    ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}>
+                  {stat.alert ? <AlertTriangle className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                  {stat.subtitle}
+                </span>
               </div>
-              <div className={`relative p-3 rounded-2xl ${stat.bg} shadow-inner transition-transform group-hover:scale-110 group-hover:rotate-3 ${stat.alert ? 'animate-pulse' : ''}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                {stat.alert && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />}
-              </div>
+              <span className={`relative w-11 h-11 shrink-0 rounded-2xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 group-hover:-rotate-3 ${stat.alert ? 'animate-pulse' : ''}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                {stat.alert && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />}
+              </span>
             </div>
-            <div className="relative mt-4 h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full bg-gradient-to-r ${stat.bar} transition-all duration-700`} style={{ width: `${Math.min(100, stat.pct)}%` }} />
+
+            <div className="relative mt-4 flex items-center gap-2.5">
+              <div className="h-1.5 flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full bg-gradient-to-r ${stat.bar} transition-all duration-700`} style={{ width: `${Math.min(100, stat.pct)}%` }} />
+              </div>
+              <span className="text-[10px] font-black tabular-nums text-slate-400">{Math.min(100, stat.pct)}%</span>
             </div>
           </div>
         ))}
@@ -376,38 +418,68 @@ export default function Dashboard() {
 
       {/* Secondary Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-2xl bg-blue-500/10">
-            <TrendingUp className="w-6 h-6 text-blue-500" />
+        {[
+          {
+            label: 'Tasa de Resolución', value: `${resolutionRate}%`,
+            caption: 'Tickets resueltos o cerrados',
+            icon: TrendingUp, gradient: 'from-blue-500 to-sky-500', shadow: 'shadow-blue-500/25',
+          },
+          {
+            label: 'Sin asignar',
+            value: tickets.filter(t => !t.tecnicoId && t.estado !== 'CERRADO' && t.estado !== 'RESUELTO').length,
+            caption: 'Pendientes de técnico',
+            icon: AlertTriangle, gradient: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/25',
+          },
+          {
+            label: 'Técnicos Activos',
+            value: new Set(tickets.filter(t => t.tecnicoId).map(t => t.tecnicoId)).size,
+            caption: 'Con carga asignada',
+            icon: Users, gradient: 'from-violet-500 to-indigo-500', shadow: 'shadow-violet-500/25',
+          },
+        ].map((item) => (
+          <div
+            key={item.label}
+            className="group flex items-center gap-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/85 dark:bg-slate-900/70 p-5 shadow-sm ring-1 ring-slate-900/5 hover:shadow-md hover:-translate-y-0.5 transition-all"
+          >
+            <span className={`w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br ${item.gradient} text-white shadow-lg ${item.shadow} flex items-center justify-center group-hover:scale-105 transition-transform`}>
+              <item.icon className="w-5 h-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{item.label}</p>
+              <p className="mt-1 text-2xl font-black tracking-tight text-slate-800 dark:text-white tabular-nums leading-none">{item.value}</p>
+              <p className="mt-1 text-[10px] text-slate-400 truncate">{item.caption}</p>
+            </div>
+            <ArrowUpRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
           </div>
+        ))}
+      </div>
+
+      {/* Barra de resumen + modo compacto */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 px-4 py-3 shadow-sm ring-1 ring-slate-900/5">
+        <div className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-800 to-slate-700 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-white shadow-md">
+            <BarChart3 className="w-4 h-4" />
+          </span>
           <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tasa de Resolución</p>
-            <p className="text-2xl font-black text-slate-800 dark:text-white">{resolutionRate}%</p>
+            <p className="text-xs font-black text-slate-800 dark:text-slate-100">Resumen operativo</p>
+            <p className="text-[10px] text-slate-400">
+              Vista {showAdvanced ? 'completa' : 'compacta'} · {tickets.length} tickets · actualizado en tiempo real
+            </p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-2xl bg-cyan-500/10">
-            <BarChart3 className="w-6 h-6 text-cyan-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Activos Abiertos</p>
-            <p className="text-2xl font-black text-slate-800 dark:text-white">{tickets.filter(t => t.estado !== 'CERRADO' && t.estado !== 'RESUELTO').length}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-          <div className="p-3 rounded-2xl bg-cyan-500/10">
-            <Users className="w-6 h-6 text-cyan-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Técnicos Activos</p>
-            <p className="text-2xl font-black text-slate-800 dark:text-white">{new Set(tickets.filter(t => t.tecnicoId).map(t => t.tecnicoId)).size}</p>
-          </div>
-        </div>
+        <button
+          onClick={toggleAdvanced}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-[11px] font-black text-slate-600 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 hover:-translate-y-px active:scale-95 transition-all self-start sm:self-auto"
+          aria-expanded={showAdvanced}
+        >
+          {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {showAdvanced ? 'Ocultar análisis' : 'Ver análisis avanzado'}
+        </button>
       </div>
 
       {/* ===== Comparativa mensual + Actividad por día de la semana ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-base font-bold flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-sky-500" />
@@ -440,7 +512,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+        <div className="bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
@@ -488,7 +560,8 @@ export default function Dashboard() {
       </div>
 
       {/* ===== Rendimiento de Técnicos: resueltos por mes con filtro por año ===== */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+      {showAdvanced && (
+      <div className="bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
@@ -516,7 +589,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Gráfico apilado por mes */}
           <div className="lg:col-span-2 h-[260px] w-full">
             {technicianStats.length > 0 ? (
@@ -587,11 +660,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Volume Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+        <div className="lg:col-span-2 bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
@@ -644,7 +718,7 @@ export default function Dashboard() {
         </div>
 
         {/* Status Distribution (Pie) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
+        <div className="bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-center gap-2.5 mb-2">
             <div className="w-9 h-9 rounded-xl bg-cyan-100 dark:bg-cyan-500/15 flex items-center justify-center">
               <PieIcon className="w-[18px] h-[18px] text-cyan-600 dark:text-cyan-400" />
@@ -720,9 +794,10 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {showAdvanced && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Priority Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+        <div className="bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-500/15 flex items-center justify-center">
@@ -758,7 +833,7 @@ export default function Dashboard() {
         </div>
 
         {/* Category Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+        <div className="bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
@@ -800,10 +875,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ===== Top áreas + Tickets vencidos ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {showAdvanced && (
+        <div className="bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-sky-100 dark:bg-sky-500/15 flex items-center justify-center">
@@ -844,8 +921,9 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+        )}
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
+        <div className={`bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up ${showAdvanced ? '' : 'lg:col-span-2'}`}>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-bold flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-rose-500" />
@@ -901,8 +979,8 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Tickets + Calendario */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="lg:col-span-2 bg-white/85 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl ring-1 ring-slate-900/5 p-6 shadow-sm hover:shadow-md transition-shadow anim-fade-in-up">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold flex items-center gap-2">
             <Ticket className="w-5 h-5 text-blue-500" />
@@ -985,7 +1063,9 @@ export default function Dashboard() {
         )}
       </div>
 
-      <MiniCalendar events={ticketEvents} />
+      <div className="anim-fade-in-up">
+        <MiniCalendar events={ticketEvents} />
+      </div>
       </div>
 
       <NewTicketModal 
@@ -998,3 +1078,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

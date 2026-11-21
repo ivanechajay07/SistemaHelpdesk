@@ -40,21 +40,34 @@ public class TotpService {
     }
 
     public boolean verificar(String secretoBase32, String codigo, int skew) {
+        return verificarPaso(secretoBase32, codigo, skew) >= 0;
+    }
+
+    /**
+     * Verifica el código y devuelve el paso TOTP (ventana) que coincidió, o -1
+     * si es inválido. Permite al llamador rechazar la reutilización del mismo
+     * código comparándolo con el último paso aceptado.
+     */
+    public long verificarPaso(String secretoBase32, String codigo) {
+        return verificarPaso(secretoBase32, codigo, DEFAULT_SKEW);
+    }
+
+    public long verificarPaso(String secretoBase32, String codigo, int skew) {
         if (secretoBase32 == null || codigo == null) {
-            return false;
+            return -1;
         }
         String limpio = codigo.replaceAll("\\s", "");
         if (!limpio.matches("\\d{" + DIGITS + "}")) {
-            return false;
+            return -1;
         }
         byte[] key = base32Decode(secretoBase32);
         long contador = System.currentTimeMillis() / 1000L / PERIOD_SECONDS;
         for (int i = -skew; i <= skew; i++) {
             if (generarCodigo(key, contador + i).equals(limpio)) {
-                return true;
+                return contador + i;
             }
         }
-        return false;
+        return -1;
     }
 
     /** Código actual (para pruebas/diagnóstico). */

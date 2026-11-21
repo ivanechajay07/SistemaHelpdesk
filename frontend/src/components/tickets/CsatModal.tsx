@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Star, Loader2, PartyPopper, X } from 'lucide-react';
-import api from '../../lib/axios';
+import { ticketService } from '../../services/ticketService';
+import { useDialogA11y } from '../../lib/useDialogA11y';
 import type { Ticket } from '../../store/ticketStore';
 
 const LABELS = ['', 'Muy insatisfecho', 'Insatisfecho', 'Neutral', 'Satisfecho', '¡Muy satisfecho!'];
@@ -17,6 +18,8 @@ export default function CsatModal({
   const [comentario, setComentario] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const titleId = useId();
+  const panelRef = useDialogA11y(true, onClose);
 
   const submit = async () => {
     if (puntaje === 0) {
@@ -26,7 +29,7 @@ export default function CsatModal({
     setSending(true);
     setError('');
     try {
-      await api.post(`/tickets/${ticket.id}/rating`, { puntaje, comentario: comentario || null });
+      await ticketService.rate(ticket.id, puntaje, comentario);
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.message || 'No se pudo enviar tu calificación.');
@@ -37,11 +40,19 @@ export default function CsatModal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm anim-overlay-in">
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden anim-scale-in">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden anim-scale-in focus:outline-none"
+      >
         {/* Encabezado degradado */}
         <div className="relative px-6 pt-7 pb-5 text-center bg-gradient-to-br from-blue-600 via-cyan-600 to-pink-600">
           <button
             onClick={onClose}
+            aria-label="Cerrar encuesta"
             className="absolute top-4 right-4 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -49,7 +60,7 @@ export default function CsatModal({
           <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center">
             <PartyPopper className="w-7 h-7 text-white" />
           </div>
-          <h2 className="text-xl font-black text-white">¡Ticket resuelto!</h2>
+          <h2 id={titleId} className="text-xl font-black text-white">¡Ticket resuelto!</h2>
           <p className="text-sm text-blue-100 font-medium mt-1">
             ¿Cómo fue tu experiencia con <span className="font-bold">{ticket.codigo}</span>?
           </p>
@@ -64,6 +75,8 @@ export default function CsatModal({
                 onClick={() => { setPuntaje(n); setError(''); }}
                 onMouseEnter={() => setHover(n)}
                 onMouseLeave={() => setHover(0)}
+                aria-label={`Calificar con ${n} estrella${n !== 1 ? 's' : ''}`}
+                aria-pressed={puntaje === n}
                 className="p-1 transition-transform duration-150 hover:scale-125 active:scale-110"
               >
                 <Star
