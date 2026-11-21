@@ -1,5 +1,7 @@
 package com.empresa.helpdesk.modules.auth.dto;
 
+import com.empresa.helpdesk.security.PasswordPolicy;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -18,8 +20,8 @@ public class ResetPasswordRequest {
     private String token;
 
     @NotBlank(message = "La contraseña es requerida")
-    @Size(min = 8, max = 100, message = "La contraseña debe tener entre 8 y 100 caracteres")
-    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{8,100}$",
-            message = "La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número")
+    @Size(min = 8, max = 12, message = "La contraseña debe tener entre 8 y 12 caracteres")
+    @Pattern(regexp = PasswordPolicy.REGEX,
+            message = PasswordPolicy.MESSAGE)
     private String newPassword;
 }

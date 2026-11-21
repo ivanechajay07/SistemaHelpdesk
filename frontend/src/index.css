@@ -5,16 +5,46 @@
   --color-primary: #0f172a;
   --color-secondary: #3b82f6;
   --color-accent: #f59e0b;
+
+  /* Radios y sombras del sistema de diseño */
+  --radius-card: 1.375rem;
+  --radius-panel: 1.625rem;
+  --radius-hero: 1.75rem;
+  --shadow-card:
+    0 1px 2px rgb(15 23 42 / 0.04),
+    0 18px 40px -32px rgb(15 23 42 / 0.35);
+  --shadow-card-hover:
+    0 1px 2px rgb(15 23 42 / 0.05),
+    0 24px 55px -34px rgb(37 99 235 / 0.42);
+  --shadow-float: 0 30px 90px -28px rgb(2 6 23 / 0.7);
 }
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  
+
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: #f8fafc;
+
+  /* Superficies y efectos compartidos */
+  --hd-surface: rgba(255, 255, 255, 0.92);
+  --hd-surface-dark: rgba(15, 23, 42, 0.86);
+  --hd-surface-dialog: rgba(255, 255, 255, 0.97);
+  --hd-surface-dialog-dark: rgba(15, 23, 42, 0.96);
+  --hd-blur-card: blur(14px) saturate(125%);
+  --hd-blur-dialog: blur(20px) saturate(120%);
+  --hd-shadow-card:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 18px 40px -32px rgba(15, 23, 42, 0.35);
+  --hd-shadow-card-hover:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 24px 55px -34px rgba(37, 99, 235, 0.42);
+  --hd-shadow-dialog:
+    0 2px 6px rgba(15, 23, 42, 0.06),
+    0 30px 90px -28px rgba(2, 6, 23, 0.7);
+  --hd-focus-ring: rgba(59, 130, 246, 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -195,6 +225,39 @@
 }
 .anim-btn-gradient { background-size: 200% 200%; animation: gradientMove 3.2s ease infinite; }
 
+/* ===== Login: aurora, reflejo de cristal y partículas ===== */
+@keyframes loginAuroraSpin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.anim-login-aurora {
+  animation: loginAuroraSpin 48s linear infinite;
+}
+
+@keyframes loginSheen {
+  0%, 18%   { transform: translateX(-140%) skewX(-14deg); opacity: 0; }
+  28%       { opacity: .55; }
+  55%, 100% { transform: translateX(240%) skewX(-14deg); opacity: 0; }
+}
+.anim-login-sheen {
+  animation: loginSheen 8s ease-in-out infinite;
+}
+
+@keyframes loginParticle {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .25; }
+  50%      { transform: translate3d(8px, -18px, 0) scale(1.35); opacity: .7; }
+}
+.anim-login-particle {
+  animation: loginParticle 6s ease-in-out infinite;
+}
+
+@keyframes loadingSlide {
+  0%   { transform: translateX(-130%); }
+  100% { transform: translateX(330%); }
+}
+.anim-loading-slide {
+  animation: loadingSlide 1.35s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
 /* ===== Check de éxito (login) ===== */
 @keyframes checkDraw { to { stroke-dashoffset: 0; } }
 .anim-check { stroke-dasharray: 48; stroke-dashoffset: 48; animation: checkDraw .45s ease-out .12s forwards; }
@@ -243,8 +306,195 @@
   .anim-top-progress,
   .anim-overlay-in,
   .anim-spin-ring,
+  .anim-login-aurora,
+  .anim-login-sheen,
+  .anim-login-particle,
+  .anim-loading-slide,
   .skeleton {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+/* ============================================================
+   Sistema visual compartido de módulos
+   Glassmorphism suave, sombras en capas y microinteracciones.
+   Se aplica a las tarjetas y tablas dentro del área de contenido.
+   ============================================================ */
+
+main :is(div, section, article).rounded-2xl.border.bg-white:not([class*='bg-gradient']),
+main :is(div, section, article).rounded-3xl.border.bg-white:not([class*='bg-gradient']) {
+  background-color: var(--hd-surface);
+  -webkit-backdrop-filter: var(--hd-blur-card);
+  backdrop-filter: var(--hd-blur-card);
+  box-shadow: var(--hd-shadow-card);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.dark main :is(div, section, article).rounded-2xl.border.bg-white:not([class*='bg-gradient']),
+.dark main :is(div, section, article).rounded-3xl.border.bg-white:not([class*='bg-gradient']) {
+  background-color: var(--hd-surface-dark);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 22px 50px -34px rgba(0, 0, 0, 0.9);
+}
+
+main :is(div, section, article).rounded-2xl.border.bg-white:hover,
+main :is(div, section, article).rounded-3xl.border.bg-white:hover {
+  box-shadow: var(--hd-shadow-card-hover);
+}
+
+/* Diálogos: superficie blanca casi opaca para que el texto y los controles
+   mantengan contraste incluso sobre el overlay oscuro. */
+main .fixed.inset-0 > div[class*='bg-white']:not([class*='bg-gradient']) {
+  background-color: var(--hd-surface-dialog) !important;
+  -webkit-backdrop-filter: var(--hd-blur-dialog);
+  backdrop-filter: var(--hd-blur-dialog);
+  box-shadow: var(--hd-shadow-dialog);
+}
+
+.dark main .fixed.inset-0 > div[class*='bg-white']:not([class*='bg-gradient']) {
+  background-color: var(--hd-surface-dialog-dark) !important;
+}
+
+/* Tablas: cabeceras compactas y hover sutil en todas las páginas */
+main table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+main table thead th {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+main table tbody tr {
+  transition: background-color 0.18s ease;
+}
+
+main table tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.045);
+}
+
+.dark main table tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.09);
+}
+
+/* Controles: transición y foco uniforme */
+main input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']),
+main select,
+main textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+main input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']):focus-visible,
+main select:focus-visible,
+main textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--hd-focus-ring);
+}
+
+/* Microinteracción opcional para tarjetas clicables */
+.app-card-interactive {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
+}
+
+.app-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 26px 55px -32px rgba(37, 99, 235, 0.40);
+}
+
+/* Degradado de fondo común para el área de contenido */
+.app-content-bg {
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.055), transparent 34%),
+    radial-gradient(circle at 88% 6%, rgba(16, 185, 129, 0.045), transparent 32%),
+    radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.035), transparent 40%);
+}
+
+.dark .app-content-bg {
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.10), transparent 34%),
+    radial-gradient(circle at 88% 6%, rgba(16, 185, 129, 0.07), transparent 32%),
+    radial-gradient(circle at 50% 100%, rgba(2, 132, 199, 0.06), transparent 40%);
+}
+
+/* ============================================================
+   Impresión: informes y actas en papel / PDF del navegador
+   ============================================================ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  /* El chrome de la aplicación no se imprime */
+  header,
+  aside,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main,
+  #contenido-principal {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-content-bg {
+    background: #fff !important;
+  }
+
+  main :is(div, section, article).rounded-2xl.border.bg-white,
+  main :is(div, section, article).rounded-card.border.bg-white {
+    background: #fff !important;
+    box-shadow: none !important;
+    border-color: #cbd5e1 !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    break-inside: avoid;
+  }
+
+  main table {
+    width: 100% !important;
+    font-size: 10px !important;
+    border-collapse: collapse !important;
+  }
+
+  main table thead {
+    display: table-header-group;
+  }
+
+  main table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  main table th,
+  main table td {
+    padding: 6px 8px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    animation: none !important;
+    transition: none !important;
   }
 }

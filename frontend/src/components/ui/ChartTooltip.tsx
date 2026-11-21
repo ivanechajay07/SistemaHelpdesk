@@ -25,7 +25,10 @@ export default function ChartTooltip({ active, payload, label, formatter, labelF
   const topLabel = labelFormatter ? labelFormatter(label) : label;
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-900/95 px-3 py-2 shadow-xl shadow-black/40 backdrop-blur-sm min-w-[130px]">
+    <div
+      role="tooltip"
+      className="pointer-events-none min-w-[130px] rounded-xl border border-slate-700 bg-slate-900/95 px-3 py-2 shadow-xl shadow-black/40 backdrop-blur-sm"
+    >
       {!hideLabel && topLabel !== undefined && topLabel !== null && topLabel !== '' && (
         <p className="text-xs font-bold text-white mb-1.5">{topLabel}</p>
       )}

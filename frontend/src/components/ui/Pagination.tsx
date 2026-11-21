@@ -107,6 +107,7 @@ export default function Pagination({
             onClick={() => changePage(1)}
             disabled={safePage === 1}
             title="Primera página"
+            aria-label="Ir a la primera página"
             className={`${btnBase} ${btnIdle} hidden lg:inline-flex`}
           >
             <ChevronsLeft className="w-4 h-4" />
@@ -115,6 +116,7 @@ export default function Pagination({
             onClick={() => changePage(safePage - 1)}
             disabled={safePage === 1}
             title="Anterior"
+            aria-label="Página anterior"
             className={`${btnBase} ${btnIdle}`}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -145,6 +147,7 @@ export default function Pagination({
             onClick={() => changePage(safePage + 1)}
             disabled={safePage === totalPages}
             title="Siguiente"
+            aria-label="Página siguiente"
             className={`${btnBase} ${btnIdle}`}
           >
             <ChevronRight className="w-4 h-4" />
@@ -153,6 +156,7 @@ export default function Pagination({
             onClick={() => changePage(totalPages)}
             disabled={safePage === totalPages}
             title="Última página"
+            aria-label="Ir a la última página"
             className={`${btnBase} ${btnIdle} hidden lg:inline-flex`}
           >
             <ChevronsRight className="w-4 h-4" />

@@ -25,10 +25,6 @@ public class JwtService {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
-    /** Expiración del refresh token (por defecto 7 días). */
-    @Value("${app.jwt.refresh-expiration:604800000}")
-    private long refreshExpiration;
-
     /** Expiración del token temporal de 2FA (por defecto 5 minutos). */
     @Value("${app.jwt.mfa-expiration:300000}")
     private long mfaExpiration;
@@ -61,13 +57,6 @@ public class JwtService {
             UserDetails userDetails
     ) {
         return buildToken(extraClaims, userDetails, jwtExpiration);
-    }
-
-    /** Genera un refresh token con vida útil más larga y claim tipo=refresh. */
-    public String generateRefreshToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("tipo", "refresh");
-        return buildToken(claims, userDetails, refreshExpiration);
     }
 
     /** Token temporal emitido tras validar credenciales cuando la cuenta tiene 2FA activo. */

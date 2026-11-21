@@ -68,6 +68,11 @@ public class User implements UserDetails {
     @Column(name = "two_factor_secret", columnDefinition = "TEXT")
     private String twoFactorSecret;
 
+    // Último paso TOTP (ventana de 30 s) aceptado. Evita reutilizar el mismo
+    // código mientras sigue siendo válido por el desfase de ±1 ventana.
+    @Column(name = "two_factor_last_step")
+    private Long twoFactorLastStep;
+
     // Preferencias de notificación del usuario (JSON serializado)
     @Column(name = "notification_prefs", length = 500)
     private String notificationPrefs;

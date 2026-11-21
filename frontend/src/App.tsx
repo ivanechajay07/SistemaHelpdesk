@@ -1,9 +1,11 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SkeletonPage } from './components/ui/Skeleton';
+import AuthPreload from './components/ui/AuthPreload';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { ToastProvider } from './components/ui/Toast';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Rutas con carga diferida (code-splitting): cada página se descarga solo al entrar.
@@ -37,6 +39,7 @@ const Prestamos = lazy(() => import('./pages/inventory/Prestamos'));
 const Historial = lazy(() => import('./pages/inventory/Historial'));
 const ReportesInventario = lazy(() => import('./pages/inventory/Reportes'));
 const QrPublic = lazy(() => import('./pages/QrPublic'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -81,6 +84,13 @@ function App() {
   const applyScheduledTheme = useThemeStore((state) => state.applyScheduledTheme);
   const refreshMe = useAuthStore((state) => state.refreshMe);
   const token = useAuthStore((state) => state.token);
+  const hydrate = useAuthStore((state) => state.hydrate);
+  const hydrated = useAuthStore((state) => state.hydrated);
+
+  // Recupera la sesión desde la cookie HttpOnly una sola vez al cargar la app.
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   useEffect(() => {
     if (isDark) {
@@ -107,9 +117,14 @@ function App() {
     return () => window.removeEventListener('focus', onFocus);
   }, [token, refreshMe]);
 
+  if (!hydrated) {
+    return <AuthPreload />;
+  }
+
   return (
     <ToastProvider>
       <BrowserRouter>
+        <ErrorBoundary>
         <Suspense fallback={<SkeletonPage />}>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -229,9 +244,11 @@ function App() {
                   <ReportesInventario />
                 </ProtectedRouteWithPermission>
               } />
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </ToastProvider>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useTicketStore } from '../store/ticketStore';
@@ -57,6 +58,7 @@ import { useChatNotificationsStore } from '../store/chatNotificationsStore';
 import { playNotificationTone } from '../lib/notificationSound';
 import api from '../lib/axios';
 import { useProfileImage } from '../lib/hooks';
+import { useIdleLogout } from '../lib/useIdleLogout';
 import { useToast } from '../components/ui/Toast';
 import GlobalSearch from '../components/ui/GlobalSearch';
 
@@ -141,6 +143,9 @@ interface InvSubItem {
 }
 
 export default function DashboardLayout() {
+  // Cierra la sesión tras 15 minutos sin interacción del usuario.
+  useIdleLogout();
+
   const { user, logout, hasPermission, isAdmin, hasRole, token } = useAuthStore();
   const { tickets, fetchTickets } = useTicketStore();
   const { items: notifications, fetchNotifications, loading: notifLoading } = useNotificationsStore();
@@ -162,6 +167,66 @@ export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [moreNavOpen, setMoreNavOpen] = useState(false);
+  const [moreNavPos, setMoreNavPos] = useState<{ top: number; right: number } | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const moreNavButtonRef = useRef<HTMLButtonElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+
+  const closeMoreNav = () => {
+    setMoreNavOpen(false);
+    moreNavButtonRef.current?.focus();
+  };
+
+  const closeUserMenu = () => {
+    setUserMenuOpen(false);
+    userMenuButtonRef.current?.focus();
+  };
+
+  // Navegación de menús con teclado (patrón ARIA menu).
+  const onMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, close: () => void) => {
+    const items = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    ).filter((el) => !el.hasAttribute('disabled'));
+    if (items.length === 0) return;
+
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(current + 1) % items.length]?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(current - 1 + items.length) % items.length]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (event.key === 'Escape' || event.key === 'Tab') {
+      event.preventDefault();
+      close();
+    }
+  };
+
+  // Al abrir un menú, enfocar su primer elemento para poder navegar con flechas.
+  useEffect(() => {
+    if (!moreNavOpen) return;
+    const timer = window.setTimeout(() => {
+      moreMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    }, 40);
+    return () => window.clearTimeout(timer);
+  }, [moreNavOpen]);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const timer = window.setTimeout(() => {
+      userMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    }, 40);
+    return () => window.clearTimeout(timer);
+  }, [userMenuOpen]);
   const [chatPulse, setChatPulse] = useState(false);
   const [ticketsSubOpen, setTicketsSubOpen] = useState(false);
   const [tasksSubOpen, setTasksSubOpen] = useState(false);
@@ -322,9 +387,14 @@ export default function DashboardLayout() {
     document.title = totalUnread > 0 ? `(${totalUnread}) HelpDesk PRO` : 'HelpDesk PRO';
   }, [totalUnread]);
 
-  // Heartbeat de presencia: mantiene actualizada la última actividad del usuario
+  // Heartbeat de presencia: mantiene actualizada la última actividad del usuario.
+  // No se envía con la pestaña oculta para no prolongar sesiones ausentes.
   useEffect(() => {
-    const beat = () => api.post('/auth/heartbeat').catch(() => {});
+    const beat = () => {
+      if (document.visibilityState === 'visible') {
+        api.post('/auth/heartbeat').catch(() => {});
+      }
+    };
     beat();
     const interval = setInterval(beat, 60000);
     return () => clearInterval(interval);
@@ -349,6 +419,21 @@ export default function DashboardLayout() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Drawer móvil: bloquear scroll del documento y cerrar con Escape.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [sidebarOpen]);
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -578,6 +663,28 @@ export default function DashboardLayout() {
 
   const currentTitle = pageTitles[location.pathname] || 'Panel de Control';
   const isTicketDetail = /^\/tickets\/\d+$/.test(location.pathname);
+
+  // Navegación principal compacta + menú "Más" agrupado por módulos.
+  const primaryNavNames = ['Dashboard', 'Tickets', 'Tareas', 'Conocimiento', 'Inventario', 'Monitoreo'];
+  const primaryNav = navItems.filter((i) => primaryNavNames.includes(i.name));
+  const moreNav = navItems.filter((i) => !primaryNavNames.includes(i.name));
+  const moreSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((i) => moreNav.some((m) => m.name === i.name)),
+    }))
+    .filter((section) => section.items.length > 0);
+  const moreNavActive = moreNav.some((i) => location.pathname.startsWith(i.path));
+
+  useEffect(() => {
+    const onClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-72';
 
   const hour = new Date().getHours();
@@ -585,6 +692,13 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+
+      <a
+        href="#contenido-principal"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[300] focus:rounded-xl focus:bg-blue-600 focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
+      >
+        Saltar al contenido
+      </a>
 
       {/* Barra de progreso animada al cambiar de página */}
       <div
@@ -604,24 +718,27 @@ export default function DashboardLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 ${sidebarWidth} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      <aside className={`fixed lg:relative inset-y-0 left-0 z-50 ${sidebarWidth} flex flex-col border-r border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-800/70 dark:bg-slate-950/80 ${
+        sidebarOpen ? 'translate-x-0 shadow-2xl shadow-slate-950/30' : '-translate-x-full lg:translate-x-0'
       }`}>
+        {/* Halo decorativo superior */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.14),transparent_70%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.10),transparent_70%)]" />
+
         {/* Sidebar Header */}
-        <div className="relative h-16 flex items-center justify-between px-4 border-b border-slate-200/50 dark:border-slate-800/50 shrink-0">
+        <div className="relative h-16 flex items-center justify-between border-b border-slate-200/50 px-4 dark:border-slate-800/50 shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-sky-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
-                H
+              <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-cyan-400 shadow-lg shadow-blue-600/30 ring-1 ring-white/25 flex items-center justify-center text-white font-black text-[11px] tracking-tight">
+                HD
               </div>
               <h1 className="text-lg font-black tracking-tight whitespace-nowrap">
-                HelpDesk <span className="text-blue-500">PRO</span>
+                HelpDesk <span className="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent">PRO</span>
               </h1>
             </div>
           )}
           {collapsed && (
-            <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-sky-500 rounded-xl shadow-lg flex items-center justify-center text-white font-bold text-lg mx-auto">
-              H
+            <div className="mx-auto w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-cyan-400 shadow-lg shadow-blue-600/30 ring-1 ring-white/25 flex items-center justify-center text-white font-black text-[11px]">
+              HD
             </div>
           )}
 
@@ -633,7 +750,7 @@ export default function DashboardLayout() {
               setHoveredModule(null);
               setHoveredAction(null);
             }}
-            className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/90 rounded-full shadow-md hover:shadow-lg items-center justify-center text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer"
+            className="hidden lg:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-30 w-7 h-7 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700/90 rounded-full shadow-md hover:shadow-lg items-center justify-center text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-500 hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer"
             title={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
             aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
           >
@@ -644,8 +761,9 @@ export default function DashboardLayout() {
             )}
           </button>
 
-          <button 
+          <button
             onClick={() => setSidebarOpen(false)}
+            aria-label="Cerrar menú lateral"
             className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -657,7 +775,7 @@ export default function DashboardLayout() {
           {navSections.map((section) => (
             <div key={section.title} className="mb-2">
               {!collapsed && (
-                <p className="px-3 pt-3 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 select-none">
+                <p className="px-3 pt-3 pb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400/90 dark:text-slate-500 select-none">
                   {section.title}
                 </p>
               )}
@@ -703,8 +821,8 @@ export default function DashboardLayout() {
                         collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
                       } ${
                         isActive
-                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg ${item.shadow} scale-[1.02]`
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1'
+                          ? `bg-gradient-to-r ${item.gradient} text-white shadow-lg ${item.shadow} ring-1 ring-white/20 scale-[1.02]`
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1'
                       }`
                     }
                   >
@@ -960,19 +1078,29 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 grid grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 lg:px-6 z-10 shrink-0">
-          <div className="min-w-0 lg:col-start-2 lg:justify-self-center">
-            <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 truncate lg:text-center">
-              {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
-            </h2>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2 justify-self-end lg:col-start-3">
-            <GlobalSearch />
-            <div className="hidden md:block text-right mr-1">
-              <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 leading-tight">{greeting},</p>
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">{user?.nombre}</p>
+      <main id="contenido-principal" tabIndex={-1} className="flex-1 flex flex-col min-w-0 overflow-hidden focus:outline-none">
+        <header className="sticky top-0 z-30 shrink-0 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/75 dark:bg-slate-950/70 backdrop-blur-xl">
+          <div className="flex h-16 items-center gap-2.5 px-4 lg:px-6">
+            <div className="hidden sm:flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/25 ring-1 ring-white/20 shrink-0">
+                <span className="text-[13px] font-black tracking-tight text-white">HD</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500/80 leading-none">HelpDesk PRO</p>
+                <h2 className="mt-1 text-base lg:text-lg font-bold text-slate-800 dark:text-slate-100 truncate leading-none">
+                  {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
+                </h2>
+              </div>
             </div>
+
+            <div className="sm:hidden min-w-0">
+              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                {isTicketDetail ? 'Detalle del Ticket' : currentTitle}
+              </h2>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+            <GlobalSearch />
             <button
               onClick={toggleTheme}
               className="p-2.5 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
@@ -1008,8 +1136,8 @@ export default function DashboardLayout() {
               </button>
 
               {chatOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[340px] sm:w-[380px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden anim-scale-in origin-top-right">
-                  <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-card border border-white/60 bg-white/95 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-xl anim-scale-in origin-top-right sm:w-[380px] dark:border-slate-700/70 dark:bg-slate-900/95">
+                  <div className="border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
                     <div className="flex items-center gap-2">
                       <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/25 shrink-0">
                         <MessageCircle className="w-4 h-4 text-white" />
@@ -1079,9 +1207,13 @@ export default function DashboardLayout() {
 
             {/* Notification Bell */}
             <div className="relative" ref={notifRef}>
-              <button 
+              <button
                 onClick={() => setNotifOpen(!notifOpen)}
-                className="relative p-2.5 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+                aria-label={`Notificaciones${notifications.length > 0 ? ` (${notifications.length} pendientes)` : ''}`}
+                aria-haspopup="menu"
+                aria-expanded={notifOpen}
+                aria-controls="notification-panel"
+                className="relative rounded-xl p-2.5 text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
               >
                 <Bell className="h-5 w-5" />
                 {notifications.length > 0 && (
@@ -1092,8 +1224,8 @@ export default function DashboardLayout() {
               </button>
 
               {notifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[340px] sm:w-[380px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden anim-scale-in origin-top-right">
-                  <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div id="notification-panel" className="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-card border border-white/60 bg-white/95 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-xl anim-scale-in origin-top-right sm:w-[380px] dark:border-slate-700/70 dark:bg-slate-900/95">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
                     <div>
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white">Notificaciones</h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -1105,8 +1237,8 @@ export default function DashboardLayout() {
                     <button
                       onClick={fetchNotifications}
                       disabled={notifLoading}
-                      title="Actualizar"
-                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors disabled:opacity-60"
+                      aria-label="Actualizar notificaciones"
+                      className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-60 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
                     >
                       <RefreshCw className={`w-4 h-4 ${notifLoading ? 'animate-spin' : ''}`} />
                     </button>
@@ -1201,24 +1333,135 @@ export default function DashboardLayout() {
                 </div>
               )}
             </div>
+            {/* Menú de usuario */}
+            <div ref={userMenuRef} className="relative ml-0.5">
+              <button
+                ref={userMenuButtonRef}
+                onClick={() => setUserMenuOpen((v) => !v)}
+                className="flex items-center gap-2 pl-1 sm:pl-1.5 pr-1.5 sm:pr-2 py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors"
+                aria-label="Menú de usuario"
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
+                aria-controls="user-menu"
+              >
+                {profileImage ? (
+                  <img src={profileImage} alt="Perfil" className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-900 shadow-sm" />
+                ) : (
+                  <span className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-xs font-black ring-2 ring-white dark:ring-slate-900 shadow-sm">
+                    {user?.nombre?.charAt(0) || 'U'}{user?.apellidos?.charAt(0) || ''}
+                  </span>
+                )}
+                <span className="hidden xl:block text-left leading-tight">
+                  <span className="block text-[10px] font-medium text-slate-400">{greeting}</span>
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 max-w-[110px] truncate">
+                    {user?.nombre} {user?.apellidos}
+                  </span>
+                </span>
+                <ChevronDown className={`hidden sm:block h-3.5 w-3.5 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {userMenuOpen && (
+                <div
+                  id="user-menu"
+                  role="menu"
+                  aria-label="Menú de usuario"
+                  onKeyDown={(event) => onMenuKeyDown(event, closeUserMenu)}
+                  className="absolute right-0 top-full mt-2 w-[310px] max-w-[calc(100vw-24px)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 z-[160] overflow-hidden anim-scale-in origin-top-right"
+                >
+                  <div className="px-4 pt-4 pb-3.5 bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-slate-800 dark:via-slate-900 dark:to-slate-900 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                      {profileImage ? (
+                        <img src={profileImage} alt="Perfil" className="w-12 h-12 rounded-full object-cover ring-2 ring-white dark:ring-slate-800 shadow-md" />
+                      ) : (
+                        <span className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white text-base font-black ring-2 ring-white dark:ring-slate-800 shadow-md">
+                          {user?.nombre?.charAt(0) || 'U'}{user?.apellidos?.charAt(0) || ''}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">
+                          {user?.nombre} {user?.apellidos}
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                          {user?.roles?.[0] && (
+                            <span className="inline-flex px-1.5 py-0.5 rounded-md bg-blue-100/80 dark:bg-blue-500/15 text-[9px] font-black uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                              {user.roles[0]}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> En línea
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-1.5 space-y-0.5">
+                    {[
+                      { icon: Settings, label: 'Mi perfil', sub: 'Datos personales y foto', tab: 'profile' },
+                      { icon: Shield, label: 'Seguridad', sub: 'Contraseña y verificación 2FA', tab: 'security' },
+                      { icon: Bell, label: 'Notificaciones', sub: 'Alertas y resumen por correo', tab: 'notifications' },
+                      { icon: isDark ? Sun : Moon, label: 'Apariencia', sub: isDark ? 'Tema oscuro activo' : 'Tema claro activo', tab: 'appearance' },
+                    ].map(({ icon: Icon, label, sub, tab }) => (
+                      <button
+                        key={tab}
+                        role="menuitem"
+                        tabIndex={-1}
+                        onClick={() => { setUserMenuOpen(false); navigate(`/settings?tab=${tab}`); }}
+                        className="group w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors"
+                      >
+                        <span className="w-8 h-8 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center justify-center transition-colors">
+                          <Icon className="w-4 h-4" />
+                        </span>
+                        <span className="flex-1 min-w-0 text-left">
+                          <span className="block text-xs font-bold text-slate-700 dark:text-slate-200">{label}</span>
+                          <span className="block text-[10px] text-slate-400 truncate">{sub}</span>
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="p-1.5 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      role="menuitem"
+                      tabIndex={-1}
+                      onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                      className="group w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                    >
+                      <span className="w-8 h-8 shrink-0 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 flex items-center justify-center">
+                        <LogOut className="w-4 h-4" />
+                      </span>
+                      <span className="flex-1 text-left">
+                        <span className="block text-xs font-bold text-red-600 dark:text-red-400">Cerrar sesión</span>
+                        <span className="block text-[10px] text-red-400/80">Salir de este dispositivo</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            </div>
           </div>
         </header>
 
-        {/* Horizontal quick nav (desktop) */}
-        <div className="hidden lg:flex items-center gap-2 px-6 py-2.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 overflow-x-auto shrink-0">
-          {navItems.map((item) => (
+        {/* Barra de navegación rápida (escritorio) */}
+        <div className="hidden lg:flex items-center gap-1.5 px-6 py-2.5 bg-white/55 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shrink-0">
+          <span className="mr-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400/80">Ir a</span>
+
+          {primaryNav.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-300 active:scale-95 ${
+                `group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all duration-300 active:scale-95 ${
                   isActive
                     ? `bg-gradient-to-r ${item.gradient} text-white shadow-md ${item.shadow}`
-                    : 'text-slate-500 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-200'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200 hover:-translate-y-px'
                 }`
               }
             >
-              <item.icon className="w-3.5 h-3.5" />
+              <item.icon className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
               {item.name}
               {!!item.badge && item.badge > 0 && (
                 <span className={`ml-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black rounded-full ${
@@ -1229,9 +1472,124 @@ export default function DashboardLayout() {
               )}
             </NavLink>
           ))}
+
+          {moreSections.length > 0 && (
+            <div className="relative ml-auto">
+              <button
+                ref={moreNavButtonRef}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setMoreNavPos({
+                    top: rect.bottom + 8,
+                    right: Math.max(12, window.innerWidth - rect.right),
+                  });
+                  setMoreNavOpen((v) => !v);
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all active:scale-95 ${
+                  moreNavActive || moreNavOpen
+                    ? 'border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+                aria-haspopup="menu"
+                aria-expanded={moreNavOpen}
+                aria-controls="more-nav-menu"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Más
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreNavOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 overflow-auto p-4 sm:p-6 pb-24 lg:pb-6">
+        {/* Menú "Más" en portal: evita que el contenido lo tape o lo recorte */}
+        {moreNavOpen && moreNavPos && createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[140] bg-slate-950/10 dark:bg-black/40 backdrop-blur-[1px] anim-fade-in"
+              onClick={closeMoreNav}
+            />
+            <div
+              ref={moreMenuRef}
+              id="more-nav-menu"
+              role="menu"
+              aria-label="Más módulos"
+              onKeyDown={(event) => onMenuKeyDown(event, closeMoreNav)}
+              style={{ top: moreNavPos.top, right: moreNavPos.right }}
+              className="fixed z-[150] w-[380px] max-w-[calc(100vw-24px)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 overflow-hidden anim-scale-in origin-top-right"
+            >
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-50 to-blue-50/70 dark:from-slate-900 dark:to-slate-800/70 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
+                    <Layers className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-slate-800 dark:text-slate-100">Más módulos</p>
+                    <p className="text-[10px] text-slate-400">Accesos rápidos del sistema</p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeMoreNav}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Cerrar menú"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-y-auto p-2">
+                {moreSections.map((section) => (
+                  <div key={section.title} className="mb-1.5 last:mb-0">
+                    <p className="px-2 pt-1.5 pb-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                      {section.title}
+                    </p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {section.items.map((item) => (
+                        <NavLink
+                          key={item.path}
+                          to={item.path}
+                          role="menuitem"
+                          tabIndex={-1}
+                          onClick={() => setMoreNavOpen(false)}
+                          className={({ isActive }) =>
+                            `group flex items-center gap-2 px-2 py-2 rounded-xl text-[11px] font-semibold border transition-all ${
+                              isActive
+                                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200/70 dark:border-blue-500/30 text-blue-700 dark:text-blue-300'
+                                : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/70 hover:border-slate-200/70 dark:hover:border-slate-700 hover:-translate-y-px'
+                            }`
+                          }
+                        >
+                          <span className={`w-7 h-7 shrink-0 rounded-lg bg-gradient-to-br ${item.gradient} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform`}>
+                            <item.icon className="w-3.5 h-3.5" />
+                          </span>
+                          <span className="truncate">{item.name}</span>
+                          {!!item.badge && item.badge > 0 && (
+                            <span className="ml-auto min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 text-[10px] text-slate-400 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Todo sincronizado
+                </span>
+                <span className="flex items-center gap-1">
+                  Buscar
+                  <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-500">Ctrl K</kbd>
+                </span>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
+
+        <div className="app-content-bg flex-1 overflow-auto p-4 sm:p-6 pb-32 lg:pb-6">
           <div key={location.pathname} className="max-w-7xl mx-auto anim-fade-in-up">
             <Outlet />
           </div>
@@ -1356,32 +1714,37 @@ export default function DashboardLayout() {
         </div>
       )}
 
-      {/* ===== Tab bar móvil (estilo app) ===== */}
+      {/* ===== Tab bar móvil glassmorphism (estilo app) ===== */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label="Navegación principal móvil"
+        className="lg:hidden fixed inset-x-3 z-30 mx-auto max-w-xl overflow-hidden rounded-[26px] border border-white/70 bg-white/70 shadow-[0_18px_50px_-12px_rgba(15,23,42,0.35)] ring-1 ring-slate-900/5 backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-slate-900/65 dark:ring-white/5"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
       >
-        <div className="flex items-stretch">
+        {/* Brillo superior y halo interior */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/25" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.55),transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.10),transparent_60%)]" />
+
+        <div className="relative flex items-stretch px-1.5 pt-1">
           {mobileTabItems.map((item) => {
             const active = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:scale-95 transition-transform"
+                className="group relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 transition-transform active:scale-95"
               >
-                <span className="relative flex items-center justify-center w-11 h-11">
+                <span className="relative flex h-11 w-11 items-center justify-center">
                   {active && (
-                    <span className={`absolute inset-0 rounded-full bg-gradient-to-br ${item.gradient} shadow-lg ${item.shadow} ring-4 ring-white dark:ring-slate-900 anim-bubble-pop`} />
+                    <span className={`absolute inset-0 rounded-full bg-gradient-to-br ${item.gradient} shadow-lg ${item.shadow} ring-2 ring-white/50 dark:ring-white/20 anim-bubble-pop`} />
                   )}
-                  <item.icon className={`relative w-5 h-5 transition-colors duration-300 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <item.icon className={`relative h-5 w-5 transition-colors duration-300 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   {!!item.badge && item.badge > 0 && (
-                    <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white dark:border-slate-900">
+                    <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full border-2 border-white/90 bg-gradient-to-r from-rose-500 to-pink-500 px-1 text-[9px] font-black text-white shadow-sm dark:border-slate-900/90">
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
                 </span>
-                <span className={`text-[10px] font-bold truncate max-w-full px-0.5 transition-colors ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                <span className={`max-w-full truncate px-0.5 text-[10px] font-bold transition-colors ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
                   {item.name}
                 </span>
               </NavLink>
@@ -1391,20 +1754,27 @@ export default function DashboardLayout() {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:scale-95 transition-transform"
+            aria-label="Abrir más opciones"
+            className="group relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 transition-transform active:scale-95"
           >
-            <span className="relative flex items-center justify-center w-11 h-11">
-              <Menu className={`w-5 h-5 transition-colors ${sidebarOpen ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} />
+            <span className="relative flex h-11 w-11 items-center justify-center">
+              {sidebarOpen && (
+                <span className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 shadow-lg shadow-slate-500/30 ring-2 ring-white/50 anim-bubble-pop dark:ring-white/20" />
+              )}
+              <Menu className={`relative h-5 w-5 transition-colors ${sidebarOpen ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
               {totalUnread + notifications.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white dark:border-slate-900">
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full border-2 border-white/90 bg-gradient-to-r from-rose-500 to-pink-500 px-1 text-[9px] font-black text-white shadow-sm dark:border-slate-900/90">
                   {totalUnread + notifications.length > 99 ? '99+' : totalUnread + notifications.length}
                 </span>
               )}
             </span>
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Más</span>
+            <span className={`text-[10px] font-bold transition-colors ${sidebarOpen ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+              Más
+            </span>
           </button>
         </div>
       </nav>
     </div>
   );
 }
+

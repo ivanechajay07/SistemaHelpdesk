@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, Loader2, Edit2, Trash2, Tag } from 'lucide-react';
+import { Search, Plus, MoreVertical, Edit2, Trash2, Tag } from 'lucide-react';
 import { useCategoryStore } from '../store/categoryStore';
 import type { Category } from '../store/categoryStore';
 import { CategoryModal } from '../components/categories/CategoryModal';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import EmptyState from '../components/ui/EmptyState';
+import { Skeleton, SkeletonList } from '../components/ui/Skeleton';
 import { usePagedList } from '../lib/hooks';
 import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
@@ -85,12 +89,15 @@ export default function Categories() {
         subtitle="Configura los tipos de incidencias y subcategorías."
         gradient="from-blue-600 via-blue-700 to-slate-800"
       >
-        <button
+        <Button
           onClick={() => { setSelectedCategory(null); setIsModalOpen(true); }}
-          className="btn-shine inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5"
+          variant="secondary"
+          size="lg"
+          leftIcon={<Plus className="w-4 h-4" />}
+          className="border-0 bg-white text-blue-700 shadow-lg shadow-blue-900/30 hover:bg-blue-50"
         >
-          <Plus className="w-4 h-4" /> Nueva Categoría
-        </button>
+          Nueva Categoría
+        </Button>
       </PageHeader>
 
       {error && (
@@ -101,26 +108,20 @@ export default function Categories() {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[400px]">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800">
-          <div className="relative w-full sm:w-[320px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
+          <div className="w-full sm:w-[320px]">
+            <Input
               type="text"
+              leftIcon={<Search className="w-4 h-4" />}
               placeholder="Buscar categoría..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Buscar categoría"
             />
           </div>
         </div>
 
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto flex-1 relative">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            </div>
-          ) : null}
-          
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50/50 dark:bg-slate-800/20 text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
               <tr>
@@ -132,10 +133,24 @@ export default function Categories() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {filteredCategories.length === 0 && !loading ? (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={`sk-${i}`}>
+                    <td className="px-6 py-4"><Skeleton className="h-9 w-40" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-3.5 w-48" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-5 w-32 rounded-full" /></td>
+                    <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                    <td className="px-6 py-4"><Skeleton className="ml-auto h-5 w-5" /></td>
+                  </tr>
+                ))
+              ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-medium">
-                    No se encontraron categorías.
+                  <td colSpan={5} className="px-6 py-10">
+                    <EmptyState
+                      icon={Tag}
+                      title="Sin categorías"
+                      description="Crea una categoría nueva o cambia el término de búsqueda."
+                    />
                   </td>
                 </tr>
               ) : (
@@ -210,9 +225,13 @@ export default function Categories() {
         {/* Mobile Cards View */}
         <div className="md:hidden flex flex-col gap-4 p-4">
           {loading ? (
-            <div className="p-4 text-center text-slate-500 font-medium">Cargando...</div>
+            <SkeletonList rows={4} />
           ) : filteredCategories.length === 0 ? (
-            <div className="p-4 text-center text-slate-500 font-medium">No se encontraron categorías.</div>
+            <EmptyState
+              icon={Tag}
+              title="Sin categorías"
+              description="Crea una categoría nueva o cambia el término de búsqueda."
+            />
           ) : (
             pagedCategories.map((cat) => (
               <div key={cat.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm relative">

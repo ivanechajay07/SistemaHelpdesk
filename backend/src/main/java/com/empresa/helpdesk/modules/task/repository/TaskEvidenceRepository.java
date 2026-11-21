@@ -13,5 +13,7 @@ public interface TaskEvidenceRepository extends JpaRepository<TaskEvidence, Long
 
     long countByTaskIdAndTipo(Long taskId, String tipo);
 
+    long countByTaskId(Long taskId);
+
     void deleteByTaskId(Long taskId);
 }

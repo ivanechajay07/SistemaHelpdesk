@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import PageHeader from '../components/ui/PageHeader';
 import { useTicketStore } from '../store/ticketStore';
 import {
   Printer,
@@ -13,7 +14,6 @@ import {
   Archive,
   TrendingUp,
   CalendarDays,
-  Sparkles,
   Filter,
   UserCheck
 } from 'lucide-react';
@@ -23,19 +23,16 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useUserStore } from '../store/userStore';
 import Pagination from '../components/ui/Pagination';
+import DataTable from '../components/ui/DataTable';
 import ChartTooltip from '../components/ui/ChartTooltip';
 import { usePagedList } from '../lib/hooks';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards } from '../lib/reportPdf';
 import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt, exSection } from '../lib/reportExcel';
+import { CHART_SERIES, PRIORITY_CHART_COLORS } from '../lib/chartColors';
 
-const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#06b6d4', '#94a3b8', '#0ea5e9'];
+const COLORS = CHART_SERIES;
 
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICA: '#ef4444',
-  ALTA: '#f97316',
-  MEDIA: '#eab308',
-  BAJA: '#10b981',
-};
+const PRIORITY_COLORS = PRIORITY_CHART_COLORS;
 
 const STATUS_LABELS: Record<string, string> = {
   NUEVO: 'Nuevo',
@@ -592,35 +589,26 @@ export default function Reports() {
     <div className="space-y-6">
 
       {/* ===== HERO ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-800 to-blue-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-900/20 print:hidden anim-fade-in-up">
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
-        <div className="absolute top-14 right-1/4 w-16 h-16 border border-white/10 rounded-full pointer-events-none hidden sm:block" />
-
-        <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              Análisis y Métricas
+      <div className="print:hidden">
+        <PageHeader
+          eyebrow="Análisis y Métricas"
+          title="Reportes e Informes"
+          subtitle="Visualiza el rendimiento del sistema de tickets y exporta informes profesionales en un clic."
+          icon={FileText}
+          gradient="from-slate-800 via-blue-800 to-blue-900"
+        >
+          <div className="hidden xl:flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-white/85">
+              <CalendarDays className="w-3.5 h-3.5" />
+              {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </span>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">Reportes e Informes</h1>
-            <p className="text-blue-100/90 mt-2 font-medium text-sm sm:text-base max-w-xl">
-              Visualiza el rendimiento del sistema de tickets y exporta informes profesionales en un clic.
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-white/85">
-                <CalendarDays className="w-3.5 h-3.5" />
-                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-white/85">
-                <Filter className="w-3.5 h-3.5" />
-                {filterOptions.find(f => f.value === dateFilter)?.label}
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-white/85 tabular-nums">
-                {total} ticket{total !== 1 ? 's' : ''}
-              </span>
-            </div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-white/85">
+              <Filter className="w-3.5 h-3.5" />
+              {filterOptions.find(f => f.value === dateFilter)?.label}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-white/85 tabular-nums">
+              {total} ticket{total !== 1 ? 's' : ''}
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-2.5">
@@ -647,7 +635,7 @@ export default function Reports() {
               <Printer className="w-4 h-4" /> Imprimir
             </button>
           </div>
-        </div>
+        </PageHeader>
       </div>
 
       {/* ===== FILTRO SEGMENTADO ===== */}
@@ -944,109 +932,98 @@ export default function Reports() {
       </div>
 
       {/* ===== TABLA DETALLE ===== */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden anim-fade-in-up" style={{ animationDelay: '630ms' }}>
-        <div className="px-5 sm:px-6 py-4 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between">
+      <DataTable
+        className="anim-fade-in-up"
+        toolbar={
           <div>
             <h3 className="font-extrabold text-slate-900 dark:text-white">Detalle de Tickets</h3>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">{total} registro{total !== 1 ? 's' : ''} en el periodo seleccionado</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-400">
+              {total} registro{total !== 1 ? 's' : ''} en el periodo seleccionado
+            </p>
           </div>
-        </div>
-
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/70 dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
-              <tr>
-                <th className="px-6 py-3.5 font-bold text-xs uppercase tracking-wider">Código</th>
-                <th className="px-6 py-3.5 font-bold text-xs uppercase tracking-wider">Título</th>
-                <th className="px-6 py-3.5 font-bold text-xs uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3.5 font-bold text-xs uppercase tracking-wider">Prioridad</th>
-                <th className="px-6 py-3.5 font-bold text-xs uppercase tracking-wider">Técnico</th>
-                <th className="px-6 py-3.5 font-bold text-xs uppercase tracking-wider">Fecha</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="p-10 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto mb-2" />
-                    <span className="text-slate-500 font-medium">Cargando datos...</span>
-                  </td>
-                </tr>
-              ) : filteredTickets.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-14 text-center">
-                    <Inbox className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                    <p className="text-slate-500 font-bold">No hay datos para mostrar</p>
-                    <p className="text-slate-400 text-sm mt-1">Prueba con otro filtro de fecha</p>
-                  </td>
-                </tr>
-              ) : (
-                pagedTickets.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition-colors group/row"
-                  >
-                    <td className="px-6 py-3">
-                      <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded-lg">
-                        {ticket.codigo}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 max-w-[260px] truncate font-bold text-slate-800 dark:text-slate-200 group-hover/row:text-blue-600 dark:group-hover/row:text-blue-400 transition-colors">
-                      {ticket.titulo}
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className={`inline-block text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${STATUS_BADGE[ticket.estado] || 'bg-slate-100 text-slate-600 ring-slate-500/20'}`}>
-                        {STATUS_LABELS[ticket.estado] || ticket.estado}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className={`inline-block text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${PRIORITY_BADGE[ticket.prioridad] || 'bg-slate-100 text-slate-600 ring-slate-500/20'}`}>
-                        {PRIORITY_LABELS[ticket.prioridad] || ticket.prioridad}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 font-medium text-slate-600 dark:text-slate-400 text-xs">{ticket.tecnicoNombre || 'Sin asignar'}</td>
-                    <td className="px-6 py-3 font-medium text-slate-500 dark:text-slate-400 text-xs tabular-nums">{new Date(ticket.fechaCreacion).toLocaleDateString()}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="md:hidden flex flex-col gap-3 p-4">
-          {loading ? (
-            <div className="p-6 text-center">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
+        }
+        columns={[
+          {
+            key: 'codigo',
+            header: 'Código',
+            mobilePrimary: true,
+            sortValue: (t) => t.codigo || '',
+            render: (t) => (
+              <span className="rounded-lg bg-blue-50 px-2 py-1 font-mono text-xs font-bold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                {t.codigo}
+              </span>
+            ),
+          },
+          {
+            key: 'titulo',
+            header: 'Título',
+            className: 'max-w-[260px] truncate font-bold text-slate-800 dark:text-slate-200',
+            sortValue: (t) => t.titulo || '',
+            render: (t) => <span className="block max-w-[260px] truncate font-bold text-slate-800 dark:text-slate-200">{t.titulo}</span>,
+          },
+          {
+            key: 'estado',
+            header: 'Estado',
+            sortValue: (t) => t.estado || '',
+            render: (t) => (
+              <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${STATUS_BADGE[t.estado] || 'bg-slate-100 text-slate-600 ring-slate-500/20'}`}>
+                {STATUS_LABELS[t.estado] || t.estado}
+              </span>
+            ),
+          },
+          {
+            key: 'prioridad',
+            header: 'Prioridad',
+            sortValue: (t) => t.prioridad || '',
+            render: (t) => (
+              <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${PRIORITY_BADGE[t.prioridad] || 'bg-slate-100 text-slate-600 ring-slate-500/20'}`}>
+                {PRIORITY_LABELS[t.prioridad] || t.prioridad}
+              </span>
+            ),
+          },
+          {
+            key: 'tecnico',
+            header: 'Técnico',
+            sortValue: (t) => t.tecnicoNombre || '',
+            render: (t) => <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t.tecnicoNombre || 'Sin asignar'}</span>,
+          },
+          {
+            key: 'fecha',
+            header: 'Fecha',
+            className: 'tabular-nums',
+            sortValue: (t) => new Date(t.fechaCreacion).getTime(),
+            render: (t) => <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{new Date(t.fechaCreacion).toLocaleDateString()}</span>,
+          },
+        ]}
+        data={pagedTickets}
+        rowKey={(t) => t.id}
+        loading={loading}
+        emptyIcon={Inbox}
+        emptyTitle="No hay datos para mostrar"
+        emptyDescription="Prueba con otro filtro de fecha."
+        caption="Detalle de tickets del periodo seleccionado"
+        minWidth="860px"
+        renderMobileCard={(t) => (
+          <div className="space-y-2 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{t.codigo}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${STATUS_BADGE[t.estado] || ''}`}>
+                {STATUS_LABELS[t.estado] || t.estado}
+              </span>
             </div>
-          ) : filteredTickets.length === 0 ? (
-            <div className="p-8 text-center">
-              <Inbox className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500 text-sm font-medium">No hay datos para mostrar</p>
+            <h3 className="text-sm font-bold leading-snug text-slate-900 dark:text-slate-100">{t.titulo}</h3>
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>{t.tecnicoNombre || 'Sin asignar'}</span>
+              <span className="flex items-center gap-1.5">
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ring-1 ${PRIORITY_BADGE[t.prioridad] || ''}`}>
+                  {PRIORITY_LABELS[t.prioridad] || t.prioridad}
+                </span>
+                {new Date(t.fechaCreacion).toLocaleDateString()}
+              </span>
             </div>
-          ) : (
-            pagedTickets.map(ticket => (
-              <div key={ticket.id} className="bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 rounded-xl p-4 shadow-sm active:scale-[0.98] transition-transform">
-                <div className="flex justify-between items-center mb-2 gap-2">
-                  <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{ticket.codigo}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${STATUS_BADGE[ticket.estado] || ''}`}>
-                    {STATUS_LABELS[ticket.estado] || ticket.estado}
-                  </span>
-                </div>
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug mb-2">{ticket.titulo}</h3>
-                <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-                  <span>{ticket.tecnicoNombre || 'Sin asignar'}</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className={`font-bold px-1.5 py-0.5 rounded ring-1 text-[10px] ${PRIORITY_BADGE[ticket.prioridad] || ''}`}>
-                      {PRIORITY_LABELS[ticket.prioridad] || ticket.prioridad}
-                    </span>
-                    {new Date(ticket.fechaCreacion).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      />
 
       {!loading && filteredTickets.length > 0 && (
         <Pagination

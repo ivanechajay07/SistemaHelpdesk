@@ -19,7 +19,6 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtService, "secretKey",
                 "clave-de-prueba-suficientemente-larga-para-hs256-1234567890");
         ReflectionTestUtils.setField(jwtService, "jwtExpiration", 3600_000L);
-        ReflectionTestUtils.setField(jwtService, "refreshExpiration", 7200_000L);
 
         user = new User();
         user.setUsername("admin");
@@ -46,12 +45,5 @@ class JwtServiceTest {
         String token = jwtService.generateToken(user);
         assertTrue(jwtService.isTokenValid(token, user));
         assertTrue(jwtService.isTokenValid(token, user), "un tv=0 debe seguir siendo válido");
-    }
-
-    @Test
-    void refreshTokenLlevaTipoRefresh() {
-        String refresh = jwtService.generateRefreshToken(user);
-        assertTrue(refresh != null && !refresh.isBlank());
-        assertTrue(jwtService.isTokenValid(refresh, user));
     }
 }

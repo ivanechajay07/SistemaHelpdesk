@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMonitoringStore } from '../store/monitoringStore';
 import ChartTooltip from '../components/ui/ChartTooltip';
+import PageHeader from '../components/ui/PageHeader';
 import {
   Activity, AlertTriangle, CheckCircle2, Timer, CalendarDays, Server, Loader2,
   RefreshCw, Wifi, WifiOff, Clock,
@@ -9,9 +10,11 @@ import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, Cell, PieChart, Pie,
   XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
 } from 'recharts';
+import { CHART, CHART_SERIES, MONITORING_STATUS_COLORS } from '../lib/chartColors';
 
-const STATUS_COLORS = { UP: '#10b981', DOWN: '#ef4444', PENDING: '#94a3b8' };
-const OBJ_COLORS = ['#06b6d4', '#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#0ea5e9'];
+const STATUS_COLORS = MONITORING_STATUS_COLORS;
+const OBJ_COLORS = CHART_SERIES;
+const LINE_COLOR = CHART.blue;
 
 export default function MonitoringDashboard() {
   const { dashboard, dashboardLoading, fetchDashboard, targets, loading: targetsLoading, fetchTargets } = useMonitoringStore();
@@ -42,28 +45,21 @@ export default function MonitoringDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-600 via-blue-700 to-slate-900 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-blue-500/20 anim-fade-in-up">
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
-                Monitoreo de Red
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">Dashboard de Incidencias</h1>
-              <p className="text-white/85 mt-1.5 font-medium text-sm sm:text-base max-w-2xl">Estadísticas de caídas detectadas por el monitoreo, por día, mes y año.</p>
-            </div>
-          </div>
-          <button onClick={load} disabled={loading} className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5 disabled:opacity-60 shrink-0">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Monitoreo de Red"
+        title="Dashboard de Incidencias"
+        subtitle="Estadísticas de caídas detectadas por el monitoreo, por día, mes y año."
+        icon={Activity}
+        gradient="from-cyan-600 via-blue-700 to-slate-900"
+      >
+        <button
+          onClick={load}
+          disabled={loading}
+          className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/30 active:scale-95 hover:-translate-y-0.5 disabled:opacity-60 shrink-0"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+        </button>
+      </PageHeader>
 
       {loading ? (
         <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-cyan-500" /></div>
@@ -173,7 +169,7 @@ export default function MonitoringDashboard() {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={8} />
                     <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dx={-8} />
                     <Tooltip content={<ChartTooltip formatter={(v: any) => [`${v} incidencias`, 'Incidencias']} />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                    <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 3, stroke: '#fff', fill: '#3b82f6' }} isAnimationActive animationDuration={1000} />
+                    <Line type="monotone" dataKey="value" stroke={LINE_COLOR} strokeWidth={3} dot={{ r: 3, fill: LINE_COLOR, strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 3, stroke: '#fff', fill: LINE_COLOR }} isAnimationActive animationDuration={1000} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

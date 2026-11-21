@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import {
   useInventarioStore, MANTENIMIENTO_LABELS, MANTENIMIENTO_BADGE,
 } from '../../store/inventoryStore';
@@ -6,13 +6,15 @@ import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
 import Pagination from '../../components/ui/Pagination';
+import DataTable from '../../components/ui/DataTable';
+import Button from '../../components/ui/Button';
 import { useUserStore } from '../../store/userStore';
 import InventoryPageHeader from './InventoryPageHeader';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, formatReportDate } from '../../lib/reportPdf';
 import {
-  Wrench, Plus, X, Loader2, Play, CheckCircle2, Eye, FileDown, ClipboardList,
+  Wrench, Plus, X, Play, CheckCircle2, Eye, FileDown, ClipboardList,
 } from 'lucide-react';
 
 export default function Mantenimientos() {
@@ -22,6 +24,16 @@ export default function Mantenimientos() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [detalle, setDetalle] = useState<any>(null);
+  const detalleTitleId = useId();
+
+  useEffect(() => {
+    if (!detalle) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDetalle(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detalle]);
   const [finalizarId, setFinalizarId] = useState<number | null>(null);
   const [iniciarId, setIniciarId] = useState<number | null>(null);
   const [informe, setInforme] = useState<{ trabajoRealizado: string; problemaEncontrado: string; repuestos: string; costo?: number; proximaRevision: string; observaciones: string }>({ trabajoRealizado: '', problemaEncontrado: '', repuestos: '', proximaRevision: '', observaciones: '' });
@@ -145,54 +157,126 @@ export default function Mantenimientos() {
       <InventoryPageHeader icon={Wrench} eyebrow="Inventario" title="Mantenimientos" subtitle="Gestión de mantenimientos preventivos y correctivos de los activos, con estados y seguimiento de técnicos." gradient="from-cyan-600 via-teal-600 to-emerald-700" />
 
       <div className="flex justify-end">
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-sm font-bold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"><Plus className="w-4 h-4" /> Registrar Mantenimiento</button>
+        <Button
+          onClick={() => setShowModal(true)}
+          leftIcon={<Plus className="w-4 h-4" />}
+          className="bg-gradient-to-r from-teal-600 to-emerald-600 shadow-teal-500/25 hover:shadow-teal-500/40"
+        >
+          Registrar Mantenimiento
+        </Button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-[11px] uppercase tracking-wider font-black text-slate-500 dark:text-slate-400">
-                <th className="px-4 py-3.5">Tipo</th>
-                <th className="px-4 py-3.5">Activo</th>
-                <th className="px-4 py-3.5">Estado</th>
-                <th className="px-4 py-3.5 hidden md:table-cell">Fecha</th>
-                <th className="px-4 py-3.5 hidden lg:table-cell">Técnico</th>
-                <th className="px-4 py-3.5 hidden xl:table-cell">Próxima revisión</th>
-                <th className="px-4 py-3.5 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mantenimientosLoading && mantenimientos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div></td></tr>
-              ) : mantenimientos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16"><div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600"><Wrench className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin mantenimientos registrados</p></div></td></tr>
-              ) : paged.map((m) => (
-                <tr key={m.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${m.tipo === 'PREVENTIVO' ? 'bg-blue-50 text-blue-700 ring-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400' : 'bg-orange-50 text-orange-700 ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400'}`}>{m.tipo === 'PREVENTIVO' ? 'Preventivo' : 'Correctivo'}</span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <p className="font-bold text-slate-800 dark:text-slate-100">{m.activoNombre}</p>
-                    <p className="font-mono text-xs text-slate-400">{m.activoCodigo}</p>
-                  </td>
-                  <td className="px-4 py-3.5"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${MANTENIMIENTO_BADGE[m.estado] || ''}`}>{MANTENIMIENTO_LABELS[m.estado] || m.estado}</span></td>
-                  <td className="px-4 py-3.5 hidden md:table-cell text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE') : '—'}</td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell text-xs font-semibold text-slate-500">{m.tecnicoNombre || m.proveedor || '—'}</td>
-                  <td className="px-4 py-3.5 hidden xl:table-cell text-xs font-semibold text-slate-500">{m.proximaRevision || '—'}</td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => setDetalle(m)} title="Ver detalle" className="p-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-500/10 transition-colors"><Eye className="w-4 h-4" /></button>
-                      {m.estado === 'PROGRAMADO' && <button onClick={() => setIniciarId(m.id)} title="Iniciar" className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"><Play className="w-4 h-4" /></button>}
-                      {m.estado === 'EN_PROCESO' && <button onClick={() => { setInforme({ trabajoRealizado: '', problemaEncontrado: '', repuestos: '', proximaRevision: '', observaciones: '' }); setFinalizarId(m.id); }} title="Finalizar y registrar informe" className="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors"><CheckCircle2 className="w-4 h-4" /></button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={[
+          {
+            key: 'tipo',
+            header: 'Tipo',
+            sortValue: (m) => m.tipo || '',
+            render: (m) => (
+              <span className={`inline-flex rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${m.tipo === 'PREVENTIVO' ? 'bg-blue-50 text-blue-700 ring-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400' : 'bg-orange-50 text-orange-700 ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400'}`}>
+                {m.tipo === 'PREVENTIVO' ? 'Preventivo' : 'Correctivo'}
+              </span>
+            ),
+          },
+          {
+            key: 'activo',
+            header: 'Activo',
+            mobilePrimary: true,
+            sortValue: (m) => m.activoNombre || '',
+            render: (m) => (
+              <div>
+                <p className="font-bold text-slate-800 dark:text-slate-100">{m.activoNombre}</p>
+                <p className="font-mono text-xs text-slate-400">{m.activoCodigo}</p>
+              </div>
+            ),
+          },
+          {
+            key: 'estado',
+            header: 'Estado',
+            sortValue: (m) => MANTENIMIENTO_LABELS[m.estado] || m.estado,
+            render: (m) => (
+              <span className={`inline-flex rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${MANTENIMIENTO_BADGE[m.estado] || ''}`}>
+                {MANTENIMIENTO_LABELS[m.estado] || m.estado}
+              </span>
+            ),
+          },
+          {
+            key: 'fecha',
+            header: 'Fecha',
+            hideBelow: 'md',
+            className: 'whitespace-nowrap',
+            sortValue: (m) => (m.fecha ? new Date(m.fecha).getTime() : 0),
+            render: (m) => <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE') : '—'}</span>,
+          },
+          {
+            key: 'tecnico',
+            header: 'Técnico',
+            hideBelow: 'lg',
+            sortValue: (m) => m.tecnicoNombre || m.proveedor || '',
+            render: (m) => <span className="text-xs font-semibold text-slate-500">{m.tecnicoNombre || m.proveedor || '—'}</span>,
+          },
+          {
+            key: 'proxima',
+            header: 'Próxima revisión',
+            hideBelow: 'xl',
+            sortValue: (m) => m.proximaRevision || '',
+            render: (m) => <span className="text-xs font-semibold text-slate-500">{m.proximaRevision || '—'}</span>,
+          },
+          {
+            key: 'acciones',
+            header: 'Acciones',
+            align: 'right',
+            mobile: false,
+            render: (m) => (
+              <div className="flex items-center justify-end gap-1.5">
+                <button onClick={() => setDetalle(m)} title="Ver detalle" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-teal-50 hover:text-teal-600 dark:hover:bg-teal-500/10"><Eye className="w-4 h-4" /></button>
+                {m.estado === 'PROGRAMADO' && <button onClick={() => setIniciarId(m.id)} title="Iniciar" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10"><Play className="w-4 h-4" /></button>}
+                {m.estado === 'EN_PROCESO' && <button onClick={() => { setInforme({ trabajoRealizado: '', problemaEncontrado: '', repuestos: '', proximaRevision: '', observaciones: '' }); setFinalizarId(m.id); }} title="Finalizar y registrar informe" className="p-2 rounded-lg text-slate-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10"><CheckCircle2 className="w-4 h-4" /></button>}
+              </div>
+            ),
+          },
+        ]}
+        data={paged}
+        rowKey={(m) => m.id}
+        loading={mantenimientosLoading}
+        emptyIcon={Wrench}
+        emptyTitle="Sin mantenimientos registrados"
+        emptyDescription="Programa el primer mantenimiento preventivo o correctivo."
+        caption="Listado de mantenimientos"
+        minWidth="920px"
+        renderMobileCard={(m) => (
+          <div className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold text-slate-800 dark:text-slate-100">{m.activoNombre}</p>
+                <p className="font-mono text-xs text-slate-400">{m.activoCodigo}</p>
+              </div>
+              <span className={`inline-flex shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${MANTENIMIENTO_BADGE[m.estado] || ''}`}>
+                {MANTENIMIENTO_LABELS[m.estado] || m.estado}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <p>Tipo: <span className="font-semibold text-slate-700 dark:text-slate-200">{m.tipo === 'PREVENTIVO' ? 'Preventivo' : 'Correctivo'}</span></p>
+              <p>Fecha: <span className="font-semibold text-slate-700 dark:text-slate-200">{m.fecha ? new Date(m.fecha).toLocaleDateString('es-PE') : '—'}</span></p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setDetalle(m)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-700 transition-colors hover:bg-teal-100 dark:bg-teal-500/10 dark:text-teal-400">
+                <Eye className="w-4 h-4" /> Informe
+              </button>
+              {m.estado === 'PROGRAMADO' && (
+                <button onClick={() => setIniciarId(m.id)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400">
+                  <Play className="w-4 h-4" /> Iniciar
+                </button>
+              )}
+              {m.estado === 'EN_PROCESO' && (
+                <button onClick={() => { setInforme({ trabajoRealizado: '', problemaEncontrado: '', repuestos: '', proximaRevision: '', observaciones: '' }); setFinalizarId(m.id); }} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" /> Finalizar
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      />
 
       <Pagination
         page={page}
@@ -257,7 +341,13 @@ export default function Mantenimientos() {
 
       {detalle && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={detalleTitleId}
+            tabIndex={-1}
+            className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden anim-scale-in focus:outline-none"
+          >
             <div className="h-1.5 w-full bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500" />
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -265,11 +355,11 @@ export default function Mantenimientos() {
                   <ClipboardList className="w-[18px] h-[18px] text-teal-600 dark:text-teal-400" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">Informe de Mantenimiento</h3>
+                  <h3 id={detalleTitleId} className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">Informe de Mantenimiento</h3>
                   <p className="text-xs text-slate-400 font-medium truncate">{detalle.activoCodigo} — {detalle.activoNombre}</p>
                 </div>
               </div>
-              <button onClick={() => setDetalle(null)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"><X className="w-5 h-5" /></button>
+              <button onClick={() => setDetalle(null)} aria-label="Cerrar informe" className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">

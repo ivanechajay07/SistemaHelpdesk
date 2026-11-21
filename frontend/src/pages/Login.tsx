@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/axios';
+import { authService } from '../services/authService';
+import PasswordStrength from '../components/ui/PasswordStrength';
+import { passwordError } from '../lib/passwordPolicy';
 import {
-  Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft,
+  Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft, Clock,
   UserPlus, User, ShieldCheck, Sun, Moon, Sunrise, LogIn,
   Headphones, Zap, BarChart3, Star, Sparkles
 } from 'lucide-react';
@@ -12,12 +14,12 @@ import {
 type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
 
 const inputCls =
-  'block w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400/40 hover:border-slate-300 dark:hover:border-white/20 transition-all duration-300';
+  'block w-full pl-11 pr-4 py-3 rounded-xl bg-white/80 dark:bg-white/[0.06] backdrop-blur-sm border border-slate-200/90 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 caret-blue-500 shadow-sm focus:bg-white/95 dark:focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/60 hover:border-slate-300 hover:bg-white/90 dark:hover:border-white/20 transition-all duration-300';
 
 const inputRegCls = (hasError: boolean) =>
-  `w-full px-3 py-2.5 rounded-xl bg-white dark:bg-white/5 border ${
-    hasError ? 'border-red-500/60 focus:border-red-400' : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-blue-400/40'
-  } text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all duration-300`;
+  `w-full px-3 py-2.5 rounded-xl bg-white/80 dark:bg-white/[0.06] backdrop-blur-sm border ${
+    hasError ? 'border-red-500/60 focus:border-red-400' : 'border-slate-200/90 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-blue-400/50'
+  } text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all duration-300`;
 
 export default function Login() {
   const [view, setView] = useState<View>('login');
@@ -32,9 +34,21 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [welcomeName, setWelcomeName] = useState('');
+  // Aviso cuando la sesión se cerró automáticamente por inactividad.
+  const [sessionNotice] = useState(() =>
+    new URLSearchParams(window.location.search).get('reason') === 'idle'
+      ? 'Tu sesión se cerró por inactividad. Inicia sesión nuevamente.'
+      : '',
+  );
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('reason') === 'idle') {
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
@@ -73,7 +87,7 @@ export default function Login() {
       apellidos: data.apellidos,
       roles,
       permissions: data.permissions || [],
-    }, data.accessToken, data.refreshToken);
+    }, data.accessToken);
     setWelcomeName(data.nombre || data.username || '');
     setTimeout(() => {
       const isClientOnly =
@@ -90,7 +104,7 @@ export default function Login() {
     setMfaError('');
     setMfaLoading(true);
     try {
-      const { data } = await api.post('/auth/2fa/verify', { mfaToken, code: mfaCode.trim() });
+      const { data } = await authService.verifyMfa(mfaToken, mfaCode.trim());
       finalizeLogin(data);
     } catch (err: any) {
       setMfaError(err.response?.data?.message || 'Código inválido. Intenta nuevamente.');
@@ -104,7 +118,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', { username, password });
+      const { data } = await authService.login(username, password);
       if (data.mfaRequired) {
         setMfaToken(data.mfaToken);
         setMfaCode('');
@@ -117,7 +131,7 @@ export default function Login() {
       if (err.response?.status === 401) {
         setError(err.response?.data?.message || 'Credenciales inválidas. Verifica tu usuario y contraseña.');
       } else if (err.response?.status === 403) {
-        setError(err.response?.data?.message || 'Tu cuenta está desactivada. Contacta al administrador.');
+        setError(err.response?.data?.message || 'El servidor rechazó la solicitud. Verifica la configuración de red o contacta al administrador.');
       } else if (err.response?.status >= 500) {
         setError('Error del servidor. Intenta nuevamente más tarde.');
       } else if (err.response?.data?.message) {
@@ -135,7 +149,7 @@ export default function Login() {
     setForgotError('');
     setForgotLoading(true);
     try {
-      await api.post('/auth/forgot-password', { email: forgotEmail });
+      await authService.forgotPassword(forgotEmail);
       setView('forgot-sent');
     } catch (err: any) {
       if (err.response?.status === 404) {
@@ -171,12 +185,7 @@ export default function Login() {
         if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'El nombre de usuario solo puede contener letras, números y guiones bajos';
         return '';
       case 'password':
-        if (!value) return 'La contraseña es requerida';
-        if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
-        if (value.length > 100) return 'La contraseña no puede exceder 100 caracteres';
-        if (!/[A-Z]/.test(value)) return 'La contraseña debe contener al menos una mayúscula';
-        if (!/[0-9]/.test(value)) return 'La contraseña debe contener al menos un número';
-        return '';
+        return passwordError(value);
       case 'confirmPassword':
         if (!value) return 'Confirma tu contraseña';
         if (value !== regData.password) return 'Las contraseñas no coinciden';
@@ -229,7 +238,7 @@ export default function Login() {
 
     setRegLoading(true);
     try {
-      await api.post('/auth/register', {
+      await authService.register({
         nombre: regData.nombre,
         apellidos: regData.apellidos,
         email: regData.email,
@@ -281,7 +290,7 @@ export default function Login() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden flex items-center transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-cyan-50 dark:from-slate-950 dark:via-slate-950 dark:to-blue-950/60 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
       <button
         onClick={toggleTheme}
@@ -293,54 +302,78 @@ export default function Login() {
 
       {/* ===== Overlay de bienvenida al iniciar sesión (suave y animado) ===== */}
       {welcomeName && (
-        <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-blue-950 dark:via-slate-950 dark:to-slate-950 backdrop-blur-xl anim-overlay-in overflow-hidden">
-          {/* Blobs suaves animados */}
-          <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-24 -right-20 w-80 h-80 bg-blue-200/50 dark:bg-blue-500/10 rounded-full blur-3xl anim-blob" />
-            <div className="absolute -bottom-32 -left-16 w-96 h-96 bg-blue-100/60 dark:bg-blue-600/10 rounded-full blur-3xl anim-blob" style={{ animationDelay: '-6s' }} />
-            <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-sky-100/50 dark:bg-blue-700/10 rounded-full blur-2xl anim-blob" style={{ animationDelay: '-11s' }} />
+        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 backdrop-blur-2xl anim-overlay-in dark:from-blue-950 dark:via-slate-950 dark:to-slate-950">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <div className="absolute -right-20 -top-24 h-80 w-80 rounded-full bg-blue-200/50 blur-3xl anim-blob dark:bg-blue-500/10" />
+            <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-cyan-100/60 blur-3xl anim-blob dark:bg-blue-600/10" style={{ animationDelay: '-6s' }} />
+            <div className="absolute left-1/3 top-1/3 h-48 w-48 rounded-full bg-sky-100/50 blur-2xl anim-blob dark:bg-blue-700/10" style={{ animationDelay: '-11s' }} />
+            {[
+              { top: '28%', left: '30%', delay: '0s' },
+              { top: '38%', left: '70%', delay: '-2s' },
+              { top: '64%', left: '36%', delay: '-4s' },
+            ].map((p, i) => (
+              <span
+                key={i}
+                className="absolute h-1.5 w-1.5 rounded-full bg-blue-400/60 shadow-[0_0_14px_rgba(59,130,246,0.7)] anim-login-particle dark:bg-cyan-300/60"
+                style={{ top: p.top, left: p.left, animationDelay: p.delay }}
+              />
+            ))}
           </div>
 
-          <div className="relative anim-float-slow">
-            <div className="relative w-28 h-28">
-              <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
-                <defs>
-                  <linearGradient id="loginRing" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#2563eb" />
-                  </linearGradient>
-                </defs>
-                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(100,116,139,0.25)" strokeWidth="6" />
-                <circle cx="50" cy="50" r="44" fill="none" stroke="url(#loginRing)" strokeWidth="6" strokeLinecap="round" className="anim-ring-fill" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-lg shadow-blue-500/25 flex items-center justify-center text-slate-900 dark:text-white font-black text-2xl">
+          <div className="relative w-full max-w-sm px-6 anim-scale-in">
+            <div className="pointer-events-none absolute -inset-6 rounded-[40px] bg-gradient-to-br from-blue-500/20 via-cyan-400/10 to-emerald-400/20 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-8 text-center shadow-2xl shadow-blue-900/15 ring-1 ring-slate-900/5 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/75">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400" />
+              <div className="pointer-events-none absolute inset-0 rounded-[30px] ring-1 ring-inset ring-white/50 dark:ring-white/10" />
+
+              <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
+                <span className="absolute inset-0 rounded-[30px] bg-gradient-to-br from-blue-500/25 to-cyan-400/25 blur-lg" />
+                <span className="absolute -inset-2 rounded-[34px] border border-blue-400/30 anim-ring-pulse dark:border-cyan-400/20" />
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-400 text-3xl font-black text-white shadow-xl shadow-blue-500/30 ring-1 ring-white/30">
                   {welcomeName.charAt(0).toUpperCase()}
                 </div>
               </div>
+
+              <h2 className="relative mt-6 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                ¡Todo listo, <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{welcomeName}</span>!
+              </h2>
+              <p className="relative mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                Preparando tu espacio de trabajo...
+              </p>
+
+              <div className="relative mt-6 h-1.5 overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
+                <div className="anim-progress h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400" />
+              </div>
+
+              <div className="relative mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Sesión segura verificada
+              </div>
             </div>
           </div>
-
-          <h2 className="relative mt-6 text-2xl font-black text-slate-900 dark:text-white tracking-tight anim-fade-in-up">
-            ¡Todo listo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-600">{welcomeName}</span>!
-          </h2>
-          <p className="relative mt-2 text-sm text-slate-500 dark:text-slate-400 anim-fade-in-up" style={{ animationDelay: '120ms' }}>
-            Preparando tu espacio de trabajo...
-          </p>
-          <div className="relative flex items-center gap-1.5 mt-6">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-500 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
-            ))}
-          </div>
-          <p className="relative mt-3 text-xs text-blue-600/70 dark:text-blue-400/60">Redirigiendo al panel...</p>
         </div>
       )}
 
       {/* ===== Fondo animado corporativo ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute top-[-15%] left-[-8%] w-[55vw] h-[55vw] bg-blue-200/50 dark:bg-blue-500/10 rounded-full blur-[140px] anim-blob" />
-        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-blue-100/60 dark:bg-blue-600/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
-        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-sky-100/50 dark:bg-blue-700/10 rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
+        <div className="absolute bottom-[-20%] right-[-5%] w-[45vw] h-[45vw] bg-cyan-100/60 dark:bg-cyan-500/10 rounded-full blur-[140px] anim-blob" style={{ animationDelay: '-7s' }} />
+        <div className="absolute top-[30%] left-[45%] w-[30vw] h-[30vw] bg-emerald-100/40 dark:bg-emerald-500/[0.08] rounded-full blur-[120px] anim-blob" style={{ animationDelay: '-13s' }} />
+        {/* Aurora cónica en rotación lenta */}
+        <div className="absolute left-1/2 top-1/2 h-[85vmax] w-[85vmax] rounded-full bg-[conic-gradient(from_90deg,rgba(37,99,235,0.16),transparent_25%,rgba(34,211,238,0.14),transparent_55%,rgba(16,185,129,0.10),transparent_82%)] opacity-70 blur-[90px] anim-login-aurora dark:opacity-40" />
+        {/* Partículas flotantes */}
+        {[
+          { top: '18%', left: '12%', delay: '0s', size: 'h-1.5 w-1.5' },
+          { top: '28%', left: '82%', delay: '-2s', size: 'h-1 w-1' },
+          { top: '62%', left: '8%', delay: '-4s', size: 'h-1 w-1' },
+          { top: '74%', left: '76%', delay: '-1s', size: 'h-2 w-2' },
+          { top: '44%', left: '92%', delay: '-3s', size: 'h-1 w-1' },
+        ].map((p, i) => (
+          <span
+            key={i}
+            className={`absolute ${p.size} rounded-full bg-blue-500/50 shadow-[0_0_12px_rgba(59,130,246,0.65)] anim-login-particle dark:bg-cyan-300/60`}
+            style={{ top: p.top, left: p.left, animationDelay: p.delay }}
+          />
+        ))}
         <div
           className="absolute inset-0 opacity-[0.35] dark:opacity-[0.2]"
           style={{
@@ -353,18 +386,35 @@ export default function Login() {
 
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-16">
 
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-2xl shadow-blue-900/15 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500" />
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/70 dark:border-white/10 shadow-2xl shadow-blue-900/15 dark:shadow-black/50 lg:grid lg:grid-cols-[1.05fr_1fr] anim-scale-in">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400" />
+          <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] ring-1 ring-inset ring-white/50 dark:ring-white/10" />
+          <div className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent anim-login-sheen dark:via-cyan-200/10" />
 
           {/* ===== Panel de marca (degradado corporativo interactivo) ===== */}
           <section
-            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-blue-500 via-blue-700 to-blue-700 dark:from-blue-700 dark:via-blue-800 dark:to-blue-800 p-10 xl:p-14 text-white select-none anim-gradient-bg"
+            className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-10 xl:p-14 text-white select-none"
             onMouseMove={handleBrandMouseMove}
           >
+            {/* Aurora y malla del sistema visual */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_18%_12%,rgba(56,189,248,0.28),transparent_38%),radial-gradient(circle_at_82%_8%,rgba(34,211,238,0.22),transparent_42%),radial-gradient(circle_at_60%_105%,rgba(16,185,129,0.18),transparent_42%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none opacity-[0.10]"
+              style={{
+                backgroundImage:
+                  'linear-gradient(rgba(255,255,255,.75) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.75) 1px, transparent 1px)',
+                backgroundSize: '36px 36px',
+                maskImage: 'radial-gradient(ellipse at 30% 20%, black, transparent 78%)',
+              }}
+            />
             <div
               aria-hidden="true"
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'radial-gradient(620px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.28), transparent 55%)' }}
+              style={{ background: 'radial-gradient(620px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.16), transparent 55%)' }}
             />
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/20 rounded-full blur-3xl anim-blob" />
@@ -374,10 +424,8 @@ export default function Login() {
 
             {/* Logo */}
             <div className="relative flex items-center gap-3 anim-fade-in-up">
-              <div className="p-[2px] rounded-2xl bg-white/90 shadow-lg shadow-blue-900/20">
-                <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center">
-                  <span className="font-black text-lg text-blue-600">H</span>
-                </div>
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/20">
+                <span className="font-black text-sm tracking-tight text-white">HD</span>
               </div>
               <div>
                 <p className="text-lg font-black tracking-tight leading-none">HelpDesk PRO</p>
@@ -441,12 +489,10 @@ export default function Login() {
           </section>
 
           {/* ===== Columna de formulario ===== */}
-          <section className="w-full p-6 sm:p-10 lg:p-12">
+          <section className="flex w-full flex-col justify-center p-6 sm:p-10 lg:p-12">
             <div className="lg:hidden text-center mb-7 anim-fade-in-up">
-              <div className="inline-flex p-[2px] rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-500 anim-gradient-text shadow-lg shadow-blue-500/30 mb-3">
-                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-950 flex items-center justify-center">
-                  <span className="font-black text-2xl text-slate-900 dark:text-white">H</span>
-                </div>
+              <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/20 mb-3">
+                <span className="font-black text-lg tracking-tight text-white">HD</span>
               </div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
                 HelpDesk <span className="text-blue-500 dark:text-blue-400">PRO</span>
@@ -459,12 +505,31 @@ export default function Login() {
               {/* === LOGIN === */}
               {view === 'login' && (
                 <>
-                  <div className="mb-7 text-center lg:text-left">
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center justify-center lg:justify-start gap-2">
-                      <GreetingIcon className="w-6 h-6 text-blue-500" /> {greeting}
+                  <div className="mb-7 text-center anim-fade-in-up lg:text-left">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-blue-200/70 bg-blue-50/70 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                      </span>
+                      Acceso seguro
+                    </span>
+                    <h2 className="mt-3 flex items-center justify-center gap-2.5 text-3xl font-black tracking-tight text-slate-900 dark:text-white lg:justify-start">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/25">
+                        <GreetingIcon className="h-5 w-5" />
+                      </span>
+                      {greeting}
                     </h2>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm">Ingresa a tu cuenta para continuar</p>
+                    <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+                      Ingresa a tu cuenta para continuar <span className="text-blue-500/70">·</span> tu espacio de trabajo te espera
+                    </p>
                   </div>
+
+                  {sessionNotice && (
+                    <div className="mb-5 flex items-start gap-2.5 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-700 dark:text-amber-300 text-sm">
+                      <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{sessionNotice}</span>
+                    </div>
+                  )}
 
                   {error && (
                     <div key={error} className="mb-5 flex items-start gap-2.5 p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 dark:text-red-300 text-sm anim-shake">
@@ -475,13 +540,18 @@ export default function Login() {
 
                   <form onSubmit={handleLogin} className="space-y-5">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Usuario o Correo</label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Mail className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                      <label htmlFor="login-username" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Usuario o Correo
+                      </label>
+                      <div className="group relative rounded-xl transition-all duration-300 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.10),0_0_28px_-8px_rgba(59,130,246,0.45)]">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3.5 transition-transform duration-300 group-focus-within:-rotate-3 group-focus-within:scale-110">
+                          <Mail className="h-5 w-5 text-slate-500 transition-colors group-focus-within:text-blue-500 dark:text-slate-400" />
                         </div>
                         <input
+                          id="login-username"
                           type="text"
+                          name="username"
+                          autoComplete="username"
                           className={inputCls}
                           placeholder="ejemplo@empresa.com"
                           value={username}
@@ -493,28 +563,41 @@ export default function Login() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Contraseña</label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                      <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Contraseña
+                      </label>
+                      <div className="group relative rounded-xl transition-all duration-300 focus-within:shadow-[0_0_0_4px_rgba(59,130,246,0.10),0_0_28px_-8px_rgba(59,130,246,0.45)]">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3.5 transition-transform duration-300 group-focus-within:-rotate-3 group-focus-within:scale-110">
+                          <Lock className="h-5 w-5 text-slate-500 transition-colors group-focus-within:text-blue-500 dark:text-slate-400" />
                         </div>
                         <input
+                          id="login-password"
                           type={showPassword ? 'text' : 'password'}
+                          name="password"
+                          autoComplete="current-password"
                           className={`${inputCls} pr-11`}
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
+                          onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+                          onKeyDown={(e) => setCapsLock(e.getModifierState('CapsLock'))}
                           required
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 transition-colors"
+                          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 transition-all hover:scale-110 hover:text-slate-600 active:scale-95 dark:text-slate-500 dark:hover:text-slate-200"
                           tabIndex={-1}
                         >
                           {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </button>
                       </div>
+                      {capsLock && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 anim-fade-in">
+                          <AlertCircle className="h-3.5 w-3.5" /> Bloq Mayús está activado
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-end">
@@ -530,12 +613,19 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={loading || !username || !password}
-                      className="btn-shine anim-btn-gradient group/btn w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98]"
+                      aria-busy={loading}
+                      className="btn-shine anim-btn-gradient group/btn relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/40 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-blue-500/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {loading ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Ingresando...</>
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Verificando credenciales...</>
                       ) : (
-                        <><LogIn className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5" /> Iniciar Sesión</>
+                        <>
+                          <LogIn className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
+                          Iniciar Sesión
+                          <span className="ml-1 hidden h-5 items-center rounded-md border border-white/25 bg-white/10 px-1.5 text-[10px] font-black text-white/80 sm:inline-flex">
+                            ↵
+                          </span>
+                        </>
                       )}
                     </button>
                   </form>
@@ -574,8 +664,8 @@ export default function Login() {
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Código de verificación</label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <ShieldCheck className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 z-10 pl-3.5 flex items-center pointer-events-none">
+                          <ShieldCheck className="h-5 w-5 text-slate-500 dark:text-slate-400 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="text"
@@ -594,7 +684,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={mfaLoading || mfaCode.length !== 6}
-                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30"
+                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30"
                     >
                       {mfaLoading ? 'Verificando...' : 'Verificar e ingresar'}
                     </button>
@@ -640,8 +730,8 @@ export default function Login() {
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Correo Electrónico</label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <Mail className="h-5 w-5 text-slate-400 dark:text-slate-500 group-focus-within:text-amber-400 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 z-10 pl-3.5 flex items-center pointer-events-none">
+                          <Mail className="h-5 w-5 text-slate-500 dark:text-slate-400 group-focus-within:text-amber-400 transition-colors" />
                         </div>
                         <input
                           type="email"
@@ -682,7 +772,7 @@ export default function Login() {
                   </p>
                   <button
                     onClick={() => { resetForms(); setView('login'); }}
-                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-600 transition-all duration-300 shadow-lg shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-300 shadow-lg shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     <ArrowLeft className="w-4 h-4" /> Volver al Inicio de Sesión
                   </button>
@@ -747,8 +837,8 @@ export default function Login() {
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Correo Electrónico *</label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Mail className="h-4 w-4 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 z-10 pl-3 flex items-center pointer-events-none">
+                          <Mail className="h-4 w-4 text-slate-500 dark:text-slate-400 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="email"
@@ -765,8 +855,8 @@ export default function Login() {
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Nombre de Usuario *</label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <User className="h-4 w-4 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 z-10 pl-3 flex items-center pointer-events-none">
+                          <User className="h-4 w-4 text-slate-500 dark:text-slate-400 group-focus-within:text-blue-400 transition-colors" />
                         </div>
                         <input
                           type="text"
@@ -787,6 +877,8 @@ export default function Login() {
                           <input
                             type={showRegPassword ? 'text' : 'password'}
                             required
+                            maxLength={12}
+                            autoComplete="new-password"
                             value={regData.password}
                             onChange={(e) => handleRegChange('password', e.target.value)}
                             className={`${inputRegCls(!!regErrors.password)} pr-10`}
@@ -797,12 +889,15 @@ export default function Login() {
                           </button>
                         </div>
                         {regErrors.password && <p className="text-red-400 text-xs mt-1">{regErrors.password}</p>}
+                        <PasswordStrength value={regData.password} />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Confirmar *</label>
                         <input
                           type="password"
                           required
+                          maxLength={12}
+                          autoComplete="new-password"
                           value={regData.confirmPassword}
                           onChange={(e) => handleRegChange('confirmPassword', e.target.value)}
                           className={inputRegCls(!!regErrors.confirmPassword)}
@@ -840,7 +935,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={regLoading || Object.keys(regErrors).length > 0}
-                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
+                      className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:-translate-y-0.5 active:scale-[0.98] mt-1.5"
                     >
                       {regLoading ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Creando cuenta...</>
@@ -864,7 +959,7 @@ export default function Login() {
                   </p>
                   <button
                     onClick={() => { resetForms(); setView('login'); }}
-                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-blue-600 transition-all duration-300 shadow-lg shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                    className="btn-shine w-full flex justify-center items-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-300 shadow-lg shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
                   >
                     <ArrowLeft className="w-4 h-4" /> Volver al Inicio de Sesión
                   </button>
@@ -874,7 +969,15 @@ export default function Login() {
             </section>
           </div>
 
-          <p className="text-center text-slate-400 dark:text-slate-600 text-xs mt-6 anim-fade-in" style={{ animationDelay: '400ms' }}>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 anim-fade-in" style={{ animationDelay: '400ms' }}>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Conexión protegida
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+              <Clock className="w-3 h-3 text-blue-500" /> Cierre por inactividad
+            </span>
+          </div>
+          <p className="text-center text-slate-400 dark:text-slate-600 text-[11px] mt-3">
             HelpDesk PRO · Sistema de Gestión de Soporte Técnico
           </p>
         </div>

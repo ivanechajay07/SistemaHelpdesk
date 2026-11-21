@@ -51,9 +51,21 @@ public class AttachmentController {
             return ResponseEntity.notFound().build();
         }
 
+        String extension = org.springframework.util.StringUtils.getFilenameExtension(filename);
+        MediaType tipo = switch (extension != null ? extension.toLowerCase() : "") {
+            case "jpg", "jpeg" -> MediaType.IMAGE_JPEG;
+            case "png" -> MediaType.IMAGE_PNG;
+            case "gif" -> MediaType.IMAGE_GIF;
+            case "webp" -> MediaType.parseMediaType("image/webp");
+            default -> MediaType.APPLICATION_OCTET_STREAM;
+        };
+        // Solo las imágenes se muestran inline; documentos y comprimidos se descargan.
+        String disposicion = tipo.getType().equals("image") ? "inline" : "attachment";
+
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .contentType(tipo)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        disposicion + "; filename=\"" + filename + "\"")
                 .body(resource);
     }
 }

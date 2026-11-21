@@ -7,9 +7,11 @@ import { useToast } from '../../components/ui/Toast';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../../components/ui/FormModal';
 import Pagination from '../../components/ui/Pagination';
+import DataTable from '../../components/ui/DataTable';
+import Button from '../../components/ui/Button';
 import InventoryPageHeader from './InventoryPageHeader';
 import {
-  PackagePlus, Plus, Loader2, Undo2, AlertTriangle,
+  PackagePlus, Plus, Undo2, AlertTriangle,
 } from 'lucide-react';
 
 export default function Prestamos() {
@@ -58,61 +60,119 @@ export default function Prestamos() {
       <InventoryPageHeader icon={PackagePlus} eyebrow="Inventario" title="Préstamos" subtitle="Control de préstamos de activos a personal, con fechas de devolución y estados." gradient="from-cyan-600 via-teal-600 to-emerald-700" />
 
       <div className="flex justify-end">
-        <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-sm font-bold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"><Plus className="w-4 h-4" /> Registrar Préstamo</button>
+        <Button
+          onClick={() => setShowModal(true)}
+          leftIcon={<Plus className="w-4 h-4" />}
+          className="bg-gradient-to-r from-teal-600 to-emerald-600 shadow-teal-500/25 hover:shadow-teal-500/40"
+        >
+          Registrar Préstamo
+        </Button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-[11px] uppercase tracking-wider font-black text-slate-500 dark:text-slate-400">
-                <th className="px-4 py-3.5">Activo</th>
-                <th className="px-4 py-3.5">Solicitante</th>
-                <th className="px-4 py-3.5">Estado</th>
-                <th className="px-4 py-3.5 hidden md:table-cell">Entrega</th>
-                <th className="px-4 py-3.5 hidden lg:table-cell">Devolución prevista</th>
-                <th className="px-4 py-3.5 hidden lg:table-cell">Devolución real</th>
-                <th className="px-4 py-3.5 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prestamosLoading && prestamos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16"><div className="flex items-center justify-center gap-3 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /> Cargando...</div></td></tr>
-              ) : prestamos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16"><div className="flex flex-col items-center gap-2 text-slate-300 dark:text-slate-600"><PackagePlus className="w-10 h-10" /><p className="text-sm font-medium text-slate-400">Sin préstamos registrados</p></div></td></tr>
-              ) : paged.map((p) => (
-                <tr key={p.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <p className="font-bold text-slate-800 dark:text-slate-100">{p.activoNombre}</p>
-                    <p className="font-mono text-xs text-slate-400">{p.activoCodigo}</p>
-                  </td>
-                  <td className="px-4 py-3.5 text-sm font-semibold text-slate-600 dark:text-slate-300">{p.solicitanteNombre || '—'}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${PRESTAMO_BADGE[p.estado] || ''}`}>
-                      {p.devolucionVencida && p.estado !== 'DEVUELTO' && <AlertTriangle className="w-3 h-3 text-red-500" />}
-                      {PRESTAMO_LABELS[p.estado] || p.estado}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 hidden md:table-cell text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">{p.fechaEntrega ? new Date(p.fechaEntrega).toLocaleDateString('es-PE') : '—'}</td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell text-xs font-bold whitespace-nowrap">
-                    <span className={`${p.devolucionVencida && p.estado !== 'DEVUELTO' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                      {p.fechaDevolucionPrevista ? new Date(p.fechaDevolucionPrevista).toLocaleDateString('es-PE') : '—'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 hidden lg:table-cell text-xs font-semibold text-slate-500 whitespace-nowrap">{p.fechaDevolucionReal ? new Date(p.fechaDevolucionReal).toLocaleDateString('es-PE') : '—'}</td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center justify-end">
-                      {(p.estado === 'APROBADO' || p.estado === 'ENTREGADO') && (
-                        <button onClick={() => setDevolverId(p.id)} title="Registrar devolución" className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 rounded-xl transition-colors"><Undo2 className="w-4 h-4" /> Devolver</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={[
+          {
+            key: 'activo',
+            header: 'Activo',
+            mobilePrimary: true,
+            sortValue: (p) => p.activoNombre || '',
+            render: (p) => (
+              <div>
+                <p className="font-bold text-slate-800 dark:text-slate-100">{p.activoNombre}</p>
+                <p className="font-mono text-xs text-slate-400">{p.activoCodigo}</p>
+              </div>
+            ),
+          },
+          {
+            key: 'solicitante',
+            header: 'Solicitante',
+            sortValue: (p) => p.solicitanteNombre || '',
+            render: (p) => <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{p.solicitanteNombre || '—'}</span>,
+          },
+          {
+            key: 'estado',
+            header: 'Estado',
+            sortValue: (p) => PRESTAMO_LABELS[p.estado] || p.estado,
+            render: (p) => (
+              <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${PRESTAMO_BADGE[p.estado] || ''}`}>
+                {p.devolucionVencida && p.estado !== 'DEVUELTO' && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                {PRESTAMO_LABELS[p.estado] || p.estado}
+              </span>
+            ),
+          },
+          {
+            key: 'entrega',
+            header: 'Entrega',
+            hideBelow: 'md',
+            className: 'whitespace-nowrap',
+            sortValue: (p) => (p.fechaEntrega ? new Date(p.fechaEntrega).getTime() : 0),
+            render: (p) => <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{p.fechaEntrega ? new Date(p.fechaEntrega).toLocaleDateString('es-PE') : '—'}</span>,
+          },
+          {
+            key: 'prevista',
+            header: 'Devolución prevista',
+            hideBelow: 'lg',
+            className: 'whitespace-nowrap',
+            sortValue: (p) => (p.fechaDevolucionPrevista ? new Date(p.fechaDevolucionPrevista).getTime() : 0),
+            render: (p) => (
+              <span className={`text-xs font-bold ${p.devolucionVencida && p.estado !== 'DEVUELTO' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                {p.fechaDevolucionPrevista ? new Date(p.fechaDevolucionPrevista).toLocaleDateString('es-PE') : '—'}
+              </span>
+            ),
+          },
+          {
+            key: 'real',
+            header: 'Devolución real',
+            hideBelow: 'lg',
+            className: 'whitespace-nowrap',
+            sortValue: (p) => (p.fechaDevolucionReal ? new Date(p.fechaDevolucionReal).getTime() : 0),
+            render: (p) => <span className="text-xs font-semibold text-slate-500">{p.fechaDevolucionReal ? new Date(p.fechaDevolucionReal).toLocaleDateString('es-PE') : '—'}</span>,
+          },
+          {
+            key: 'acciones',
+            header: 'Acciones',
+            align: 'right',
+            mobile: false,
+            render: (p) =>
+              (p.estado === 'APROBADO' || p.estado === 'ENTREGADO') ? (
+                <button onClick={() => setDevolverId(p.id)} title="Registrar devolución" className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20">
+                  <Undo2 className="w-4 h-4" /> Devolver
+                </button>
+              ) : null,
+          },
+        ]}
+        data={paged}
+        rowKey={(p) => p.id}
+        loading={prestamosLoading}
+        emptyIcon={PackagePlus}
+        emptyTitle="Sin préstamos registrados"
+        emptyDescription="Registra el primer préstamo de un activo a un colaborador."
+        caption="Listado de préstamos de activos"
+        minWidth="960px"
+        renderMobileCard={(p) => (
+          <div className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-bold text-slate-800 dark:text-slate-100">{p.activoNombre}</p>
+                <p className="font-mono text-xs text-slate-400">{p.activoCodigo}</p>
+              </div>
+              <span className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ring-inset ${PRESTAMO_BADGE[p.estado] || ''}`}>
+                {PRESTAMO_LABELS[p.estado] || p.estado}
+              </span>
+            </div>
+            <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <p>Solicitante: <span className="font-semibold text-slate-700 dark:text-slate-200">{p.solicitanteNombre || '—'}</span></p>
+              <p>Entrega: <span className="font-semibold">{p.fechaEntrega ? new Date(p.fechaEntrega).toLocaleDateString('es-PE') : '—'}</span></p>
+              <p>Prevista: <span className={`font-semibold ${p.devolucionVencida && p.estado !== 'DEVUELTO' ? 'text-red-500' : ''}`}>{p.fechaDevolucionPrevista ? new Date(p.fechaDevolucionPrevista).toLocaleDateString('es-PE') : '—'}</span></p>
+            </div>
+            {(p.estado === 'APROBADO' || p.estado === 'ENTREGADO') && (
+              <button onClick={() => setDevolverId(p.id)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20">
+                <Undo2 className="w-4 h-4" /> Registrar devolución
+              </button>
+            )}
+          </div>
+        )}
+      />
 
       <Pagination
         page={page}

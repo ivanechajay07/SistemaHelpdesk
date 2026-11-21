@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Search, Loader2, LogIn, UserPlus, Ticket, Settings2, KeyRound, Trash2, Star, Smartphone, Tablet, Monitor } from 'lucide-react';
+import { ShieldCheck, Search, LogIn, UserPlus, Ticket, Settings2, KeyRound, Trash2, Star, Smartphone, Tablet, Monitor } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
-import api from '../lib/axios';
+import { auditService } from '../services/auditService';
 import Pagination from '../components/ui/Pagination';
+import DataTable from '../components/ui/DataTable';
 
 interface AuditLog {
   id: number;
@@ -89,23 +90,27 @@ export default function Audit() {
   const [size, setSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(async () => {
       setLoading(true);
+      setError(null);
       try {
-        const { data } = await api.get('/audit', { params: { q: q || undefined, page, size } });
+        const { data } = await auditService.list({ q: q || undefined, page, size });
         setLogs(data.content || []);
         setTotalPages(data.totalPages || 0);
         setTotal(data.totalElements || 0);
       } catch {
         setLogs([]);
+        setError('No se pudieron cargar los registros de auditoría.');
       } finally {
         setLoading(false);
       }
     }, q ? 350 : 0);
     return () => clearTimeout(t);
-  }, [q, page, size]);
+  }, [q, page, size, reloadKey]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
@@ -128,86 +133,94 @@ export default function Audit() {
         </div>
       </PageHeader>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        {/* ===== Escritorio: tabla ===== */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40">
-                <th className="px-5 py-3 font-black">Acción</th>
-                <th className="px-5 py-3 font-black">Usuario</th>
-                <th className="px-5 py-3 font-black hidden lg:table-cell">Entidad</th>
-                <th className="px-5 py-3 font-black">Dispositivo / IP</th>
-                <th className="px-5 py-3 font-black hidden xl:table-cell">Detalle</th>
-                <th className="px-5 py-3 font-black hidden lg:table-cell">Fecha</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-              {loading ? (
-                <tr><td colSpan={6} className="py-14 text-center"><Loader2 className="w-6 h-6 animate-spin text-slate-400 mx-auto" /></td></tr>
-              ) : logs.length === 0 ? (
-                <tr><td colSpan={6} className="py-14 text-center text-sm font-semibold text-slate-400">Sin registros de auditoría</td></tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="px-5 py-3"><ActionBadge accion={log.accion} /></td>
-                    <td className="px-5 py-3 text-xs font-bold text-slate-700 dark:text-slate-200">{log.usuario}</td>
-                    <td className="px-5 py-3 hidden lg:table-cell">
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        {log.entidad}{log.entidadId ? ` #${log.entidadId}` : ''}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 max-w-[220px]"><DeviceBlock log={log} /></td>
-                    <td className="px-5 py-3 max-w-[320px] hidden xl:table-cell">
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={log.detalle || ''}>{log.detalle || '—'}</p>
-                    </td>
-                    <td className="px-5 py-3 hidden lg:table-cell">
-                      <span className="text-[11px] font-medium text-slate-400 tabular-nums">{formatFecha(log.fecha)}</span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ===== Móvil / tablet pequeña: tarjetas ===== */}
-        <div className="md:hidden">
-          {loading ? (
-            <div className="py-14 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
-          ) : logs.length === 0 ? (
-            <p className="py-14 text-center text-sm font-semibold text-slate-400">Sin registros de auditoría</p>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {logs.map((log) => (
-                <div key={log.id} className="p-4 space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <ActionBadge accion={log.accion} />
-                    <span className="text-[10px] font-medium text-slate-400 tabular-nums text-right shrink-0">
-                      {formatFecha(log.fecha)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{log.usuario}</span>
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      {log.entidad}{log.entidadId ? ` #${log.entidadId}` : ''}
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-2.5">
-                    <DeviceBlock log={log} compact />
-                  </div>
-
-                  {log.detalle && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{log.detalle}</p>
-                  )}
-                </div>
-              ))}
+      <DataTable
+        columns={[
+          {
+            key: 'accion',
+            header: 'Acción',
+            mobilePrimary: true,
+            sortValue: (log) => log.accion,
+            render: (log) => <ActionBadge accion={log.accion} />,
+          },
+          {
+            key: 'usuario',
+            header: 'Usuario',
+            sortValue: (log) => log.usuario,
+            render: (log) => <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{log.usuario}</span>,
+          },
+          {
+            key: 'entidad',
+            header: 'Entidad',
+            hideBelow: 'lg',
+            sortValue: (log) => `${log.entidad}${log.entidadId ? ` #${log.entidadId}` : ''}`,
+            render: (log) => (
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {log.entidad}{log.entidadId ? ` #${log.entidadId}` : ''}
+              </span>
+            ),
+          },
+          {
+            key: 'dispositivo',
+            header: 'Dispositivo / IP',
+            className: 'max-w-[220px]',
+            sortValue: (log) => log.dispositivoModelo || '',
+            render: (log) => <DeviceBlock log={log} />,
+          },
+          {
+            key: 'detalle',
+            header: 'Detalle',
+            hideBelow: 'xl',
+            className: 'max-w-[320px]',
+            mobile: false,
+            render: (log) => (
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400" title={log.detalle || ''}>
+                {log.detalle || '—'}
+              </p>
+            ),
+          },
+          {
+            key: 'fecha',
+            header: 'Fecha',
+            hideBelow: 'lg',
+            sortValue: (log) => new Date(log.fecha).getTime(),
+            render: (log) => (
+              <span className="text-[11px] font-medium tabular-nums text-slate-400">{formatFecha(log.fecha)}</span>
+            ),
+          },
+        ]}
+        data={logs}
+        rowKey={(log) => log.id}
+        loading={loading}
+        error={error}
+        onRetry={() => setReloadKey((key) => key + 1)}
+        emptyIcon={ShieldCheck}
+        emptyTitle="Sin registros de auditoría"
+        emptyDescription="Las acciones de los usuarios aparecerán aquí."
+        caption="Registro de auditoría del sistema"
+        minWidth="900px"
+        renderMobileCard={(log) => (
+          <div className="space-y-2.5 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <ActionBadge accion={log.accion} />
+              <span className="shrink-0 text-right text-[10px] font-medium tabular-nums text-slate-400">
+                {formatFecha(log.fecha)}
+              </span>
             </div>
-          )}
-        </div>
-      </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{log.usuario}</span>
+              <span className="text-[10px] font-semibold text-slate-400">
+                {log.entidad}{log.entidadId ? ` #${log.entidadId}` : ''}
+              </span>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-800/40">
+              <DeviceBlock log={log} compact />
+            </div>
+            {log.detalle && (
+              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{log.detalle}</p>
+            )}
+          </div>
+        )}
+      />
 
       <Pagination
         page={page + 1}

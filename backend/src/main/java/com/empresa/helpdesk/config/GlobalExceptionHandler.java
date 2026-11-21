@@ -34,6 +34,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
+
+
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<Map<String, String>> handleDisabled(DisabledException ex) {
         Map<String, String> response = new HashMap<>();
@@ -44,8 +46,28 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LockedException.class)
     public ResponseEntity<Map<String, String>> handleLocked(LockedException ex) {
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Tu cuenta está bloqueada. Contacta al administrador.");
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        response.put("message", "Tu cuenta está bloqueada temporalmente por intentos fallidos.");
+        return ResponseEntity.status(HttpStatus.LOCKED).body(response);
+    }
+
+    /** Bloqueo temporal por intentos fallidos (incluye minutos restantes). */
+    @ExceptionHandler(com.empresa.helpdesk.modules.auth.service.AuthService.CuentaBloqueadaException.class)
+    public ResponseEntity<Map<String, Object>> handleCuentaBloqueada(
+            com.empresa.helpdesk.modules.auth.service.AuthService.CuentaBloqueadaException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", ex.getMessage());
+        response.put("lockedMinutes", ex.getMinutosRestantes());
+        return ResponseEntity.status(HttpStatus.LOCKED).body(response);
+    }
+
+    /** Credenciales incorrectas: informa cuántos intentos quedan antes del bloqueo. */
+    @ExceptionHandler(com.empresa.helpdesk.modules.auth.service.AuthService.CredencialesInvalidasException.class)
+    public ResponseEntity<Map<String, Object>> handleCredencialesInvalidas(
+            com.empresa.helpdesk.modules.auth.service.AuthService.CredencialesInvalidasException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", ex.getMessage());
+        response.put("attemptsRemaining", ex.getIntentosRestantes());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -62,14 +84,75 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
     }
 
+    /** Reutilización de refresh token: sesión comprometida, se fuerza re-login. */
+    @ExceptionHandler(com.empresa.helpdesk.modules.auth.service.RefreshTokenService.ReuseDetectedException.class)
+    public ResponseEntity<Map<String, String>> handleRefreshReuse(
+            com.empresa.helpdesk.modules.auth.service.RefreshTokenService.ReuseDetectedException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    /** Nunca exponer detalles de SQL/esquema/constraints al cliente. */
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<Map<String, String>> handleDataAccess(org.springframework.dao.DataAccessException ex) {
+        log.error("Error de acceso a datos", ex);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "No se pudo completar la operación por un conflicto con los datos.");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, String>> handleUnreadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "La solicitud no tiene un formato válido.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Parámetro inválido en la solicitud.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleMaxUpload(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "El archivo supera el tamaño máximo permitido.");
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
         // Las RuntimeException se usan para errores de negocio con mensajes
-        // controlados; se registran para diagnóstico pero no se expone el stack.
+        // controlados. Si el mensaje parece técnico (SQL, clases internas), se
+        // sustituye por uno genérico para no filtrar detalles del sistema.
         log.warn("Error de negocio: {}", ex.getMessage());
         Map<String, String> response = new HashMap<>();
-        response.put("message", ex.getMessage());
+        response.put("message", mensajeSeguro(ex.getMessage()));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    private String mensajeSeguro(String message) {
+        if (message == null || message.isBlank()) {
+            return "No se pudo procesar la solicitud.";
+        }
+        String lower = message.toLowerCase();
+        String[] indicadores = {
+                "sql", "constraint", "duplicate entry", "data too long", "foreign key",
+                "could not execute", "nested exception", "org.springframework", "org.hibernate",
+                "java.", "jdbc", "column", "table '", "syntax error"
+        };
+        for (String indicador : indicadores) {
+            if (lower.contains(indicador)) {
+                return "No se pudo procesar la solicitud.";
+            }
+        }
+        return message;
     }
 
     @ExceptionHandler(Exception.class)

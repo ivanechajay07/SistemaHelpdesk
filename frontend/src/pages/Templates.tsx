@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FileStack, Plus, Loader2, Edit2, Trash2, Search } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
-import api from '../lib/axios';
+import { templateService } from '../services/templateService';
 import { useCategoryStore } from '../store/categoryStore';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import FormModal, { SectionTitle } from '../components/ui/FormModal';
@@ -48,7 +48,7 @@ export default function Templates() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/templates');
+      const { data } = await templateService.list();
       setTemplates(data || []);
     } catch {
       setTemplates([]);
@@ -77,8 +77,8 @@ export default function Templates() {
     setSaving(true);
     try {
       const payload = { ...form, subcategoriaId: form.subcategoriaId ? Number(form.subcategoriaId) : null };
-      if (editing) await api.put(`/templates/${editing.id}`, payload);
-      else await api.post('/templates', payload);
+      if (editing) await templateService.update(editing.id, payload);
+      else await templateService.create(payload);
       toast({ variant: 'success', title: editing ? 'Plantilla actualizada' : 'Plantilla creada', message: `"${form.nombre}" se guardó correctamente.` });
       setModalOpen(false);
       load();
@@ -95,7 +95,7 @@ export default function Templates() {
       title: 'Eliminar plantilla',
       message: `¿Seguro que deseas eliminar la plantilla "${t.nombre}"? Los tickets ya creados no se afectan.`,
       action: async () => {
-        await api.delete(`/templates/${t.id}`);
+        await templateService.remove(t.id);
         toast({ variant: 'success', title: 'Plantilla eliminada', message: `"${t.nombre}" fue eliminada.` });
         load();
       },

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Loader2, Edit2, Trash2, ListTodo, UserCheck, CalendarDays,
-  Inbox, CheckCircle2, TrendingUp, Flame, FileDown, Images, Sparkles, Clock,
+  Inbox, CheckCircle2, TrendingUp, Flame, FileDown, Images, Clock,
   CheckCheck, Layers, ListChecks, CalendarRange, ChartGantt,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import ChartTooltip from '../components/ui/ChartTooltip';
+import PageHeader from '../components/ui/PageHeader';
 import { useTaskStore, type Task, type TaskStatus } from '../store/taskStore';
 import { useAuthStore } from '../store/authStore';
 import { TaskModal, getPrioridadCls, getEstadoCls, getEstadoLabel } from '../components/tasks/TaskModal';
@@ -220,55 +221,39 @@ export default function Tasks() {
 
   return (
     <div className="space-y-6">
-      {/* ===== HERO ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-emerald-600 to-slate-800 px-6 py-7 sm:px-8 sm:py-9 shadow-xl shadow-teal-900/20 anim-fade-in-up">
-        <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-10 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-6 right-1/3 w-24 h-24 border border-white/15 rounded-full pointer-events-none" />
-        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0">
-              <ListTodo className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-[11px] font-black tracking-widest uppercase text-white/90 mb-2">
-                <Sparkles className="w-3.5 h-3.5" /> Gestión de actividades
-              </span>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">Gestor de Tareas</h1>
-              <p className="text-white/85 mt-1.5 font-medium text-sm sm:text-base max-w-2xl">
-                {canManage ? 'Crea, edita y da seguimiento a las tareas del equipo.' : 'Avance de tus tareas asignadas.'}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex bg-white/10 backdrop-blur-sm rounded-xl p-1 gap-1 border border-white/15">
-              {[
-                { label: 'Lista', icon: ListChecks, path: '/tareas', active: true },
-                { label: 'Calendario', icon: CalendarRange, path: '/tareas/calendario', active: false },
-                { label: 'Gantt', icon: ChartGantt, path: '/tareas/gantt', active: false },
-              ].map((v) => (
-                <button
-                  key={v.path}
-                  onClick={() => navigate(v.path)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
-                    v.active ? 'bg-white text-teal-700 shadow-sm' : 'text-white/80 hover:bg-white/10'
-                  }`}
-                >
-                  <v.icon className="w-3.5 h-3.5" /> {v.label}
-                </button>
-              ))}
-            </div>
-            {canManage && (
-              <button
-                onClick={() => { setEditingTask(null); setModalOpen(true); }}
-                className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"
-              >
-                <Plus className="w-4 h-4" /> Nueva Tarea
-              </button>
-            )}
-          </div>
+      <PageHeader
+        eyebrow="Gestión de actividades"
+        title="Gestor de Tareas"
+        subtitle={canManage ? 'Crea, edita y da seguimiento a las tareas del equipo.' : 'Avance de tus tareas asignadas.'}
+        icon={ListTodo}
+        gradient="from-teal-600 via-emerald-600 to-slate-800"
+      >
+        <div className="inline-flex bg-white/10 backdrop-blur-sm rounded-xl p-1 gap-1 border border-white/15">
+          {[
+            { label: 'Lista', icon: ListChecks, path: '/tareas', active: true },
+            { label: 'Calendario', icon: CalendarRange, path: '/tareas/calendario', active: false },
+            { label: 'Gantt', icon: ChartGantt, path: '/tareas/gantt', active: false },
+          ].map((v) => (
+            <button
+              key={v.path}
+              onClick={() => navigate(v.path)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 ${
+                v.active ? 'bg-white text-teal-700 shadow-sm' : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <v.icon className="w-3.5 h-3.5" /> {v.label}
+            </button>
+          ))}
         </div>
-      </div>
+        {canManage && (
+          <button
+            onClick={() => { setEditingTask(null); setModalOpen(true); }}
+            className="btn-shine inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-teal-700 hover:bg-teal-50 rounded-xl text-sm font-black transition-all shadow-lg shadow-teal-900/30 active:scale-95 hover:-translate-y-0.5"
+          >
+            <Plus className="w-4 h-4" /> Nueva Tarea
+          </button>
+        )}
+      </PageHeader>
 
       {/* ===== RESUMEN ===== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

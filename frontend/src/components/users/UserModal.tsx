@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, UserPlus, Save, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useId } from 'react';
+import { useDialogA11y } from '../../lib/useDialogA11y';
+import PasswordStrength from '../ui/PasswordStrength';
+import { passwordError } from '../../lib/passwordPolicy';
+import { X, UserPlus, Save, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import type { User } from '../../store/userStore';
 import { useRoleStore } from '../../store/roleStore';
 
@@ -34,7 +37,6 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -64,12 +66,8 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isOpen, roles]);
 
-  const passwordChecks = useMemo(() => ([
-    { label: 'Mínimo 8 caracteres', ok: formData.password.length >= 8 },
-    { label: 'Al menos una mayúscula', ok: /[A-Z]/.test(formData.password) },
-    { label: 'Al menos una minúscula', ok: /[a-z]/.test(formData.password) },
-    { label: 'Al menos un número', ok: /\d/.test(formData.password) },
-  ]), [formData.password]);
+  const titleId = useId();
+  const panelRef = useDialogA11y(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -103,13 +101,7 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
         return '';
       case 'password':
         if (!user && !value) return 'La contraseña es requerida';
-        if (value) {
-          if (value.length < 8) return 'Mínimo 8 caracteres';
-          if (!/[A-Z]/.test(value)) return 'Debe incluir una mayúscula';
-          if (!/[a-z]/.test(value)) return 'Debe incluir una minúscula';
-          if (!/\d/.test(value)) return 'Debe incluir un número';
-          if (value.length > 100) return 'Máximo 100 caracteres';
-        }
+        if (value) return passwordError(value);
         return '';
       default:
         return '';
@@ -170,7 +162,14 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
-      <div className="my-auto bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] border border-slate-200 dark:border-slate-800">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="my-auto bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden anim-scale-in flex flex-col max-h-[calc(100dvh-1.5rem)] border border-slate-200 dark:border-slate-800 focus:outline-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-500/10 dark:to-sky-500/10">
           <div className="flex items-center gap-3">
@@ -178,11 +177,11 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{user ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
+              <h2 id={titleId} className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{user ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">{user ? 'Actualiza los datos y el acceso' : 'Registra una nueva cuenta'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <button onClick={onClose} aria-label="Cerrar formulario de usuario" className="p-2 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -239,8 +238,9 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
+                  maxLength={12}
+                  autoComplete="new-password"
                   onChange={(e) => handleFieldChange('password', e.target.value)}
-                  onFocus={() => setPasswordFocused(true)}
                   className={inputCls('password') + ' pr-11'}
                   placeholder="••••••••"
                 />
@@ -250,16 +250,7 @@ export function UserModal({ isOpen, onClose, onSubmit, user }: UserModalProps) {
               </div>
               {errors.password && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.password}</p>}
 
-              {(passwordFocused || formData.password) && (
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  {passwordChecks.map((c) => (
-                    <span key={c.label} className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${c.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                      <Check className={`w-3.5 h-3.5 ${c.ok ? '' : 'opacity-30'}`} />
-                      {c.label}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <PasswordStrength value={formData.password} />
             </div>
 
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
