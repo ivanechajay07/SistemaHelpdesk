@@ -1,5 +1,5 @@
 # Build stage
-FROM node:25-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -12,8 +12,8 @@ ARG VITE_IDLE_TIMEOUT_MINUTES=15
 ENV VITE_IDLE_TIMEOUT_MINUTES=$VITE_IDLE_TIMEOUT_MINUTES
 RUN npm run build
 
-# Run stage with Nginx
-FROM nginx:1.29-alpine
+# Run stage: Nginx sin privilegios (usuario nginx, puerto 8080)
+FROM nginxinc/nginx-unprivileged:1.29-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html

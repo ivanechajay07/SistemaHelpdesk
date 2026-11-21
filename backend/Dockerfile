@@ -1,5 +1,5 @@
 # Build stage
-FROM maven:3.9-eclipse-temurin-22-jammy AS build
+FROM maven:3.9-eclipse-temurin-21-jammy AS build
 WORKDIR /app
 COPY pom.xml .
 RUN mvn -B -ntp dependency:go-offline
