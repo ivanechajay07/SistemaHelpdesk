@@ -12,8 +12,8 @@ ARG VITE_IDLE_TIMEOUT_MINUTES=15
 ENV VITE_IDLE_TIMEOUT_MINUTES=$VITE_IDLE_TIMEOUT_MINUTES
 RUN npm run build
 
-# Run stage: imagen de Nginx sin privilegios (usuario nginx, puerto 8080)
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+# Run stage with Nginx
+FROM nginx:1.29-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
