@@ -1,0 +1,5 @@
+# CVEs de Spring Framework 6.2 (EOL) corregidas únicamente en Spring 7 / Boot 4.
+# HelpDesk PRO solo expone controladores REST: no usa XsltView ni vistas SSE.
+# Riesgo aceptado temporalmente; la migración a Spring Boot 4 elimina estas excepciones.
+CVE-2026-47884
+CVE-2026-47890
