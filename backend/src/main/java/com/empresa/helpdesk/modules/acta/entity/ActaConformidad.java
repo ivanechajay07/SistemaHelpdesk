@@ -37,13 +37,13 @@ public class ActaConformidad {
     @Column(columnDefinition = "TEXT")
     private String observaciones;
 
-    @Column(name = "foto_data", columnDefinition = "LONGTEXT")
+    @Column(name = "foto_data", columnDefinition = "TEXT")
     private String fotoData;
 
-    @Column(name = "firma_solicitante", columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "firma_solicitante", columnDefinition = "TEXT", nullable = false)
     private String firmaSolicitante;
 
-    @Column(name = "firma_tecnico", columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "firma_tecnico", columnDefinition = "TEXT", nullable = false)
     private String firmaTecnico;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

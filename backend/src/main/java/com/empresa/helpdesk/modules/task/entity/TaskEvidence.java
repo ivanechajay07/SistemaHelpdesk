@@ -34,7 +34,7 @@ public class TaskEvidence {
     private String tipo;
 
     @Lob
-    @Column(name = "imagen_data", columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "imagen_data", columnDefinition = "TEXT", nullable = false)
     private String imagenData;
 
     @Column(columnDefinition = "TEXT")
