@@ -35,6 +35,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-https://repo.maven.apache.org/maven2}
     container_name: helpdesk_backend
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8082}:8080"
