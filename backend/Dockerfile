@@ -1,10 +1,15 @@
+# syntax=docker/dockerfile:1
+
 # Build stage
 FROM maven:3.9-eclipse-temurin-21-jammy AS build
+ARG MAVEN_MIRROR_URL=https://repo.maven.apache.org/maven2
+ENV MAVEN_MIRROR_URL=$MAVEN_MIRROR_URL
 WORKDIR /app
+COPY docker-settings.xml /root/.m2/settings.xml
 COPY pom.xml .
-RUN mvn -B -ntp dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2/repository mvn -B -ntp dependency:go-offline
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2/repository mvn -B -ntp clean package -DskipTests
 
 # Run stage (usuario sin privilegios)
 FROM eclipse-temurin:21-jre-jammy
