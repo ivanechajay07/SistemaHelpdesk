@@ -102,6 +102,24 @@ Si otro dispositivo no conecta, revisa el firewall de Windows y permite el puert
 en la red privada. La API y MySQL siguen publicados solo en `127.0.0.1`; el frontend
 las proxya internamente.
 
+### PostgreSQL / Supabase
+
+El backend incluye un perfil `postgres` para desplegar sobre Supabase:
+
+```bash
+SPRING_PROFILES_ACTIVE=postgres
+```
+
+La guía completa (conexión, Flyway, Vercel y migración de datos MySQL → Postgres)
+está en [`docs/DESPLIEGUE_POSTGRES_SUPABASE.md`](docs/DESPLIEGUE_POSTGRES_SUPABASE.md).
+
+Para copiar datos existentes:
+
+```bash
+pip install -r scripts/migrate/requirements.txt
+python scripts/migrate/mysql_to_postgres.py
+```
+
 ### Checklist para producción con varios usuarios
 
 1. Publica **un solo dominio** con HTTPS, por ejemplo `https://helpdesk.miempresa.com`.
