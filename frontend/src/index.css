@@ -74,12 +74,66 @@ html.dark body {
  * Área segura del dispositivo: deja el contenido fuera del notch, la barra de
  * estado y la barra de gestos. En navegador el valor es 0 y no cambia nada.
  */
+:root {
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+
 .safe-top {
-  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  padding-top: var(--safe-top);
 }
 
 .safe-bottom {
-  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--safe-bottom);
+}
+
+/*
+ * Modales en la APK: el panel nunca queda debajo de la barra de estado ni de la
+ * barra de gestos, y su contenido hace scroll dentro del espacio disponible.
+ */
+.modal-safe {
+  padding-top: calc(var(--safe-top) + 0.75rem);
+  padding-bottom: calc(var(--safe-bottom) + 0.75rem);
+}
+
+.modal-safe > [role='dialog'] {
+  max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 1.5rem);
+}
+
+@media (min-width: 640px) {
+  .modal-safe {
+    padding-top: calc(var(--safe-top) + 1.5rem);
+    padding-bottom: calc(var(--safe-bottom) + 1.5rem);
+  }
+
+  .modal-safe > [role='dialog'] {
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 3rem);
+  }
+}
+
+/*
+ * Paneles flotantes (chat y notificaciones) en móvil: en lugar de un dropdown
+ * de 340px que se sale de la pantalla, ocupan el ancho útil como una hoja.
+ */
+@media (max-width: 639px) {
+  .popover-mobile {
+    position: fixed !important;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: calc(var(--safe-top) + 4.5rem);
+    width: auto !important;
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 5.25rem);
+    display: flex;
+    flex-direction: column;
+    z-index: 95;
+  }
+
+  .popover-mobile .popover-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
 }
 
 /* Custom Scrollbar Global */

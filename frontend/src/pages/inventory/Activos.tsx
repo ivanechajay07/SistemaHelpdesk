@@ -615,7 +615,7 @@ function QrModal({ qr, onClose }: { qr: { token: string; codigo: string }; onClo
     ? `${publicBase}/qr/${qr.token}`
     : qr.codigo;
   return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
+    <div className="modal-safe fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
       <div
         ref={panelRef}
         role="dialog"

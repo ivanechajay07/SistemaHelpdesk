@@ -39,7 +39,7 @@ export default function CsatModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm anim-overlay-in">
+    <div className="modal-safe fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm anim-overlay-in">
       <div
         ref={panelRef}
         role="dialog"

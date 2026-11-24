@@ -149,7 +149,7 @@ export default function GlobalSearch() {
 
       {open && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-start justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-lg anim-fade-in"
+          className="modal-safe fixed inset-0 z-[200] flex items-start justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-lg anim-fade-in"
           onClick={closeSearch}
         >
           <div

@@ -238,7 +238,7 @@ export default function TaskStatusDialog({ isOpen, onClose, task }: Props) {
     );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm anim-fade-in" onClick={onClose}>
+    <div className="modal-safe fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm anim-fade-in" onClick={onClose}>
       <div
         ref={panelRef}
         role="dialog"
