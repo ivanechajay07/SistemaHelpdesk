@@ -320,12 +320,13 @@ export default function Login() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-cyan-50 dark:from-slate-950 dark:via-slate-950 dark:to-blue-950/60 relative overflow-hidden flex items-center transition-colors duration-500">
+    <div className="min-h-screen safe-top safe-bottom bg-gradient-to-br from-white via-slate-50 to-cyan-50 dark:from-slate-950 dark:via-slate-950 dark:to-blue-950/60 relative overflow-hidden flex items-center transition-colors duration-500">
       {/* ===== Botón claro / oscuro ===== */}
       <button
         onClick={toggleTheme}
         title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-        className="fixed top-5 right-5 z-30 p-2.5 rounded-xl bg-white/70 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 backdrop-blur-md text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 active:scale-95 shadow-lg transition-all duration-300"
+        style={{ top: 'calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 1.25rem)' }}
+        className="fixed right-5 z-30 p-2.5 rounded-xl bg-white/70 dark:bg-white/[0.06] border border-slate-200 dark:border-white/10 backdrop-blur-md text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 active:scale-95 shadow-lg transition-all duration-300"
       >
         {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>

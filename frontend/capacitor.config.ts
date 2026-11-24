@@ -16,6 +16,12 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   plugins: {
+    // Barras del sistema en Android 15+: el contenido llega al borde y el
+    // fondo del documento pinta detras de la barra de estado/navegacion.
+    SystemBars: {
+      insetsHandling: 'css',
+      initialViewportFitValueHint: 'cover',
+    },
     SplashScreen: {
       launchShowDuration: 1200,
       backgroundColor: '#0f172a',

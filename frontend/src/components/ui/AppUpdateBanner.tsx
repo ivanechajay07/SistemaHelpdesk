@@ -41,8 +41,8 @@ export default function AppUpdateBanner() {
   if (!version || (descartado && !version.mandatory)) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 z-[70] border-b border-blue-500/30 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 px-4 py-3 text-white shadow-lg">
-      <div className="mx-auto flex max-w-5xl items-center gap-3">
+    <div className="safe-top fixed inset-x-0 top-0 z-[70] border-b border-blue-500/30 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-lg">
+      <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
         <Download className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
         <div className="min-w-0 flex-1 text-sm">
           <p className="font-bold">

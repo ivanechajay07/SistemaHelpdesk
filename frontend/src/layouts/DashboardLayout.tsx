@@ -718,7 +718,7 @@ export default function DashboardLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:relative inset-y-0 left-0 z-50 ${sidebarWidth} flex flex-col border-r border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-800/70 dark:bg-slate-950/80 ${
+      <aside className={`fixed lg:relative inset-y-0 left-0 z-50 ${sidebarWidth} safe-top flex flex-col border-r border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-800/70 dark:bg-slate-950/80 ${
         sidebarOpen ? 'translate-x-0 shadow-2xl shadow-slate-950/30' : '-translate-x-full lg:translate-x-0'
       }`}>
         {/* Halo decorativo superior */}
@@ -1079,7 +1079,7 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <main id="contenido-principal" tabIndex={-1} className="flex-1 flex flex-col min-w-0 overflow-hidden focus:outline-none">
-        <header className="sticky top-0 z-30 shrink-0 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/75 dark:bg-slate-950/70 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 shrink-0 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/75 dark:bg-slate-950/70 backdrop-blur-xl safe-top">
           <div className="flex h-16 items-center gap-2.5 px-4 lg:px-6">
             <div className="hidden sm:flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/25 ring-1 ring-white/20 shrink-0">
@@ -1718,7 +1718,7 @@ export default function DashboardLayout() {
       <nav
         aria-label="Navegación principal móvil"
         className="lg:hidden fixed inset-x-3 z-30 mx-auto max-w-xl overflow-hidden rounded-[26px] border border-white/70 bg-white/70 shadow-[0_18px_50px_-12px_rgba(15,23,42,0.35)] ring-1 ring-slate-900/5 backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-slate-900/65 dark:ring-white/5"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
+        style={{ bottom: 'calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 0.75rem)' }}
       >
         {/* Brillo superior y halo interior */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/25" />
