@@ -24,7 +24,7 @@ Para migrar **datos existentes**, aplica primero el baseline sin arrancar el bac
 
 ```bash
 psql "host=... port=5432 dbname=postgres user=postgres sslmode=require" \
-  -f backend/src/main/resources/db/migration/postgres/V1__baseline_postgres.sql
+  -f backend/src/main/resources/db/migration-postgres/V1__baseline_postgres.sql
 ```
 
 ## 2. Copiar los datos

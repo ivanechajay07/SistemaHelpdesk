@@ -68,6 +68,10 @@ inventario de activos, actas de conformidad, tareas, monitoreo de red, base de c
 - La política de contraseñas es **8–12 caracteres**, con al menos una mayúscula, una minúscula,
   un número y un carácter especial. Se aplica al registro, creación de usuarios, cambio y
   restablecimiento, con barra de progreso en la interfaz.
+- Los usuarios **ADMIN** deben configurar **Google Authenticator** en su primer inicio de sesión.
+  El flujo muestra el QR, verifica el código TOTP y solo entonces emite la sesión.
+- Si un administrador pierde el dispositivo, define `RESET_ADMIN_2FA=true`, reinicia el backend
+  una vez, vuelve a entrar y desactiva la variable. Después deberá configurar 2FA de nuevo.
 
 ## Ejecutar en paralelo con otros contenedores
 

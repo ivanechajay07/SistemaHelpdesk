@@ -74,6 +74,21 @@ public class JwtService {
         }
     }
 
+    /** Token temporal para completar la configuración obligatoria de 2FA. */
+    public String generateMfaSetupToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tipo", "mfa_setup");
+        return buildToken(claims, userDetails, mfaExpiration);
+    }
+
+    public boolean isMfaSetupToken(String token) {
+        try {
+            return "mfa_setup".equals(extractClaim(token, c -> c.get("tipo", String.class)));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private String buildToken(
             Map<String, Object> extraClaims,
             UserDetails userDetails,

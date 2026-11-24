@@ -8,6 +8,9 @@ export const authService = {
   verifyMfa: (mfaToken: string, code: string) =>
     api.post('/auth/2fa/verify', { mfaToken, code }),
 
+  completeMfaSetup: (mfaSetupToken: string, code: string) =>
+    api.post('/auth/2fa/setup/complete', { mfaSetupToken, code }),
+
   register: (payload: Record<string, unknown>) =>
     api.post('/auth/register', payload),
 

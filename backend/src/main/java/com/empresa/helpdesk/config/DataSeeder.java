@@ -43,6 +43,10 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${app.admin.allow-default-password:false}")
     private boolean allowDefaultAdminPassword;
 
+    /** Recuperación operativa: desactiva 2FA del admin si se pierde el dispositivo. */
+    @Value("${app.security.reset-admin-2fa:false}")
+    private boolean resetAdmin2fa;
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -179,6 +183,14 @@ public class DataSeeder implements CommandLineRunner {
             admin.setRoles(rolesAdmin);
         }
         userRepository.save(admin);
+        if (resetAdmin2fa) {
+            admin.setTwoFactorEnabled(false);
+            admin.setTwoFactorSecret(null);
+            admin.setTwoFactorLastStep(null);
+            userRepository.save(admin);
+            System.out.println("2FA del administrador reiniciado por RESET_ADMIN_2FA=true. "
+                    + "Desactiva esta variable después de recuperar el acceso.");
+        }
         System.out.println("Usuario administrador verificado y actualizado: admin");
         if ("admin123".equals(adminPasswordConfig)) {
             System.out.println("ADVERTENCIA: el administrador usa la contraseña por defecto. "

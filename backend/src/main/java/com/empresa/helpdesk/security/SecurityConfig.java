@@ -35,6 +35,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
+    private final OriginValidationFilter originValidationFilter;
 
     /** Orígenes permitidos para CORS. En producción definir APP_CORS_ORIGINS (ej: https://midominio.com). */
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
@@ -84,6 +85,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
                                 "/api/v1/auth/2fa/verify",
+                                "/api/v1/auth/2fa/setup/complete",
                                 "/ws/**",
                                 "/error"
                         ).permitAll()
@@ -116,6 +118,7 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler()))
+                .addFilterAfter(originValidationFilter, org.springframework.web.filter.CorsFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

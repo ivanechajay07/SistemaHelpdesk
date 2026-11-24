@@ -4,6 +4,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import PasswordStrength from '../components/ui/PasswordStrength';
+import { QRCodeSVG } from 'qrcode.react';
 import { passwordError } from '../lib/passwordPolicy';
 import {
   Lock, Mail, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, ArrowLeft, Clock,
@@ -11,7 +12,7 @@ import {
   Headphones, Zap, BarChart3, Star, Sparkles
 } from 'lucide-react';
 
-type View = 'login' | 'mfa' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
+type View = 'login' | 'mfa' | 'mfa-setup' | 'forgot' | 'register' | 'forgot-sent' | 'register-sent';
 
 const inputCls =
   'block w-full pl-11 pr-4 py-3 rounded-xl bg-white/80 dark:bg-white/[0.06] backdrop-blur-sm border border-slate-200/90 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 caret-blue-500 shadow-sm focus:bg-white/95 dark:focus:bg-white/[0.09] focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/60 hover:border-slate-300 hover:bg-white/90 dark:hover:border-white/20 transition-all duration-300';
@@ -75,6 +76,12 @@ export default function Login() {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaError, setMfaError] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaSetupToken, setMfaSetupToken] = useState('');
+  const [mfaSetupSecret, setMfaSetupSecret] = useState('');
+  const [mfaSetupUrl, setMfaSetupUrl] = useState('');
+  const [mfaSetupCode, setMfaSetupCode] = useState('');
+  const [mfaSetupError, setMfaSetupError] = useState('');
+  const [mfaSetupLoading, setMfaSetupLoading] = useState(false);
 
   // Finaliza la sesión con los datos devueltos por el backend (login o verificación 2FA)
   const finalizeLogin = (data: any) => {
@@ -113,6 +120,20 @@ export default function Login() {
     }
   };
 
+  const handleCompleteMfaSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMfaSetupError('');
+    setMfaSetupLoading(true);
+    try {
+      const { data } = await authService.completeMfaSetup(mfaSetupToken, mfaSetupCode.trim());
+      finalizeLogin(data);
+    } catch (err: any) {
+      setMfaSetupError(err.response?.data?.message || 'Código inválido. Verifica la hora de tu dispositivo.');
+    } finally {
+      setMfaSetupLoading(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -124,6 +145,15 @@ export default function Login() {
         setMfaCode('');
         setMfaError('');
         setView('mfa');
+        return;
+      }
+      if (data.mfaSetupRequired) {
+        setMfaSetupToken(data.mfaSetupToken);
+        setMfaSetupSecret(data.mfaSetupSecret);
+        setMfaSetupUrl(data.mfaSetupOtpauthUrl);
+        setMfaSetupCode('');
+        setMfaSetupError('');
+        setView('mfa-setup');
         return;
       }
       finalizeLogin(data);
@@ -644,7 +674,86 @@ export default function Login() {
                 </>
               )}
 
-              {/* === OLVIDÉ MI CONTRASEÑA === */}
+              {/* === CONFIGURACIÓN OBLIGATORIA 2FA (ADMIN) === */}
+              {view === 'mfa-setup' && (
+                <>
+                  <div className="mb-6 text-center lg:text-left">
+                    <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/25">
+                      <ShieldCheck className="h-6 w-6" />
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                      Protege tu cuenta
+                    </h2>
+                    <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+                      Como administrador debes configurar Google Authenticator antes de entrar.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+                      {mfaSetupUrl ? (
+                        <QRCodeSVG value={mfaSetupUrl} size={148} aria-label="Código QR para Google Authenticator" />
+                      ) : (
+                        <div className="flex h-[148px] w-[148px] items-center justify-center text-xs text-slate-400">Generando QR...</div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                      <p><strong>1.</strong> Abre Google Authenticator, Authy o 1Password.</p>
+                      <p><strong>2.</strong> Escanea el código QR.</p>
+                      <p><strong>3.</strong> Ingresa el código de 6 dígitos.</p>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Secreto manual</p>
+                        <code className="mt-1 block break-all font-mono text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                          {mfaSetupSecret}
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+
+                  {mfaSetupError && (
+                    <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-sm text-red-500 dark:text-red-300">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      {mfaSetupError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleCompleteMfaSetup} className="mt-5 space-y-4">
+                    <div>
+                      <label htmlFor="mfa-setup-code" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Código de Google Authenticator
+                      </label>
+                      <input
+                        id="mfa-setup-code"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        value={mfaSetupCode}
+                        onChange={(e) => setMfaSetupCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="000000"
+                        autoFocus
+                        className={`${inputCls} text-center font-mono text-lg tracking-[0.45em]`}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={mfaSetupLoading || mfaSetupCode.length !== 6}
+                      className="btn-shine flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {mfaSetupLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Activando...</> : <><ShieldCheck className="h-4 w-4" /> Activar y entrar</>}
+                    </button>
+                  </form>
+
+                  <button
+                    type="button"
+                    onClick={() => { setView('login'); setMfaSetupError(''); setMfaSetupCode(''); }}
+                    className="mt-4 w-full text-center text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    Volver al inicio de sesión
+                  </button>
+                </>
+              )}
+
               {/* === VERIFICACIÓN 2FA === */}
               {view === 'mfa' && (
                 <>
