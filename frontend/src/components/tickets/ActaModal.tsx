@@ -5,6 +5,7 @@ import { actaService } from '../../services/actaService';
 import type { Ticket } from '../../store/ticketStore';
 import SignaturePad from '../ui/SignaturePad';
 import { generarActaPdf } from '../../lib/actaPdf';
+import { descargarPdf } from '../../lib/nativeFiles';
 import { useToast } from '../ui/Toast';
 
 interface ActaResponse {
@@ -141,9 +142,8 @@ export default function ActaModal({ isOpen, onClose, ticket }: ActaModalProps) {
           firmaSolicitante: acta.firmaSolicitante,
           firmaTecnico: acta.firmaTecnico,
         });
-        doc.save(`Acta_Conformidad_${ticket.codigo}.pdf`);
-      } catch (err) {
-        console.error(err);
+        await descargarPdf(doc, `Acta_Conformidad_${ticket.codigo}.pdf`);
+      } catch (err) {        console.error(err);
         toast({ variant: 'error', title: 'Error al generar el PDF', message: 'No se pudo generar el acta en PDF.' });
       } finally {
         setDownloading(false);

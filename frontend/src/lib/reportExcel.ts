@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx-js-style';
+import { esNativo, guardarArchivoBase64 } from './nativeFiles';
 
 // Paleta corporativa sobria: un solo color de marca (azul profundo) + neutros
 export const XC = {
@@ -101,5 +102,15 @@ export function setCols(ws: XLSX.WorkSheet, widths: number[]) {
 }
 
 export function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
-  XLSX.writeFile(wb, filename);
+  if (!esNativo()) {
+    XLSX.writeFile(wb, filename);
+    return;
+  }
+  try {
+    const base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' }) as string;
+    void guardarArchivoBase64(base64, filename);
+  } catch {
+    // Si el complemento nativo falla, intenta la descarga del navegador.
+    XLSX.writeFile(wb, filename);
+  }
 }

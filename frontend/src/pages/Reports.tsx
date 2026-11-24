@@ -29,6 +29,7 @@ import { usePagedList } from '../lib/hooks';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards } from '../lib/reportPdf';
 import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt, exSection } from '../lib/reportExcel';
 import { CHART_SERIES, PRIORITY_CHART_COLORS } from '../lib/chartColors';
+import { descargarPdf } from '../lib/nativeFiles';
 
 const COLORS = CHART_SERIES;
 
@@ -456,7 +457,7 @@ export default function Reports() {
       });
 
       drawFooter(doc, `Reporte HelpDesk · ${dateStr}`);
-      doc.save(`Reporte_HelpDesk_${new Date().toISOString().slice(0, 10)}.pdf`);
+      await descargarPdf(doc, `Reporte_HelpDesk_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error('Error exportando PDF:', err);
     } finally {
@@ -571,7 +572,7 @@ export default function Reports() {
       }
 
       drawFooter(doc, `Informe por usuario · ${dateStr}`);
-      doc.save(`Informe_Usuario_${selectedTecnico.nombre}_${selectedTecnico.apellidos}_${new Date().toISOString().slice(0, 10)}.pdf`.replace(/\s+/g, '_'));
+      await descargarPdf(doc, `Informe_Usuario_${selectedTecnico.nombre}_${selectedTecnico.apellidos}_${new Date().toISOString().slice(0, 10)}.pdf`.replace(/\s+/g, '_'));
     } catch (err) {
       console.error('Error exportando PDF por usuario:', err);
     } finally {

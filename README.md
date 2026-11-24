@@ -215,7 +215,25 @@ MVC → servicio → DAO (ver [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md)).
 ```bash
 npm run build    # typecheck + build de producción
 npm run lint     # oxlint
+npm run apk:sync # build + sincroniza la app Android (Capacitor)
+npm run apk:open # abre Android Studio
 ```
+
+## APK Android (distribución libre)
+
+La app Android se empaqueta con **Capacitor** y se distribuye como APK, sin Play Store.
+El detalle completo (firma, versiones, publicación y aviso de actualización) está en
+[`docs/APK_LIBRE.md`](docs/APK_LIBRE.md).
+
+```powershell
+cd frontend
+$env:VITE_API_URL = "http://192.168.18.140:5174/api/v1"
+npm run apk:sync
+npx cap open android
+```
+
+El workflow `android-apk.yml` también compila el APK en GitHub Actions y lo deja como
+artefacto descargable.
 
 ## Scripts de base de datos
 

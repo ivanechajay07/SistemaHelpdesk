@@ -24,6 +24,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards, formatReportDate } from '../../lib/reportPdf';
 import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt } from '../../lib/reportExcel';
+import { descargarPdf } from '../../lib/nativeFiles';
 
 function Badge({ estado }: { estado: string }) {
   if (!estado) return null;
@@ -199,7 +200,7 @@ export default function Activos() {
       });
 
       drawFooter(doc, `Inventario de activos · ${dateStr}`);
-      doc.save(`Inventario_Activos_${new Date().toISOString().slice(0, 10)}.pdf`);
+      await descargarPdf(doc, `Inventario_Activos_${new Date().toISOString().slice(0, 10)}.pdf`);
       toast({ variant: 'success', title: 'PDF generado', message: `Se exportaron ${list.length} activos` });
     } catch (e) {
       console.error(e);

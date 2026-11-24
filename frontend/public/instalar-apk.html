@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Instalar HelpDesk PRO</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: radial-gradient(circle at 20% 0%, #1e3a8a 0%, #0f172a 45%, #020617 100%);
+        color: #e2e8f0;
+        padding: 24px 18px 48px;
+      }
+      main { max-width: 640px; margin: 0 auto; }
+      .card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 20px;
+        padding: 26px 22px;
+        backdrop-filter: blur(10px);
+      }
+      h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
+      p.lead { margin: 0 0 22px; color: #94a3b8; font-size: 14px; line-height: 1.55; }
+      ol { margin: 0 0 22px; padding-left: 20px; }
+      li { margin-bottom: 14px; font-size: 14px; line-height: 1.55; }
+      li strong { color: #f8fafc; }
+      .download {
+        display: flex; align-items: center; justify-content: center;
+        width: 100%; padding: 16px;
+        border-radius: 14px; text-decoration: none;
+        font-weight: 800; font-size: 15px; color: #fff;
+        background: linear-gradient(90deg, #2563eb, #06b6d4);
+        box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
+      }
+      .note {
+        margin-top: 18px; padding: 14px 16px;
+        border-radius: 12px; font-size: 13px; line-height: 1.55;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #bfdbfe;
+      }
+      .warn {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.35);
+        color: #fde68a;
+      }
+      code { background: rgba(148, 163, 184, 0.15); padding: 1px 6px; border-radius: 6px; }
+      footer { margin-top: 22px; text-align: center; font-size: 12px; color: #64748b; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <h1>HelpDesk PRO</h1>
+        <p class="lead">
+          Aplicación Android del sistema de mesa de ayuda. Se instala directamente,
+          sin pasar por Play Store.
+        </p>
+
+        <ol>
+          <li><strong>Descarga el APK</strong> con el botón de abajo.</li>
+          <li>Si Android lo pide, activa <strong>“Permitir instalar apps de esta fuente”</strong>.</li>
+          <li>Abre el archivo descargado y toca <strong>Instalar</strong>.</li>
+          <li>Si Play Protect muestra un aviso, elige <strong>“Instalar de todas formas”</strong>.</li>
+          <li>Abre la app e inicia sesión con tu usuario habitual.</li>
+        </ol>
+
+        <a class="download" href="descargas/helpdesk.apk">Descargar APK</a>
+
+        <div class="note">
+          <strong>Actualizaciones:</strong> cuando exista una versión nueva, la app mostrará un
+          aviso. Descarga el APK y se instala encima de la versión anterior; no pierdes la
+          sesión ni los datos.
+        </div>
+
+        <div class="note warn">
+          No envíes el archivo APK por WhatsApp: bloquea ese tipo de archivos.
+          Comparte este enlace o el código QR de la página.
+        </div>
+      </div>
+
+      <footer>Si el botón no descarga, pide el enlace actualizado al administrador.</footer>
+    </main>
+  </body>
+</html>

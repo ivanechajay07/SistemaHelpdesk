@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import api from '../lib/axios';
-import { refreshSession, session } from '../lib/session';
+import {
+  borrarRefreshToken,
+  isNativeApp,
+  leerRefreshToken,
+  refreshSession,
+  session,
+} from '../lib/session';
 
 export interface User {
   id: number;
@@ -52,6 +58,8 @@ const loadUser = (): User | null => {
 const clearLocalSession = () => {
   session.clear();
   localStorage.removeItem('user');
+  // La APK guarda el refresh token en almacenamiento privado del dispositivo.
+  void borrarRefreshToken();
   // Limpieza de la migración anterior: los tokens ya no viven en localStorage.
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
@@ -99,8 +107,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    // El backend revoca el refresh token y borra la cookie HttpOnly.
-    api.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
+    if (isNativeApp) {
+      // La APK envía el refresh token en el cuerpo (no usa cookies).
+      void leerRefreshToken()
+        .then((token) => api.post('/auth/logout', token ? { refreshToken: token } : {}))
+        .catch(() => {});
+    } else {
+      // El backend revoca el refresh token y borra la cookie HttpOnly.
+      api.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
+    }
     clearLocalSession();
     set({ user: null, token: null, isAuthenticated: false });
   },

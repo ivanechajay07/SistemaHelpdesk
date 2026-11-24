@@ -13,6 +13,7 @@ import InventoryPageHeader from './InventoryPageHeader';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, formatReportDate } from '../../lib/reportPdf';
+import { descargarPdf } from '../../lib/nativeFiles';
 import {
   Wrench, Plus, X, Play, CheckCircle2, Eye, FileDown, ClipboardList,
 } from 'lucide-react';
@@ -142,7 +143,7 @@ export default function Mantenimientos() {
       doc.text('Supervisor / Administrador', pageWidth - 52.5, y + 5, { align: 'center' });
 
       drawFooter(doc, dateStr);
-      doc.save(`Informe_Mantenimiento_${m.activoCodigo || m.id}.pdf`);
+      void descargarPdf(doc, `Informe_Mantenimiento_${m.activoCodigo || m.id}.pdf`);
       toast({ variant: 'success', title: 'Informe generado', message: 'El PDF del mantenimiento se descargó.' });
     } catch (e) {
       console.error(e);
