@@ -341,7 +341,7 @@ export default function Mantenimientos() {
       </FormModal>
 
       {detalle && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
+        <div className="modal-safe fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
           <div
             role="dialog"
             aria-modal="true"

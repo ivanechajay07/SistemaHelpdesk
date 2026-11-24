@@ -1136,7 +1136,7 @@ export default function DashboardLayout() {
               </button>
 
               {chatOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-card border border-white/60 bg-white/95 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-xl anim-scale-in origin-top-right sm:w-[380px] dark:border-slate-700/70 dark:bg-slate-900/95">
+                <div className="popover-mobile absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-card border border-white/60 bg-white/95 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-xl anim-scale-in origin-top-right sm:w-[380px] dark:border-slate-700/70 dark:bg-slate-900/95">
                   <div className="border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
                     <div className="flex items-center gap-2">
                       <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/25 shrink-0">
@@ -1152,7 +1152,7 @@ export default function DashboardLayout() {
                       </div>
                     </div>
                   </div>
-                  <div className="overflow-y-auto max-h-[380px]">
+                  <div className="popover-scroll overflow-y-auto max-h-[380px]">
                     {recentMessages.length === 0 ? (
                       <div className="py-10 text-center">
                         <MessageCircle className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
@@ -1224,7 +1224,7 @@ export default function DashboardLayout() {
               </button>
 
               {notifOpen && (
-                <div id="notification-panel" className="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-card border border-white/60 bg-white/95 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-xl anim-scale-in origin-top-right sm:w-[380px] dark:border-slate-700/70 dark:bg-slate-900/95">
+                <div id="notification-panel" className="popover-mobile absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-card border border-white/60 bg-white/95 shadow-2xl shadow-slate-950/20 ring-1 ring-slate-900/5 backdrop-blur-xl anim-scale-in origin-top-right sm:w-[380px] dark:border-slate-700/70 dark:bg-slate-900/95">
                   <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
                     <div>
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white">Notificaciones</h3>
@@ -1266,7 +1266,7 @@ export default function DashboardLayout() {
                       ))}
                     </div>
                   )}
-                  <div className="overflow-y-auto max-h-[380px]">
+                  <div className="popover-scroll overflow-y-auto max-h-[380px]">
                     {filteredNotifications.length === 0 ? (
                       <div className="py-10 text-center">
                         <Bell className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />

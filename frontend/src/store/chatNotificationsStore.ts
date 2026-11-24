@@ -111,19 +111,29 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
             };
             set({ unreadByTicket: prev, totalUnread: recomputeTotal(prev) });
 
-            // Feed de mensajes recientes (persiste aunque se marquen como leídos)
-            const recientes = get().recentMessages.filter((m) => m.mensajeId !== event.mensajeId);
-            recientes.unshift({
-              mensajeId: event.mensajeId,
-              ticketId: event.ticketId,
-              ticketCodigo: event.ticketCodigo,
-              ticketTitulo: event.ticketTitulo,
-              remitenteNombre: event.remitenteNombre,
-              contenido: event.contenido,
-              fechaEnvio: event.fechaEnvio,
-              adjuntoUrl: event.adjuntoUrl,
-            });
-            set({ recentMessages: recientes.slice(0, 20) });
+            // Feed de mensajes recientes (persiste aunque se marquen como leídos).
+            // Se ordena por fecha descendente para que el más nuevo quede arriba,
+            // incluso si un evento llega con retraso.
+            const recientes = [
+              {
+                mensajeId: event.mensajeId,
+                ticketId: event.ticketId,
+                ticketCodigo: event.ticketCodigo,
+                ticketTitulo: event.ticketTitulo,
+                remitenteNombre: event.remitenteNombre,
+                contenido: event.contenido,
+                fechaEnvio: event.fechaEnvio,
+                adjuntoUrl: event.adjuntoUrl,
+              },
+              ...get().recentMessages.filter((m) => m.mensajeId !== event.mensajeId),
+            ]
+              .sort((a, b) => {
+                const fa = a.fechaEnvio ? new Date(a.fechaEnvio).getTime() : 0;
+                const fb = b.fechaEnvio ? new Date(b.fechaEnvio).getTime() : 0;
+                return fb - fa;
+              })
+              .slice(0, 20);
+            set({ recentMessages: recientes });
 
             set({
               lastEvent: { ...event, receivedAt: Date.now() },

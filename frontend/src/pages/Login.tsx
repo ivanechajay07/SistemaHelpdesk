@@ -279,7 +279,23 @@ export default function Login() {
       });
       setView('register-sent');
     } catch (err: any) {
-      setRegError(err.response?.data?.message || 'Error al registrar. Intenta más tarde.');
+      const status = err.response?.status;
+      const data = err.response?.data;
+      const campos = data && typeof data === 'object' ? data : null;
+
+      if (!err.response) {
+        setRegError('No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.');
+      } else if (campos && typeof campos === 'object' && !campos.message) {
+        // Errores de validación del backend: { email: '...', username: '...' }
+        setRegErrors(campos as Record<string, string>);
+        setRegError('Revisa los campos marcados.');
+      } else if (status === 429) {
+        setRegError('Demasiados intentos de registro. Espera un minuto e inténtalo de nuevo.');
+      } else if (status === 403) {
+        setRegError('El servidor rechazó la solicitud. Contacta al administrador.');
+      } else {
+        setRegError(data?.message || 'Error al registrar. Intenta más tarde.');
+      }
     } finally {
       setRegLoading(false);
     }

@@ -25,6 +25,15 @@ interface Message {
   leido?: boolean;
 }
 
+/** Orden cronológico estable: por fecha y, si empatan, por id. */
+const ordenarMensajes = (lista: Message[]): Message[] =>
+  [...lista].sort((a, b) => {
+    const fa = new Date(a.fechaEnvio).getTime() || 0;
+    const fb = new Date(b.fechaEnvio).getTime() || 0;
+    return fa === fb ? (a.id ?? 0) - (b.id ?? 0) : fa - fb;
+  });
+
+
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -109,7 +118,7 @@ export default function TicketDetail() {
           ticketService.getMessages(id)
         ]);
         setTicket(ticketRes.data);
-        setMessages(messagesRes.data);
+        setMessages(ordenarMensajes(messagesRes.data));
         // Al abrir el detalle, todos los mensajes pendientes quedan leídos
         await markAsRead();
       } catch (err) {
@@ -142,7 +151,7 @@ export default function TicketDetail() {
           setMessages((prev) =>
             prev.some((m) => m.id === receivedMessage.id)
               ? prev
-              : [...prev, receivedMessage]
+              : ordenarMensajes([...prev, receivedMessage])
           );
           if (receivedMessage.remitenteId !== user?.id) {
             if (document.visibilityState === 'visible') {
@@ -653,7 +662,7 @@ export default function TicketDetail() {
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
 
       {/* Chat Container */}
-      <div className="flex h-[calc(100dvh-19rem)] max-h-[880px] min-h-[520px] flex-col overflow-hidden rounded-panel border border-slate-200/80 bg-white/90 shadow-sm ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/80 anim-fade-in-up">
+      <div className="flex h-[62dvh] min-h-[360px] max-h-[620px] flex-col overflow-hidden rounded-panel border border-slate-200/80 bg-white/90 shadow-sm ring-1 ring-slate-900/5 dark:border-slate-800 dark:bg-slate-900/80 anim-fade-in-up lg:h-[calc(100dvh-19rem)] lg:min-h-[520px] lg:max-h-[880px]">
 
         {/* Encabezado del chat: participante + presencia / escribiendo */}
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-50 via-white to-white dark:from-blue-500/10 dark:via-slate-900 dark:to-slate-900 shrink-0">
@@ -872,7 +881,7 @@ export default function TicketDetail() {
 
              {/* Link Dialog */}
              {showLinkDialog && (
-                <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
+                <div className="modal-safe fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/70 backdrop-blur-md p-3 anim-fade-in">
                   <div
                     ref={linkDialogPanelRef}
                     role="dialog"

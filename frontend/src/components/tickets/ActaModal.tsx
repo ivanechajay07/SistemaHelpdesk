@@ -195,7 +195,7 @@ export default function ActaModal({ isOpen, onClose, ticket }: ActaModalProps) {
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
+    <div className="modal-safe fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-md anim-fade-in">
       <div
         ref={panelRef}
         role="dialog"

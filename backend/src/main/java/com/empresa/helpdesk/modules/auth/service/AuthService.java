@@ -435,7 +435,9 @@ public class AuthService {
         // Mensaje genérico para no permitir enumerar usuarios/correos existentes
         if (userRepository.existsByUsername(request.getUsername())
                 || userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("No se pudo completar el registro con los datos proporcionados.");
+            throw new RuntimeException(
+                    "Ya existe una cuenta con ese correo o nombre de usuario. "
+                    + "Si es tuya, inicia sesión o recupera tu contraseña.");
         }
 
         Role defaultRole = roleRepository.findByName("CLIENTE")
