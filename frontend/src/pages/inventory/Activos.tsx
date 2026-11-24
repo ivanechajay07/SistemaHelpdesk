@@ -458,7 +458,7 @@ export default function Activos() {
               <Field label="Cargo del responsable"><input value={form.cargoResponsable} onChange={(e) => setForm({ ...form, cargoResponsable: e.target.value })} className={inputCls} /></Field>
               <Field label="Proveedor"><input value={form.proveedor} onChange={(e) => setForm({ ...form, proveedor: e.target.value })} className={inputCls} /></Field>
               <Field label="N° factura / compra"><input value={form.numeroFactura} onChange={(e) => setForm({ ...form, numeroFactura: e.target.value })} className={inputCls} /></Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Fecha de compra"><input type="date" value={form.fechaCompra} onChange={(e) => setForm({ ...form, fechaCompra: e.target.value })} className={inputCls} /></Field>
                 <Field label="Costo (S/)">
                   <input type="number" value={form.costo ?? ''} onChange={(e) => setForm({ ...form, costo: e.target.value === '' ? undefined : Number(e.target.value) })} className={inputCls} />
@@ -481,7 +481,7 @@ export default function Activos() {
                   <button type="button" onClick={() => setSpecs((s) => ({ ...s, ['']: '' }))} className="text-xs font-bold text-teal-600 hover:text-teal-700 dark:text-teal-400 inline-flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Agregar</button>
                 </div>
                 {Object.entries(specs).map(([k, v], idx) => (
-                  <div key={idx} className="grid grid-cols-2 gap-2 mb-2">
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                     <input value={k} onChange={(e) => {
                       const neo: Record<string, string> = {};
                       Object.entries(specs).forEach(([ok, ov], i) => {
