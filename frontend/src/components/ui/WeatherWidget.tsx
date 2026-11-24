@@ -1,10 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Sun, Cloud, CloudSun, CloudFog, CloudRain, CloudDrizzle, CloudSnow, CloudLightning, MapPin, Loader2 } from 'lucide-react';
+import { Geolocation } from '@capacitor/geolocation';
+import { isNativeApp } from '../../lib/session';
 
 interface WeatherData {
   temp: number;
   code: number;
   wind: number;
+  city: string;
+}
+
+/**
+ * Ubicación de respaldo (Lima, Perú) cuando el usuario no da permiso de
+ * ubicación o el navegador la bloquea. Así el widget siempre muestra algo útil.
+ */
+const UBICACION_RESPALDO = { lat: -12.0464, lon: -77.0428, city: 'Lima, Perú' };
+
+interface Coords {
+  lat: number;
+  lon: number;
+  city?: string;
 }
 
 const codeToIcon = (code: number) => {
@@ -33,47 +48,94 @@ const conditionText = (code: number) => {
   return 'Nublado';
 };
 
+async function ubicacionNativa(): Promise<Coords | null> {
+  try {
+    const actuales = await Geolocation.checkPermissions();
+    if (actuales.location !== 'granted') {
+      const pedidos = await Geolocation.requestPermissions();
+      if (pedidos.location !== 'granted') return null;
+    }
+    const pos = await Geolocation.getCurrentPosition({
+      timeout: 12000,
+      maximumAge: 600000,
+      enableHighAccuracy: false,
+    });
+    return { lat: pos.coords.latitude, lon: pos.coords.longitude };
+  } catch {
+    return null;
+  }
+}
+
+function ubicacionNavegador(): Promise<Coords | null> {
+  if (!('geolocation' in navigator)) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 12000, maximumAge: 600000 },
+    );
+  });
+}
+
+async function cargarClima(coords: Coords): Promise<WeatherData> {
+  const [clima, geo] = await Promise.all([
+    fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`,
+    ).then((r) => r.json()),
+    coords.city
+      ? Promise.resolve(null)
+      : fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.lat}&longitude=${coords.lon}&localityLanguage=es`,
+        )
+          .then((r) => r.json())
+          .catch(() => null),
+  ]);
+
+  return {
+    temp: Math.round(clima.current?.temperature_2m ?? 0),
+    code: clima.current?.weather_code ?? 0,
+    wind: Math.round(clima.current?.wind_speed_10m ?? 0),
+    city: coords.city || [geo?.city, geo?.principalSubdivision].filter(Boolean).join(', ') || 'Tu ubicación',
+  };
+}
+
 export default function WeatherWidget() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [city, setCity] = useState('');
   const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading');
 
   useEffect(() => {
     let cancelled = false;
-    if (!('geolocation' in navigator)) {
-      setState('error');
-      return;
-    }
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        try {
-          const [w, g] = await Promise.all([
-            fetch(
-              `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`
-            ).then((r) => r.json()),
-            fetch(
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=es`
-            ).then((r) => r.json()),
-          ]);
-          if (cancelled) return;
-          setWeather({
-            temp: Math.round(w.current?.temperature_2m ?? 0),
-            code: w.current?.weather_code ?? 0,
-            wind: Math.round(w.current?.wind_speed_10m ?? 0),
-          });
-          setCity([g.city, g.principalSubdivision].filter(Boolean).join(', ') || 'Tu ubicación');
+    const cargar = async () => {
+      const coords =
+        (isNativeApp ? await ubicacionNativa() : await ubicacionNavegador()) ?? UBICACION_RESPALDO;
+
+      try {
+        const data = await cargarClima(coords);
+        if (!cancelled) {
+          setWeather(data);
           setState('ok');
-        } catch {
-          if (!cancelled) setState('error');
         }
-      },
-      () => {
+      } catch {
+        if (cancelled) return;
+        // Si falló con la ubicación real, intenta al menos con la de respaldo.
+        if (!coords.city) {
+          try {
+            const data = await cargarClima(UBICACION_RESPALDO);
+            if (!cancelled) {
+              setWeather(data);
+              setState('ok');
+              return;
+            }
+          } catch {
+            /* sin conexión */
+          }
+        }
         if (!cancelled) setState('error');
-      },
-      { timeout: 12000, maximumAge: 600000 }
-    );
+      }
+    };
+
+    void cargar();
 
     return () => {
       cancelled = true;
@@ -103,7 +165,7 @@ export default function WeatherWidget() {
           <div className="h-8 w-px bg-white/20" />
           <div className="leading-tight min-w-0">
             <p className="flex items-center gap-1 text-xs font-bold text-white truncate max-w-[120px]">
-              <MapPin className="w-3 h-3 shrink-0 text-cyan-200" /> {city}
+              <MapPin className="w-3 h-3 shrink-0 text-cyan-200" /> {weather.city}
             </p>
             <p className="text-[10px] font-semibold text-white/60 mt-0.5">Viento {weather.wind} km/h</p>
           </div>
@@ -113,7 +175,7 @@ export default function WeatherWidget() {
       {state === 'error' && (
         <div className="leading-tight">
           <p className="text-xs font-bold text-white/80">Clima no disponible</p>
-          <p className="text-[10px] text-white/50">Activa tu ubicación e intenta de nuevo</p>
+          <p className="text-[10px] text-white/50">Sin conexión a internet</p>
         </div>
       )}
     </div>
