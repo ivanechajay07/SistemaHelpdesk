@@ -49,7 +49,8 @@ services:
     environment:
       # URL pública con la que acceden los usuarios (localhost o IP de LAN).
       # Si usas otro dispositivo, define PUBLIC_FRONTEND_URL=http://TU_IP:5174.
-      CORS_ALLOWED_ORIGINS: "${PUBLIC_FRONTEND_URL:-http://localhost:5174},http://localhost:5174"
+      # Incluye los origenes del .env (localhost, capacitor://localhost) y la URL publica.
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:5174},${PUBLIC_FRONTEND_URL:-http://localhost:5174}"
       FRONTEND_URL: "${PUBLIC_FRONTEND_URL:-http://localhost:5174}"
       # Usa el Mailpit de este stack: no envia correos reales por Gmail.
       MAIL_HOST: "mailpit"
@@ -83,3 +84,7 @@ services:
     ports: !override
       # 0.0.0.0 permite entrar desde otro dispositivo de la LAN.
       - "${FRONTEND_BIND:-0.0.0.0}:5174:8080"
+    volumes:
+      # APK publicado para los celulares: coloca helpdesk.apk en ./descargas
+      # y quedara accesible en http://TU_IP:5174/descargas/helpdesk.apk
+      - ./descargas:/usr/share/nginx/html/descargas:ro

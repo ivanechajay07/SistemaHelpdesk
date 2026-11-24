@@ -33,3 +33,6 @@ npm-debug.log*
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+# APK de distribucion (se publica en el servidor, no se versiona)
+descargas/*.apk
+!descargas/.gitkeep
