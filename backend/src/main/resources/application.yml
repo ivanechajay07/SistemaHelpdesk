@@ -96,6 +96,11 @@ app:
     # Límite por IP para oficinas detrás de NAT. El límite por usuario sigue en 5/min.
     login-ip-attempts: ${LOGIN_IP_ATTEMPTS:120}
     login-ip-window-seconds: ${LOGIN_IP_WINDOW_SECONDS:60}
+    # Los ADMIN deben configurar Google Authenticator en el primer login.
+    # Para recuperar acceso si se pierde el dispositivo, poner false temporalmente.
+    require-2fa-for-admins: ${REQUIRE_2FA_FOR_ADMINS:true}
+    # Recuperación: true desactiva 2FA del admin al arrancar (usar solo una vez).
+    reset-admin-2fa: ${RESET_ADMIN_2FA:false}
     # Cierre de sesión por inactividad (0 = deshabilitado)
     idle-timeout-minutes: ${IDLE_TIMEOUT_MINUTES:15}
   jwt:

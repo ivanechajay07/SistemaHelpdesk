@@ -6,6 +6,7 @@ import com.empresa.helpdesk.modules.auth.dto.ChangePasswordRequest;
 import com.empresa.helpdesk.modules.auth.dto.ForgotPasswordRequest;
 import com.empresa.helpdesk.modules.auth.dto.MfaCodeRequest;
 import com.empresa.helpdesk.modules.auth.dto.MfaDisableRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaSetupCompleteRequest;
 import com.empresa.helpdesk.modules.auth.dto.MfaSetupResponse;
 import com.empresa.helpdesk.modules.auth.dto.MfaVerifyRequest;
 import com.empresa.helpdesk.modules.auth.dto.RefreshRequest;
@@ -192,6 +193,15 @@ public class AuthController {
     @Operation(summary = "Verificar código 2FA", description = "Segundo paso del login cuando la cuenta tiene 2FA activo")
     public ResponseEntity<AuthResponse> verify2fa(@Valid @RequestBody MfaVerifyRequest request) {
         return withRefreshCookie(authService.verificarMfa(request));
+    }
+
+    @PostMapping("/2fa/setup/complete")
+    @Operation(summary = "Completar configuración 2FA obligatoria",
+            description = "Verifica el primer código de Google Authenticator y emite la sesión")
+    public ResponseEntity<AuthResponse> completeMfaSetup(
+            @Valid @RequestBody MfaSetupCompleteRequest request
+    ) {
+        return withRefreshCookie(authService.completarConfiguracion2fa(request));
     }
 
     @PostMapping("/2fa/setup")

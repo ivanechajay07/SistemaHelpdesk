@@ -28,4 +28,13 @@ public class AuthResponse {
     private String mfaToken;
     /** 2FA: indica si la cuenta tiene la verificación en dos pasos activada. */
     private Boolean twoFactorEnabled;
+
+    /** 2FA obligatorio para ADMIN: true cuando debe configurar Google Authenticator. */
+    private Boolean mfaSetupRequired;
+    /** Token temporal para completar la configuración obligatoria. */
+    private String mfaSetupToken;
+    /** Secreto Base32 para el QR (solo durante la configuración). */
+    private String mfaSetupSecret;
+    /** URL otpauth:// para el QR. */
+    private String mfaSetupOtpauthUrl;
 }

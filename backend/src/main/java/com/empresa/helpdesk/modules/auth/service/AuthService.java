@@ -6,6 +6,7 @@ import com.empresa.helpdesk.modules.auth.dto.ChangePasswordRequest;
 import com.empresa.helpdesk.modules.auth.dto.ForgotPasswordRequest;
 import com.empresa.helpdesk.modules.auth.dto.MfaCodeRequest;
 import com.empresa.helpdesk.modules.auth.dto.MfaDisableRequest;
+import com.empresa.helpdesk.modules.auth.dto.MfaSetupCompleteRequest;
 import com.empresa.helpdesk.modules.auth.dto.MfaSetupResponse;
 import com.empresa.helpdesk.modules.auth.dto.MfaVerifyRequest;
 import com.empresa.helpdesk.modules.auth.dto.RefreshRequest;
@@ -82,6 +83,10 @@ public class AuthService {
     @Value("${app.security.login-ip-window-seconds:60}")
     private int loginIpWindowSeconds;
 
+    /** Obliga a los ADMIN a configurar Google Authenticator en el primer login. */
+    @Value("${app.security.require-2fa-for-admins:true}")
+    private boolean require2faForAdmins;
+
     public AuthResponse login(AuthRequest request) {
         // Límite por IP (defensa contra fuerza bruta distribuida). El límite por
         // usuario sigue siendo 5/min; este es más amplio para oficinas con NAT.
@@ -145,6 +150,25 @@ public class AuthService {
             return AuthResponse.builder()
                     .mfaRequired(true)
                     .mfaToken(mfaToken)
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .build();
+        }
+
+        // Los administradores deben configurar Google Authenticator antes de entrar.
+        if (require2faForAdmins && esAdmin(user)) {
+            String secreto = totpService.generarSecreto();
+            user.setTwoFactorSecret(cryptoService.encrypt(secreto));
+            user.setTwoFactorEnabled(false);
+            user.setTwoFactorLastStep(null);
+            userRepository.save(user);
+            auditService.registrar("CONFIGURAR_2FA_REQUERIDA", "USUARIO", user.getId(),
+                    user.getUsername() + " debe configurar 2FA");
+            return AuthResponse.builder()
+                    .mfaSetupRequired(true)
+                    .mfaSetupToken(jwtService.generateMfaSetupToken(user))
+                    .mfaSetupSecret(secreto)
+                    .mfaSetupOtpauthUrl(otpauthUrl(user, secreto))
                     .id(user.getId())
                     .username(user.getUsername())
                     .build();
@@ -238,6 +262,58 @@ public class AuthService {
         auditService.registrar(user.getUsername(), "LOGIN", "USUARIO", user.getId(),
                 user.getUsername() + " inició sesión (2FA)");
         return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    /** Completa la configuración obligatoria de Google Authenticator para ADMIN. */
+    @Transactional
+    public AuthResponse completarConfiguracion2fa(MfaSetupCompleteRequest request) {
+        rateLimiter.verificar("mfa-setup-ip:" + currentIp(), 20, 300);
+
+        String username;
+        try {
+            if (!jwtService.isMfaSetupToken(request.getMfaSetupToken())) {
+                throw new RuntimeException("Token de configuración inválido");
+            }
+            username = jwtService.extractUsername(request.getMfaSetupToken());
+        } catch (Exception e) {
+            throw new RuntimeException("La configuración expiró. Inicia sesión nuevamente.");
+        }
+
+        rateLimiter.verificar("mfa-setup:" + username.toLowerCase(), 5, 300);
+
+        User user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        if (!user.isEnabled()) {
+            throw new org.springframework.security.authentication.DisabledException("Cuenta desactivada");
+        }
+        if (user.isTwoFactorEnabled()) {
+            throw new RuntimeException("La verificación en dos pasos ya está activa.");
+        }
+        if (user.getTwoFactorSecret() == null) {
+            throw new RuntimeException("Primero inicia sesión para generar el código QR.");
+        }
+
+        String secreto = cryptoService.decrypt(user.getTwoFactorSecret());
+        long paso = totpService.verificarPaso(secreto, request.getCode());
+        if (paso < 0) {
+            throw new RuntimeException("Código inválido. Verifica la hora de tu dispositivo.");
+        }
+
+        registrarPasoTotp(user, paso);
+        user.setTwoFactorEnabled(true);
+        userRepository.saveAndFlush(user);
+        rateLimiter.resetear("mfa-setup:" + username.toLowerCase());
+        auditService.registrar("ACTIVAR_2FA", "USUARIO", user.getId(),
+                user.getUsername() + " activó Google Authenticator");
+
+        String accessToken = jwtService.generateToken(new HashMap<>(), user);
+        String refreshToken = refreshTokenService.emitir(user);
+        return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    private boolean esAdmin(User user) {
+        return user.getRoles().stream()
+                .anyMatch(role -> "ADMIN".equalsIgnoreCase(role.getName()));
     }
 
     /**

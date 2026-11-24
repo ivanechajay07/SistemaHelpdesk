@@ -51,7 +51,7 @@ persistente en `/app/uploads` o migra los adjuntos a Supabase Storage.
 ### Instalación nueva
 
 Arranca el backend con el perfil `postgres`. Flyway aplicará
-`backend/src/main/resources/db/migration/postgres/V1__baseline_postgres.sql`
+`backend/src/main/resources/db/migration-postgres/V1__baseline_postgres.sql`
 y `DataSeeder` creará roles, permisos y el administrador.
 
 ### Migrar datos existentes desde MySQL
