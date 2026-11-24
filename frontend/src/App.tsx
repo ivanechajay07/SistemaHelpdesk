@@ -7,6 +7,7 @@ import { useThemeStore } from './store/themeStore';
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import AppUpdateBanner from './components/ui/AppUpdateBanner';
+import { aplicarTemaBarrasSistema } from './lib/systemBars';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Rutas con carga diferida (code-splitting): cada página se descarga solo al entrar.
@@ -99,6 +100,8 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    // Iconos de las barras del sistema (solo APK): claros en oscuro y viceversa.
+    void aplicarTemaBarrasSistema(isDark);
   }, [isDark]);
 
   // Tema automático por horario: revisa cada minuto si debe cambiar.

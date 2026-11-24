@@ -173,6 +173,13 @@ volumes:
 | Aviso de nueva versión | ✅ |
 | Notificaciones con la app cerrada | ❌ requiere Firebase (FCM) |
 
+### Barras del sistema (edge-to-edge)
+
+La app dibuja hasta el borde de la pantalla y pinta el fondo del tema detrás de la
+barra de estado y la de gestos. Los iconos cambian de claros a oscuros según el tema
+con el plugin `SystemBars` de Capacitor 8. El encabezado, el menú lateral y la barra
+de pestañas usan `env(safe-area-inset-*)` para no quedar tapados.
+
 ---
 
 ## 7. Problemas comunes
@@ -185,6 +192,7 @@ volumes:
 | Play Protect bloquea | APK fuera de Play Store | “Instalar de todas formas” |
 | La sesión se pierde al cerrar | Token no guardado | Verificar que la app sea la APK (no el navegador) |
 | PDF no descarga | WebView sin plugin | Debe usar `src/lib/nativeFiles.ts` |
+| Franja de color distinto arriba/abajo | WebView antiguo sin edge-to-edge | Actualizar **Android System WebView** desde Play Store |
 
 ---
 

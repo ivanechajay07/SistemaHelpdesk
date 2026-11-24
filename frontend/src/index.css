@@ -54,6 +54,34 @@
   }
 }
 
+/*
+ * Barras del sistema en la APK (Android edge-to-edge).
+ * El fondo del documento se ve detrás de la barra de estado y de navegación,
+ * así que sigue el tema de la app (.dark), no solo el del sistema.
+ * :root con más especificidad gana al media query de arriba.
+ */
+html:root,
+body {
+  background-color: #f8fafc;
+}
+
+html.dark:root,
+html.dark body {
+  background-color: #020617;
+}
+
+/*
+ * Área segura del dispositivo: deja el contenido fuera del notch, la barra de
+ * estado y la barra de gestos. En navegador el valor es 0 y no cambia nada.
+ */
+.safe-top {
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+}
+
+.safe-bottom {
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+
 /* Custom Scrollbar Global */
 ::-webkit-scrollbar {
   width: 8px;
