@@ -50,8 +50,12 @@ jobs:
 
       - name: Instalar SDK de Android
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "SDK=$SDK"
+          SDKMGR="$(find "$SDK" -path '*/bin/sdkmanager' -type f | head -n 1)"
+          echo "sdkmanager=$SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null || true
+          "$SDKMGR" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Instalar dependencias
         run: npm ci
