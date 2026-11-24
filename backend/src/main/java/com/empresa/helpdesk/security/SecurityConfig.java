@@ -86,6 +86,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/reset-password",
                                 "/api/v1/auth/2fa/verify",
                                 "/api/v1/auth/2fa/setup/complete",
+                                // La app consulta la versión antes de iniciar sesión.
+                                "/api/v1/app/version",
                                 "/ws/**",
                                 "/error"
                         ).permitAll()
@@ -131,7 +133,7 @@ public class SecurityConfig {
         boolean hasWildcard = Arrays.stream(origins).map(String::trim).anyMatch("*"::equals);
         configuration.setAllowedOriginPatterns(List.of(origins));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "X-Session-Mode", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(List.of("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
         // Nunca combinar credenciales con origen comodín: si hay "*" se deshabilita
         // el envío de credenciales para evitar que cualquier sitio consuma la API.

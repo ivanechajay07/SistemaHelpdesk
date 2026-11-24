@@ -25,6 +25,9 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Duration;
 import java.util.Map;
@@ -66,9 +69,29 @@ public class AuthController {
                 .build();
     }
 
+    /**
+     * La app Android no puede usar la cookie HttpOnly (su WebView corre en otro
+     * origen), así que pide el refresh token en el cuerpo con este encabezado.
+     * Solo se acepta desde orígenes permitidos por CORS.
+     */
+    private static final String SESSION_MODE_HEADER = "X-Session-Mode";
+
+    private boolean usaRefreshTokenEnCuerpo() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (!(attributes instanceof ServletRequestAttributes servletAttributes)) {
+            return false;
+        }
+        String mode = servletAttributes.getRequest().getHeader(SESSION_MODE_HEADER);
+        return mode != null && "body".equalsIgnoreCase(mode.trim());
+    }
+
     /** Devuelve la respuesta sin exponer el refresh token en el cuerpo. */
     private ResponseEntity<AuthResponse> withRefreshCookie(AuthResponse response) {
         String refreshToken = response.getRefreshToken();
+        if (usaRefreshTokenEnCuerpo()) {
+            // La app móvil guarda el token en almacenamiento privado del dispositivo.
+            return ResponseEntity.ok(response);
+        }
         response.setRefreshToken(null);
         if (refreshToken == null) {
             return ResponseEntity.ok(response);

@@ -6,6 +6,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import AppUpdateBanner from './components/ui/AppUpdateBanner';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Rutas con carga diferida (code-splitting): cada página se descarga solo al entrar.
@@ -123,6 +124,7 @@ function App() {
 
   return (
     <ToastProvider>
+      <AppUpdateBanner />
       <BrowserRouter>
         <ErrorBoundary>
         <Suspense fallback={<SkeletonPage />}>

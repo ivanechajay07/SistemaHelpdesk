@@ -12,6 +12,7 @@ import autoTable from 'jspdf-autotable';
 import ChartTooltip from '../../components/ui/ChartTooltip';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards, formatReportDate } from '../../lib/reportPdf';
 import { mergeRow, styleRow, setCols, downloadWorkbook, exTitle, exSubtitle, exHeader, exData, exDataAlt } from '../../lib/reportExcel';
+import { descargarPdf } from '../../lib/nativeFiles';
 
 const COLORS = ['#06b6d4', '#10b981', '#3b82f6', '#f59e0b', '#f97316', '#0ea5e9', '#ef4444', '#14b8a6', '#84cc16', '#94a3b8'];
 
@@ -189,7 +190,7 @@ export default function Reportes() {
       }
 
       drawFooter(doc, dateStr);
-      doc.save(`Reporte_Inventario_${new Date().toISOString().slice(0, 10)}.pdf`);
+      await descargarPdf(doc, `Reporte_Inventario_${new Date().toISOString().slice(0, 10)}.pdf`);
       toast({ variant: 'success', title: 'PDF generado', message: 'Reporte de inventario exportado' });
     } catch (e) {
       console.error(e);

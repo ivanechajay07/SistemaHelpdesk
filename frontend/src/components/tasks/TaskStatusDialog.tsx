@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { getPrioridadCls, getEstadoCls, getEstadoLabel } from './TaskModal';
 import { useToast } from '../ui/Toast';
 import { generarTareaPdf } from '../../lib/taskPdf';
+import { descargarPdf } from '../../lib/nativeFiles';
 
 interface Props {
   isOpen: boolean;
@@ -201,7 +202,7 @@ export default function TaskStatusDialog({ isOpen, onClose, task }: Props) {
     try {
       const list = evidencias.length ? evidencias : await fetchTaskEvidence(task.id);
       const doc = await generarTareaPdf({ task, evidencias: list });
-      doc.save(`Informe_Tarea_${task.id}.pdf`);
+      await descargarPdf(doc, `Informe_Tarea_${task.id}.pdf`);
     } catch {
       toast({ variant: 'error', title: 'Error', message: 'No se pudo generar el informe en PDF.' });
     } finally {

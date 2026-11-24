@@ -13,6 +13,7 @@ import { usePagedList } from '../lib/hooks';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawCorporateHeader, drawSectionTitle, drawFooter, drawKpiCards, formatReportDate } from '../lib/reportPdf';
+import { descargarPdf } from '../lib/nativeFiles';
 
 interface CuentaRow {
   email: string;
@@ -212,7 +213,7 @@ export default function CorreoCorporativo() {
       });
 
       drawFooter(doc, `Directorio de correos · ${dateStr}`);
-      doc.save(`Directorio_Correos_${new Date().toISOString().slice(0, 10)}.pdf`);
+      void descargarPdf(doc, `Directorio_Correos_${new Date().toISOString().slice(0, 10)}.pdf`);
       toast({ variant: 'success', title: 'PDF generado', message: `Directorio exportado con ${correos.length} registros.` });
     } catch (err) {
       console.error(err);

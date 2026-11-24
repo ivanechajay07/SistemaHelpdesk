@@ -1,12 +1,20 @@
 import axios from 'axios';
-import { refreshSession, session } from './session';
+import {
+  API_BASE_URL,
+  appHeaders,
+  guardarRefreshToken,
+  isNativeApp,
+  refreshSession,
+  session,
+} from './session';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8081/api/v1',
-  // La cookie HttpOnly de refresh viaja en las peticiones al mismo origen.
-  withCredentials: true,
+  baseURL: API_BASE_URL,
+  // En web la cookie HttpOnly de refresh viaja en las peticiones al mismo origen.
+  withCredentials: !isNativeApp,
   headers: {
     'Content-Type': 'application/json',
+    ...appHeaders(),
   },
 });
 
@@ -23,7 +31,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Renovación automática del access token con la cookie HttpOnly de refresh.
+// La APK recibe el refresh token en el cuerpo: guardarlo en almacenamiento privado.
+api.interceptors.response.use(
+  (response) => {
+    if (isNativeApp && response.data?.refreshToken) {
+      void guardarRefreshToken(response.data.refreshToken);
+    }
+    return response;
+  },
+  (error) => Promise.reject(error),
+);
+
+// Renovación automática del access token.
 let refreshing: Promise<string | null> | null = null;
 
 const refreshAccessToken = async (): Promise<string | null> => {

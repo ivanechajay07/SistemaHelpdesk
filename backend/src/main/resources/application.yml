@@ -86,6 +86,14 @@ server:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mobile:
+    # Versión publicada de la APK: la app compara este valor con su versionCode.
+    version-code: ${APP_VERSION_CODE:1}
+    version-name: ${APP_VERSION_NAME:1.0.0}
+    # URL pública del APK (se abre en el navegador del dispositivo).
+    apk-url: ${APP_APK_URL:}
+    notes: ${APP_RELEASE_NOTES:}
+    mandatory: ${APP_UPDATE_MANDATORY:false}
   security:
     swagger-enabled: ${SWAGGER_ENABLED:false}
     # true en producción (HTTPS): la cookie de refresh solo viaja por TLS.

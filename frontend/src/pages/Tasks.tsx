@@ -15,6 +15,7 @@ import { useAuthStore } from '../store/authStore';
 import { TaskModal, getPrioridadCls, getEstadoCls, getEstadoLabel } from '../components/tasks/TaskModal';
 import TaskStatusDialog from '../components/tasks/TaskStatusDialog';
 import { generarTareaPdf } from '../lib/taskPdf';
+import { descargarPdf } from '../lib/nativeFiles';
 import ConfirmDialog, { type DialogVariant } from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
 import { usePagedList } from '../lib/hooks';
@@ -196,7 +197,7 @@ export default function Tasks() {
     try {
       const evidencias = await useTaskStore.getState().fetchTaskEvidence(task.id);
       const doc = await generarTareaPdf({ task, evidencias });
-      doc.save(`Informe_Tarea_${task.id}.pdf`);
+      await descargarPdf(doc, `Informe_Tarea_${task.id}.pdf`);
     } catch {
       toast({ variant: 'error', title: 'Error', message: 'No se pudo generar el informe PDF.' });
     } finally {
