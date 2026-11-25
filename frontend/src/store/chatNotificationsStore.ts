@@ -4,7 +4,6 @@ import SockJS from 'sockjs-client';
 import api from '../lib/axios';
 import { notificarMensajeChat } from '../lib/notifications';
 import { pushActivo } from '../lib/push';
-
 export interface ChatNotificationEvent {
   tipo: string;
   ticketId: number;
@@ -142,7 +141,7 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
             // en primer plano. No se muestra si el usuario ya lee ese ticket.
             const viendoEseTicket = window.location.pathname === `/tickets/${event.ticketId}`;
             if (
-              !pushActivo &&
+              !pushActivo() &&
               (!viendoEseTicket || document.visibilityState !== 'visible')
             ) {
               void notificarMensajeChat({

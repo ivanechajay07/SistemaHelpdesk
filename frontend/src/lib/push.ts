@@ -6,19 +6,29 @@ import { isNativeApp, session } from './session';
 /**
  * Notificaciones push con Firebase Cloud Messaging (solo APK).
  *
- * Se activa únicamente cuando la APK se compiló con google-services.json
- * (VITE_FCM_ENABLED=true). Sin esa configuración todo queda desactivado y la
- * app usa las notificaciones locales mientras está abierta.
+ * Se compila solo cuando la APK incluye google-services.json
+ * (VITE_FCM_ENABLED=true). Además, solo se activa si el backend confirma en
+ * /app/version que tiene FCM configurado; si no, la app mantiene las
+ * notificaciones locales.
  */
-export const pushActivo =
+export const pushCompilado =
   isNativeApp && import.meta.env.VITE_FCM_ENABLED === 'true';
+
+let pushRemotoHabilitado = false;
+
+/** true cuando esta APK soporta push y el backend lo tiene activo. */
+export const pushActivo = (): boolean => pushCompilado && pushRemotoHabilitado;
+
+export function setPushRemoto(habilitado: boolean): void {
+  pushRemotoHabilitado = habilitado;
+}
 
 let inicializado = false;
 let tokenActual: string | null = null;
 let cleanupAccion: (() => void) | null = null;
 
 export async function initPush(onOpenTicket: (ticketId: number) => void): Promise<void> {
-  if (!pushActivo || inicializado) return;
+  if (!pushCompilado || inicializado) return;
   inicializado = true;
 
   try {
@@ -67,7 +77,7 @@ export async function initPush(onOpenTicket: (ticketId: number) => void): Promis
 
 /** Elimina el token del backend al cerrar sesión. */
 export async function unregisterPush(): Promise<void> {
-  if (!pushActivo) return;
+  if (!pushActivo()) return;
   const token = tokenActual;
   const accessToken = session.getToken();
   tokenActual = null;

@@ -56,13 +56,14 @@ import { useThemeStore } from '../store/themeStore';
 import { useNotificationsStore, type AppNotification } from '../store/notificationsStore';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
 import { playNotificationTone } from '../lib/notificationSound';
+import { appService } from '../services/appService';
 import {
   alTocarNotificacion,
   initNotificaciones,
   notificarEventoTicket,
   notificacionesNativas,
 } from '../lib/notifications';
-import { initPush, pushActivo } from '../lib/push';
+import { initPush, pushActivo, pushCompilado, setPushRemoto } from '../lib/push';
 import api from '../lib/axios';
 import { useProfileImage } from '../lib/hooks';
 import { useIdleLogout } from '../lib/useIdleLogout';
@@ -361,7 +362,20 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!notificacionesNativas) return;
     void initNotificaciones();
-    void initPush((ticketId) => navigate(`/tickets/${ticketId}`));
+
+    // Push real solo si la APK lo incluye y el backend lo tiene configurado.
+    if (pushCompilado) {
+      void appService.getVersion()
+        .then(({ data }) => {
+          const habilitado = !!data.pushEnabled;
+          setPushRemoto(habilitado);
+          if (habilitado) {
+            void initPush((ticketId) => navigate(`/tickets/${ticketId}`));
+          }
+        })
+        .catch(() => setPushRemoto(false));
+    }
+
     let cleanup: (() => void) | undefined;
     void alTocarNotificacion((ticketId) => navigate(`/tickets/${ticketId}`)).then((fn) => {
       cleanup = fn;
@@ -393,7 +407,7 @@ export default function DashboardLayout() {
       if (document.visibilityState === 'visible') playNotificationSound();
       if (
         notificacionesNativas &&
-        !pushActivo &&
+        !pushActivo() &&
         document.visibilityState !== 'visible'
       ) {
         void notificarEventoTicket({

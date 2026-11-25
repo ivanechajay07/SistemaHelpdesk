@@ -8,12 +8,14 @@ package com.empresa.helpdesk.modules.appinfo.dto;
  * @param apkUrl      URL directa de descarga del APK
  * @param notes       novedades breves para mostrar al usuario
  * @param mandatory   true si la actualización es obligatoria
+ * @param pushEnabled true si el backend tiene FCM configurado
  */
 public record AppVersionResponse(
         int versionCode,
         String versionName,
         String apkUrl,
         String notes,
-        boolean mandatory
+        boolean mandatory,
+        boolean pushEnabled
 ) {
 }
