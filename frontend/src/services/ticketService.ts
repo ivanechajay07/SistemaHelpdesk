@@ -6,6 +6,9 @@ export const ticketService = {
 
   getMessages: (id: number | string) => api.get(`/tickets/${id}/messages`),
 
+  sendMessage: (id: number | string, contenido: string) =>
+    api.post(`/tickets/${id}/messages`, { contenido }),
+
   markMessagesRead: (id: number | string) =>
     api.post(`/tickets/${id}/messages/read`),
 

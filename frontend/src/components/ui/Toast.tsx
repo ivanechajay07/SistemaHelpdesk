@@ -65,7 +65,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ toast }}>
       {children}
       <div
-        className="fixed top-4 right-4 z-[200] flex flex-col gap-3 w-[calc(100vw-2rem)] max-w-sm pointer-events-none"
+        className="toast-safe fixed right-4 z-[200] flex flex-col gap-3 w-[calc(100vw-2rem)] max-w-sm pointer-events-none"
         role="status"
         aria-live="polite"
         aria-atomic="false"

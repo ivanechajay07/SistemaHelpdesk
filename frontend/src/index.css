@@ -87,6 +87,11 @@ html.dark body {
   padding-bottom: var(--safe-bottom);
 }
 
+/* Toasts debajo de la barra de estado en la APK. */
+.toast-safe {
+  top: calc(var(--safe-top) + 1rem);
+}
+
 /*
  * Modales en la APK: el panel nunca queda debajo de la barra de estado ni de la
  * barra de gestos, y su contenido hace scroll dentro del espacio disponible.

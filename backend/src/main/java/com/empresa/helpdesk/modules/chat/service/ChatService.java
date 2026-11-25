@@ -92,6 +92,11 @@ public class ChatService {
 
         message = messageRepository.save(message);
         ChatMessageResponse response = mapToResponse(message);
+
+        // Difusión a la sala del ticket: tanto el envío por WebSocket como el
+        // respaldo REST pasan por aquí, así que se emite una sola vez.
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, response);
+
         chatNotificationService.notificarNuevoMensaje(ticket, message, response);
         return response;
     }
