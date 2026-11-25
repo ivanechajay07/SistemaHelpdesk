@@ -4,6 +4,10 @@ Permite que la APK reciba notificaciones **con la app cerrada o en segundo plano
 Sin esta configuración la app sigue funcionando con notificaciones locales
 (mientras está abierta) y con los correos.
 
+> **Atajo:** con los dos archivos descargados puedes ejecutar
+> `.\scripts\configure-firebase.ps1 -GoogleServicesJson <ruta> -ServiceAccountJson <ruta> -SetGitHubSecret`
+> y deja todo configurado (copia el archivo, actualiza `.env` y sube el secreto).
+
 ---
 
 ## 1. Crear el proyecto en Firebase

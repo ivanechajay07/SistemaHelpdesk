@@ -24,25 +24,28 @@ public class AppInfoController {
     private final String apkUrl;
     private final String notes;
     private final boolean mandatory;
+    private final boolean pushEnabled;
 
     public AppInfoController(
             @Value("${app.mobile.version-code:1}") int versionCode,
             @Value("${app.mobile.version-name:1.0.0}") String versionName,
             @Value("${app.mobile.apk-url:}") String apkUrl,
             @Value("${app.mobile.notes:}") String notes,
-            @Value("${app.mobile.mandatory:false}") boolean mandatory
+            @Value("${app.mobile.mandatory:false}") boolean mandatory,
+            @Value("${app.push.enabled:false}") boolean pushEnabled
     ) {
         this.versionCode = versionCode;
         this.versionName = versionName;
         this.apkUrl = apkUrl;
         this.notes = notes;
         this.mandatory = mandatory;
+        this.pushEnabled = pushEnabled;
     }
 
     @GetMapping("/version")
     @Operation(summary = "Última versión de la APK",
             description = "Público: permite que la app detecte actualizaciones sin iniciar sesión")
     public AppVersionResponse version() {
-        return new AppVersionResponse(versionCode, versionName, apkUrl, notes, mandatory);
+        return new AppVersionResponse(versionCode, versionName, apkUrl, notes, mandatory, pushEnabled);
     }
 }

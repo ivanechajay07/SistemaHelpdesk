@@ -12,7 +12,7 @@ class AppInfoControllerTest {
     @Test
     void exponeLaVersionPublicada() {
         AppInfoController controller = new AppInfoController(
-                7, "1.4.0", "https://midominio.com/helpdesk.apk", "Chat y cámara", true);
+                7, "1.4.0", "https://midominio.com/helpdesk.apk", "Chat y cámara", true, true);
 
         AppVersionResponse response = controller.version();
 
@@ -21,16 +21,18 @@ class AppInfoControllerTest {
         assertEquals("https://midominio.com/helpdesk.apk", response.apkUrl());
         assertEquals("Chat y cámara", response.notes());
         assertTrue(response.mandatory());
+        assertTrue(response.pushEnabled());
     }
 
     @Test
     void funcionaSinApkPublicada() {
-        AppInfoController controller = new AppInfoController(1, "1.0.0", "", "", false);
+        AppInfoController controller = new AppInfoController(1, "1.0.0", "", "", false, false);
 
         AppVersionResponse response = controller.version();
 
         assertEquals(1, response.versionCode());
         assertEquals("", response.apkUrl());
         assertFalse(response.mandatory());
+        assertFalse(response.pushEnabled());
     }
 }

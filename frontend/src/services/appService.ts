@@ -6,6 +6,8 @@ export interface AppVersion {
   apkUrl: string;
   notes: string;
   mandatory: boolean;
+  /** El backend tiene FCM configurado y puede enviar push. */
+  pushEnabled?: boolean;
 }
 
 /** Versión publicada de la APK (endpoint público). */
