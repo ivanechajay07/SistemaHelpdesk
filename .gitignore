@@ -36,3 +36,8 @@ Thumbs.db
 # APK de distribucion (se publica en el servidor, no se versiona)
 descargas/*.apk
 !descargas/.gitkeep
+
+# Credenciales de Firebase (nunca versionar)
+cuenta-servicio*.json
+service-account*.json
+*.b64

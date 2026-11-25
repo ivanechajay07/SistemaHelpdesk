@@ -94,6 +94,12 @@ app:
     apk-url: ${APP_APK_URL:}
     notes: ${APP_RELEASE_NOTES:}
     mandatory: ${APP_UPDATE_MANDATORY:false}
+  push:
+    # Notificaciones con la app cerrada (Firebase Cloud Messaging).
+    # Requiere subir el JSON de la cuenta de servicio en base64.
+    enabled: ${PUSH_ENABLED:false}
+    credentials-base64: ${FIREBASE_CREDENTIALS_BASE64:}
+    credentials-file: ${FIREBASE_CREDENTIALS_FILE:}
   security:
     swagger-enabled: ${SWAGGER_ENABLED:false}
     # true en producción (HTTPS): la cookie de refresh solo viaja por TLS.
