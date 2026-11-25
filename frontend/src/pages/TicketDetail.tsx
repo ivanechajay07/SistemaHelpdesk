@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { ticketService } from '../services/ticketService';
+import { session } from '../lib/session';
 import { useAuthStore } from '../store/authStore';
 import { useTicketStore } from '../store/ticketStore';
 import type { Ticket } from '../store/ticketStore';
@@ -47,6 +48,7 @@ export default function TicketDetail() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -54,6 +56,7 @@ export default function TicketDetail() {
   const linkDialogTitleId = useId();
   const linkDialogPanelRef = useDialogA11y(showLinkDialog, () => setShowLinkDialog(false));
   const stompClient = useRef<Client | null>(null);
+  const primeraConexion = useRef(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -140,10 +143,32 @@ export default function TicketDetail() {
 
     const apiUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:8081';
     const socket = new SockJS(`${apiUrl}/ws/chat`);
+
+    // Al reconectar, recuperar lo que se haya perdido mientras no había socket.
+    const sincronizarMensajes = async () => {
+      try {
+        const { data } = await ticketService.getMessages(id);
+        setMessages(ordenarMensajes(data));
+      } catch {
+        /* sin red: se reintenta en la próxima reconexión */
+      }
+    };
+
     const client = new Client({
       webSocketFactory: () => socket,
       connectHeaders: {
         Authorization: `Bearer ${token}`
+      },
+      // Reintento automático: si el celular pierde red o vuelve del segundo plano.
+      reconnectDelay: 4000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      beforeConnect: () => {
+        // Usa el token más reciente: el access token se renueva cada 30 min.
+        const actual = session.getToken();
+        if (actual) {
+          client.connectHeaders = { Authorization: `Bearer ${actual}` };
+        }
       },
       onConnect: () => {
         client.subscribe(`/topic/ticket/${id}`, (message) => {
@@ -216,6 +241,14 @@ export default function TicketDetail() {
         };
         announcePresence();
         presenceIntervalRef.current = setInterval(announcePresence, 25000);
+
+        // En la primera conexión el historial ya se cargó al abrir; en las
+        // reconexiones se sincroniza para no perder mensajes.
+        if (primeraConexion.current) {
+          primeraConexion.current = false;
+        } else {
+          void sincronizarMensajes();
+        }
       },
       onStompError: (frame) => {
         console.error('Broker reported error: ' + frame.headers['message']);
@@ -226,14 +259,22 @@ export default function TicketDetail() {
     stompClient.current = client;
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && pendingReadRef.current) {
+      if (document.visibilityState !== 'visible') return;
+      if (pendingReadRef.current) {
         markAsRead();
+      }
+      // Al volver del segundo plano: reanudar el socket y ponerse al día.
+      if (stompClient.current && !stompClient.current.connected) {
+        void sincronizarMensajes();
+        stompClient.current.activate();
       }
     };
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onVisible);
 
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onVisible);
       if (presenceIntervalRef.current) clearInterval(presenceIntervalRef.current);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (typingClearRef.current) clearTimeout(typingClearRef.current);
@@ -261,19 +302,39 @@ export default function TicketDetail() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isChatDisabled) return;
-    if (!newMessage.trim() || !stompClient.current?.connected) return;
+    if (isChatDisabled || sending) return;
+    const texto = newMessage.trim();
+    if (!texto) return;
 
-    const chatMessage = {
-      contenido: newMessage,
-      ticketId: Number(id),
-      remitenteId: user?.id
-    };
-
-    stompClient.current.publish({
-      destination: `/app/chat/${id}`,
-      body: JSON.stringify(chatMessage)
-    });
+    if (stompClient.current?.connected) {
+      stompClient.current.publish({
+        destination: `/app/chat/${id}`,
+        body: JSON.stringify({
+          contenido: texto,
+          ticketId: Number(id),
+          remitenteId: user?.id,
+        }),
+      });
+    } else {
+      // Respaldo REST: el backend difunde a la sala igual que por WebSocket.
+      setSending(true);
+      ticketService.sendMessage(id!, texto)
+        .then(({ data }) => {
+          setMessages((prev) =>
+            prev.some((m) => m.id === data.id) ? prev : ordenarMensajes([...prev, data]),
+          );
+        })
+        .catch((err: any) => {
+          toast({
+            variant: 'error',
+            title: 'No se pudo enviar el mensaje',
+            message:
+              err?.response?.data?.message ||
+              'Revisa tu conexión e inténtalo de nuevo.',
+          });
+        })
+        .finally(() => setSending(false));
+    }
 
     // Dejar de indicar "escribiendo" al enviar
     notifyTyping(false);

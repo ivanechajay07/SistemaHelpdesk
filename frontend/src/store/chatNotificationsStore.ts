@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import api from '../lib/axios';
+import { session } from '../lib/session';
 import { notificarMensajeChat } from '../lib/notifications';
 import { pushActivo } from '../lib/push';
 export interface ChatNotificationEvent {
@@ -90,6 +91,15 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
       webSocketFactory: () => new SockJS(`${socketBase}/ws/chat`),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      beforeConnect: () => {
+        // Tras un refresh de sesión, reconectar con el token vigente.
+        const actual = session.getToken();
+        if (actual) {
+          client.connectHeaders = { Authorization: `Bearer ${actual}` };
+        }
+      },
       onConnect: () => {
         set({ connected: true });
 

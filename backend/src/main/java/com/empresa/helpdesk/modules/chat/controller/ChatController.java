@@ -32,11 +32,11 @@ public class ChatController {
     private final ChatService chatService;
 
     @MessageMapping("/chat/{ticketId}")
-    @SendTo("/topic/ticket/{ticketId}")
     public ChatMessageResponse sendMessage(
             @DestinationVariable Long ticketId,
             @Payload ChatMessageRequest request,
             Principal principal) {
+        // La difusión a /topic/ticket/{id} la hace el servicio (también vale para REST).
         return chatService.enviar(ticketId, request, principal != null ? principal.getName() : null);
     }
 
@@ -56,6 +56,16 @@ public class ChatController {
     @Operation(summary = "Obtener el historial de chat de un ticket")
     public ResponseEntity<List<ChatMessageResponse>> getChatHistory(@PathVariable Long ticketId) {
         return ResponseEntity.ok(chatService.historial(ticketId));
+    }
+
+    @PostMapping("/api/v1/tickets/{ticketId}/messages")
+    @Operation(summary = "Enviar un mensaje por REST",
+            description = "Respaldo cuando el WebSocket está reconectando; difunde igual a la sala")
+    public ResponseEntity<ChatMessageResponse> sendMessageRest(
+            @PathVariable Long ticketId,
+            @RequestBody ChatMessageRequest request,
+            Principal principal) {
+        return ResponseEntity.ok(chatService.enviar(ticketId, request, principal != null ? principal.getName() : null));
     }
 
     @PostMapping("/api/v1/tickets/{ticketId}/messages/read")
