@@ -3,6 +3,7 @@ package com.empresa.helpdesk.modules.chat.service;
 import com.empresa.helpdesk.modules.chat.dto.ChatMessageResponse;
 import com.empresa.helpdesk.modules.chat.dto.ChatNotificationDto;
 import com.empresa.helpdesk.modules.chat.entity.Message;
+import com.empresa.helpdesk.modules.push.service.PushService;
 import com.empresa.helpdesk.modules.ticket.entity.Ticket;
 import com.empresa.helpdesk.modules.user.entity.User;
 import com.empresa.helpdesk.modules.user.repository.UserRepository;
@@ -32,6 +33,7 @@ public class ChatNotificationService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
+    private final PushService pushService;
 
     /** Notifica a cada participante (excepto el remitente) que llegó un mensaje nuevo. */
     public void notificarNuevoMensaje(Ticket ticket, Message mensaje, ChatMessageResponse response) {
@@ -61,6 +63,14 @@ public class ChatNotificationService {
                 log.warn("No se pudo enviar la notificación de chat a {}: {}",
                         destinatario.getUsername(), e.getMessage());
             }
+
+            // Push (app cerrada o en segundo plano). No-op si FCM no está configurado.
+            pushService.enviarMensajeChat(
+                    destinatario.getId(),
+                    response.getRemitenteNombre(),
+                    response.getContenido(),
+                    ticket.getCodigo(),
+                    ticket.getId());
         }
     }
 

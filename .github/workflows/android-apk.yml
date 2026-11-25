@@ -60,9 +60,24 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Preparar Firebase (opcional)
+        id: fcm
+        env:
+          GOOGLE_SERVICES_B64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_B64" ]; then
+            echo "$GOOGLE_SERVICES_B64" | base64 -d > android/app/google-services.json
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "google-services.json configurado: la APK tendrá push FCM."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Sin GOOGLE_SERVICES_JSON_BASE64: la APK se compila sin push FCM."
+          fi
+
       - name: Compilar frontend y sincronizar Capacitor
         env:
           VITE_API_URL: ${{ inputs.api_url || vars.VITE_API_URL }}
+          VITE_FCM_ENABLED: ${{ steps.fcm.outputs.present }}
         run: |
           npm run build
           npx cap sync android

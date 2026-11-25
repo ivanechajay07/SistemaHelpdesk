@@ -242,6 +242,12 @@ npx cap open android
 El workflow `android-apk.yml` también compila el APK en GitHub Actions y lo deja como
 artefacto descargable.
 
+## Notificaciones push (FCM)
+
+Para notificaciones con la app cerrada se usa Firebase Cloud Messaging. Sigue
+[`docs/PUSH_FCM.md`](docs/PUSH_FCM.md): necesitas `google-services.json` y la cuenta
+de servicio del proyecto de Firebase.
+
 ## Scripts de base de datos
 
 En `database/` hay migraciones manuales que se aplican vía:

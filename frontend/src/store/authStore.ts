@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../lib/axios';
+import { unregisterPush } from '../lib/push';
 import {
   borrarRefreshToken,
   isNativeApp,
@@ -108,6 +109,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: () => {
     if (isNativeApp) {
+      // Quita el token push antes de limpiar la sesión.
+      void unregisterPush();
       // La APK envía el refresh token en el cuerpo (no usa cookies).
       void leerRefreshToken()
         .then((token) => api.post('/auth/logout', token ? { refreshToken: token } : {}))

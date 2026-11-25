@@ -171,7 +171,7 @@ volumes:
 | Exportar PDF y Excel | ✅ (se guarda/comparte con el sistema) |
 | Botón atrás, barra de estado, splash | ✅ |
 | Aviso de nueva versión | ✅ |
-| Notificaciones con la app cerrada | ❌ requiere Firebase (FCM) |
+| Notificaciones con la app cerrada | ✅ con Firebase configurado (`docs/PUSH_FCM.md`) |
 
 ### Barras del sistema (edge-to-edge)
 

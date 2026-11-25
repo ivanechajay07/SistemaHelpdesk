@@ -62,6 +62,7 @@ import {
   notificarEventoTicket,
   notificacionesNativas,
 } from '../lib/notifications';
+import { initPush, pushActivo } from '../lib/push';
 import api from '../lib/axios';
 import { useProfileImage } from '../lib/hooks';
 import { useIdleLogout } from '../lib/useIdleLogout';
@@ -360,6 +361,7 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!notificacionesNativas) return;
     void initNotificaciones();
+    void initPush((ticketId) => navigate(`/tickets/${ticketId}`));
     let cleanup: (() => void) | undefined;
     void alTocarNotificacion((ticketId) => navigate(`/tickets/${ticketId}`)).then((fn) => {
       cleanup = fn;
@@ -369,12 +371,9 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     if (!lastEvent) return;
-    // En la APK el sonido lo pone la notificación del sistema, salvo que el
-    // usuario ya esté viendo ese ticket (ahí suena el tono interno).
-    const enTicketVisible =
-      window.location.pathname === `/tickets/${lastEvent.ticketId}` &&
-      document.visibilityState === 'visible';
-    if (!notificacionesNativas || enTicketVisible) playNotificationSound();
+    // Sonido interno solo con la app a la vista; en segundo plano suena la
+    // notificación del sistema (local o push de FCM).
+    if (document.visibilityState === 'visible') playNotificationSound();
     // Pulso en el icono de chat para llamar la atención
     setChatPulse(true);
     if (chatPulseTimeoutRef.current) clearTimeout(chatPulseTimeoutRef.current);
@@ -391,8 +390,12 @@ export default function DashboardLayout() {
     if (!lastAppNotification) return;
     fetchNotifications();
     if (lastAppNotification.titulo) {
-      if (!notificacionesNativas || document.visibilityState === 'visible') playNotificationSound();
-      if (notificacionesNativas && document.visibilityState !== 'visible') {
+      if (document.visibilityState === 'visible') playNotificationSound();
+      if (
+        notificacionesNativas &&
+        !pushActivo &&
+        document.visibilityState !== 'visible'
+      ) {
         void notificarEventoTicket({
           titulo: lastAppNotification.titulo,
           mensaje: lastAppNotification.mensaje,
