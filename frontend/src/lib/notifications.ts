@@ -48,7 +48,12 @@ const idNotificacion = () => Math.floor(Date.now() % 2147483647);
 
 const recortar = (texto?: string | null, largo = 160): string => {
   if (!texto) return '';
-  const limpio = texto.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  // El cuerpo de la notificación es texto plano: solo se normalizan espacios
+  // y se eliminan caracteres de control.
+  const limpio = texto
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return limpio.length > largo ? `${limpio.slice(0, largo)}…` : limpio;
 };
 
