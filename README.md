@@ -92,9 +92,16 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml down
 | Mailpit | http://localhost:8026 |
 | MySQL | `localhost:3312` |
 
-Ese modo usa Mailpit para el correo (no envía correos reales por Gmail). Los contenedores se
-llaman `helpdesk_local_*` y los volúmenes `helpdesk-local_*`, así que los datos son independientes
-de cualquier otro stack que tengas levantado.
+Ese modo usa el SMTP definido en `.env`:
+
+- **Mailpit** (por defecto en `.env.example`): los correos quedan en el visor
+  `http://localhost:8026` y no salen a Internet.
+- **Gmail real**: define `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`,
+  `MAIL_USERNAME` y `MAIL_PASSWORD` (App Password de 16 caracteres). El backend
+  enviará los correos reales al crear o asignar tickets.
+
+Los contenedores se llaman `helpdesk_local_*` y los volúmenes `helpdesk-local_*`,
+así que los datos son independientes de cualquier otro stack que tengas levantado.
 
 El frontend local escucha en `0.0.0.0:5174` para permitir el acceso desde otros
 dispositivos de la LAN. Abre `http://TU_IP:5174` desde el otro equipo y define
