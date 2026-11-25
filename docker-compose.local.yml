@@ -52,11 +52,12 @@ services:
       # Incluye los origenes del .env (localhost, capacitor://localhost) y la URL publica.
       CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:5174},${PUBLIC_FRONTEND_URL:-http://localhost:5174}"
       FRONTEND_URL: "${PUBLIC_FRONTEND_URL:-http://localhost:5174}"
-      # Usa el Mailpit de este stack: no envia correos reales por Gmail.
-      MAIL_HOST: "mailpit"
-      MAIL_PORT: "1025"
-      MAIL_USERNAME: ""
-      MAIL_PASSWORD: ""
+      # Por defecto usa Mailpit (visor en localhost:8026). Si defines MAIL_HOST/
+      # MAIL_USERNAME/MAIL_PASSWORD en .env (por ejemplo Gmail), se envian correos reales.
+      MAIL_HOST: "${MAIL_HOST:-mailpit}"
+      MAIL_PORT: "${MAIL_PORT:-1025}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
 
   phpmyadmin:
     image: phpmyadmin:5.2

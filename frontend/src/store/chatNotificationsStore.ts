@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import api from '../lib/axios';
+import { notificarMensajeChat } from '../lib/notifications';
 
 export interface ChatNotificationEvent {
   tipo: string;
@@ -134,6 +135,19 @@ export const useChatNotificationsStore = create<ChatNotificationsState>((set, ge
               })
               .slice(0, 20);
             set({ recentMessages: recientes });
+
+            // Notificación del sistema en la APK (con sonido). No se muestra si
+            // el usuario ya está viendo ese ticket con la app en primer plano.
+            const viendoEseTicket = window.location.pathname === `/tickets/${event.ticketId}`;
+            if (!viendoEseTicket || document.visibilityState !== 'visible') {
+              void notificarMensajeChat({
+                ticketId: event.ticketId,
+                remitente: event.remitenteNombre,
+                contenido: event.contenido,
+                tieneAdjunto: !!event.adjuntoUrl,
+                ticketCodigo: event.ticketCodigo,
+              });
+            }
 
             set({
               lastEvent: { ...event, receivedAt: Date.now() },

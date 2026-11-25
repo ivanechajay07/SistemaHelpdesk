@@ -56,6 +56,12 @@ import { useThemeStore } from '../store/themeStore';
 import { useNotificationsStore, type AppNotification } from '../store/notificationsStore';
 import { useChatNotificationsStore } from '../store/chatNotificationsStore';
 import { playNotificationTone } from '../lib/notificationSound';
+import {
+  alTocarNotificacion,
+  initNotificaciones,
+  notificarEventoTicket,
+  notificacionesNativas,
+} from '../lib/notifications';
 import api from '../lib/axios';
 import { useProfileImage } from '../lib/hooks';
 import { useIdleLogout } from '../lib/useIdleLogout';
@@ -348,9 +354,27 @@ export default function DashboardLayout() {
 
   // Toast instantáneo cuando llega un mensaje nuevo de chat
   const toast = useToast();
+
+  // Notificaciones del sistema en la APK: permiso, canal con sonido y apertura
+  // del ticket al tocar la notificación.
+  useEffect(() => {
+    if (!notificacionesNativas) return;
+    void initNotificaciones();
+    let cleanup: (() => void) | undefined;
+    void alTocarNotificacion((ticketId) => navigate(`/tickets/${ticketId}`)).then((fn) => {
+      cleanup = fn;
+    });
+    return () => cleanup?.();
+  }, [navigate]);
+
   useEffect(() => {
     if (!lastEvent) return;
-    playNotificationSound();
+    // En la APK el sonido lo pone la notificación del sistema, salvo que el
+    // usuario ya esté viendo ese ticket (ahí suena el tono interno).
+    const enTicketVisible =
+      window.location.pathname === `/tickets/${lastEvent.ticketId}` &&
+      document.visibilityState === 'visible';
+    if (!notificacionesNativas || enTicketVisible) playNotificationSound();
     // Pulso en el icono de chat para llamar la atención
     setChatPulse(true);
     if (chatPulseTimeoutRef.current) clearTimeout(chatPulseTimeoutRef.current);
@@ -367,7 +391,14 @@ export default function DashboardLayout() {
     if (!lastAppNotification) return;
     fetchNotifications();
     if (lastAppNotification.titulo) {
-      playNotificationSound();
+      if (!notificacionesNativas || document.visibilityState === 'visible') playNotificationSound();
+      if (notificacionesNativas && document.visibilityState !== 'visible') {
+        void notificarEventoTicket({
+          titulo: lastAppNotification.titulo,
+          mensaje: lastAppNotification.mensaje,
+          ticketId: lastAppNotification.ticketId,
+        });
+      }
       toast({
         variant: 'info',
         title: lastAppNotification.titulo,
